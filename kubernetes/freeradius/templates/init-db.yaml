@@ -36,16 +36,26 @@ spec:
               done
 
         env:
-            - name: MYSQL_HOST
-              value: {{ .Values.externalDatabase.host | quote}}
-            - name: MYSQL_PORT
-              value: {{ .Values.externalDatabase.port | quote}}
-            - name: MYSQL_USER
-              value: {{ .Values.externalDatabase.user | quote }}
-            - name: MYSQL_DATABASE
-              value: {{ .Values.externalDatabase.database | quote }}
-            - name: MYSQL_PASSWORD
-              value: {{ .Values.externalDatabase.password | quote }}
+          - name: MYSQL_HOST
+            value: {{ .Values.externalDatabase.host | quote}}
+          - name: MYSQL_PORT
+            value: {{ .Values.externalDatabase.port | quote}}
+          - name: MYSQL_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mariadb.secretName" . }}
+                key: mariadb-user
+          - name: MYSQL_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mariadb.secretName" . }}
+                key: mariadb-database
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mariadb.secretName" . }}
+                key: mariadb-password
+
         volumeMounts:
           - name: custom-init-scripts
             mountPath: /docker-entrypoint-initdb.d

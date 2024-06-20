@@ -78,19 +78,32 @@ spec:
             value: {{ .Values.externalDatabase.host | quote }}
           - name: SERVER_PORT
             value: {{ .Values.externalDatabase.port | quote }}
+          - name: MYSQL_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mariadb.secretName" . }}
+                key: mariadb-user
+          - name: MYSQL_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mariadb.secretName" . }}
+                key: mariadb-database
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mariadb.secretName" . }}
+                key: mariadb-password
           command:
             - /bin/bash
             - -c
             - |
-              MYSQL_USER="radius"
-              MYSQL_PASSWORD="juniper@123"
 
               # Set a flag to track successful logins
               LOGGED_IN=false
 
               # Continue looping until successfully logged in to all servers
               while [ "$LOGGED_IN" == false ]; do
-                  DB=`mysql -h "$SERVER_HOST" -P "$SERVER_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -e "SHOW tables FROM radius;" | grep radacct`
+                  DB=`mysql -h "$SERVER_HOST" -P "$SERVER_PORT" -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" -e "SHOW tables FROM $MYSQL_DATABASE;" | grep radacct`
 
                   # Check the exit status of the mysql command
                   if [ "$DB" == "radacct" ]; then
@@ -130,8 +143,8 @@ spec:
                   name: {{ tpl (include "common.secrets.name" (dict "existingSecret" .Values.auth.existingSecretPerPassword.databasePassword "context" $)) $ }}
                   key: {{ include "common.secrets.key" (dict "existingSecret" .Values.auth.existingSecretPerPassword "key" "databasePassword") }}
                 {{- else }}
-                  name: {{ include "freeradius.databaseSecretName" . }}
-                  key: {{ include "freeradius.databaseSecretKey" . }}
+                  name: {{ include "mariadb.secretName" . }}
+                  key: mariadb-password
                 {{- end }}
             {{- if .Values.extraEnvVars }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraEnvVars "context" $) | nindent 12 }}

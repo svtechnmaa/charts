@@ -592,9 +592,9 @@ mariadb:
   enabled: false
   replicaCount: 3
   auth:
-    username: radius
-    password: "juniper@123"
-    database: radius
+    username: ""
+    password: ""
+    database: ""
     existingSecret: ""
   architecture: standalone
 ## External Database configuration
@@ -608,11 +608,11 @@ mariadb:
 ## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
 ##
 externalDatabase:
-  host: "mariadb"
+  host: ""
   port: 3306
-  user: radius
-  database: radius
-  password: "juniper@123"
+  user: ""
+  database: ""
+  password: ""
   existingSecret: ""
   existingSecretPasswordKey: ""
 
