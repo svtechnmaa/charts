@@ -26,13 +26,20 @@ spec:
             - name: SERVER
               value: {{ include "generate_external_mariadb_string" (dict "server" .Values.maxscaleConfig.server) }}
             {{- end }}
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: wait-for-mariadb-secret
+                  key: mysql_user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wait-for-mariadb-secret
+                  key: mysql_password
           command:
             - /bin/bash
             - -c
             - |
-              MYSQL_USER="grafana"
-              MYSQL_PASSWORD="juniper@123"
-
               # Split MySQL servers into an array
               IFS=',' read -ra SERVERS <<< "$SERVER"
 
@@ -41,7 +48,8 @@ spec:
 
               # Continue looping until successfully logged in to all servers
               while [ "$LOGGED_IN" == false ]; do
-
+                  echo $MYSQL_USER
+                  echo $MYSQL_PASSWORD
                   # Loop through each MySQL server
                   for SERVER in "${SERVERS[@]}"; do
                       # Extract server details
