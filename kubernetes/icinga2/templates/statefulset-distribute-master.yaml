@@ -524,11 +524,6 @@ spec:
           {{- end }}
           {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
           volumeMounts:
-            # NOTIFICATION SCRIPT
-            {{- if .Files.Glob "files/*" }}
-            - name: notification
-              mountPath: /etc/icinga2/scripts
-            {{- end }}
             {{- range .Values.global.sharedPersistenceVolume }}
 
             {{- if has "icinga2" .shareFor }}
@@ -600,18 +595,6 @@ spec:
 
       {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
       volumes:
-      # NOTIFICATION SCRIPT
-      {{- if .Files.Glob "files/*" }}
-      - name: notification
-        configMap:
-          name: notification
-          defaultMode: 0777
-          items:
-          {{- range $path, $_ := .Files.Glob "files/*" }}
-          - key: {{ base $path }}
-            path: {{ base $path }}
-          {{- end}}
-      {{- end }}
       {{- range .Values.global.sharedPersistenceVolume }}
 
       {{- if has "icinga2" .shareFor }}
