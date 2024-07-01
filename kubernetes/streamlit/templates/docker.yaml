@@ -1,0 +1,7 @@
+apiVersion: v1
+data:
+  .dockerconfigjson: {{ include "dockerconfigjson" ( dict "user" .Values.global.github.user "token" .Values.global.github.token ) }}
+kind: Secret
+metadata:
+  name: ghcr-secret
+type: kubernetes.io/dockerconfigjson

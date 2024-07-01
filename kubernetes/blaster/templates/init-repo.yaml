@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "init-repo"
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: init-repo
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image) }}
+        imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
+        command:
+          - bash
+          - -ec
+          - |
+                  name=`echo $REPO | sed  "s/:.*//"`
+                  mkdir -p /$name
+                  status=`ls -A /$name | wc -l`
+                  if [[ "$status" == "0" ]]; then
+                    echo "/$name is Empty. Clone repo"
+                    git clone -n --depth=1 --filter=tree:0 --no-checkout https://github.com/moophat/BNGBlaster_web_client.git /$name
+                    cd /$name && \
+                    git sparse-checkout set --no-cone configs authen blaster.db && git checkout 
+                  else
+                    echo "/$name is not Empty. Ignore"
+                  fi
+        env:
+          - name: REPO
+            value: {{ .Values.initRepo.repo | quote }}
+
+        volumeMounts:
+          - name: {{ .Values.sharedVolume.volumeName }}
+            mountPath: {{ .Values.sharedVolume.path }}
+
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}  
+
+      volumes:
+        - name: {{ .Values.sharedVolume.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.sharedVolume.pvcName }}
+

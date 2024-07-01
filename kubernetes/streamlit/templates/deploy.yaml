@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: streamlit
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: streamlit
+  strategy: 
+    type: {{ .Values.updateStrategy }}
+    {{- if (eq "Recreate" .Values.updateStrategy) }}
+    rollingUpdate: null
+    {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: streamlit
+    spec:
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+      {{- end }}
+      
+      initContainers:
+      - name: wait-for-init-repo
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.init.image) }}
+        imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
+        command:
+          - /bin/sh
+          - -ec
+          - |
+            until [ `ls -A {{ .Values.sharedVolume.path }} | grep "completed" | wc -l` != 0 ];
+            do
+              echo "Waiting for Init Repo...";
+              sleep 2;
+            done  
+        volumeMounts:
+          - name: {{ .Values.sharedVolume.volumeName }}
+            mountPath: {{ .Values.sharedVolume.path }}
+      containers:
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        {{- if .Values.securityContext.enabled }}
+        securityContext:
+          runAsUser: {{ .Values.securityContext.runAsUser }}
+        {{- end }}
+        name: streamlit
+        env:
+        - name: GIT_TOKEN
+          value: {{ .Values.global.github.token }}
+        - name: USER_NAME
+          value: {{ .Values.global.github.user }}
+        {{- if .Values.sharedVolume.enabled }}
+        - name: REPO
+          value: {{ .Values.sharedVolume.path }}
+        - name: DB_DIR
+          value: {{ .Values.sharedVolume.path }}{{ .Values.streamlitConfig.db_dir }}
+        {{- end }}
+        ports:
+          - name: streamlit
+            containerPort: 8501
+        command:
+        - bash
+        - -ec
+        - |
+          chmod +x /root/git_config.sh
+          /root/git_config.sh $USER_NAME $GIT_TOKEN
+          cd $REPO && git stash && git pull
+          /root/entrypoint.sh
+        {{- if .Values.sharedVolume.enabled }}
+        volumeMounts:
+        - name: {{ .Values.sharedVolume.volumeName }}
+          mountPath: {{ .Values.sharedVolume.path }}
+        {{- end }}
+      imagePullSecrets:
+      - name: ghcr-secret
+      {{- if .Values.sharedVolume.enabled }}
+      volumes:
+      - name: {{ .Values.sharedVolume.volumeName }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.sharedVolume.pvcName }}
+      {{- end }}

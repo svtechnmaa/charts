@@ -1,0 +1,15 @@
+apiVersion: v2
+name: streamlit
+description: A Helm chart for Streamlit app
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: x.x.x
+  - name: syncthing
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: x.x.x
+    condition: global.syncthing.enabled
+
+version: 0.1.0
+appVersion: "v1.0.0"

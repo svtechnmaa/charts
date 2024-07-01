@@ -1,0 +1,16 @@
+{{- $namespace := .Release.Namespace }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+  name: {{ .Values.sharedVolume.pvcName }}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: {{ $namespace }}-{{ .Values.sharedVolume.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.sharedVolume.storageSize }}
+
