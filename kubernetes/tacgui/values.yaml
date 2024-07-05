@@ -1,4 +1,5 @@
 global:
+  imageRegistry: ghcr.io/moophat
   basePath: /opt/shared
 
 databaseConfig:
@@ -8,3 +9,8 @@ databaseConfig:
   password: juniper@123
   databaseName: tgui
   logDatabaseName: tgui_log
+
+image:
+  repository: svtechnmaa/svtech_tacacsgui
+  tag: v1.0.0
+  pullPolicy: IfNotPresent

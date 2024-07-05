@@ -86,9 +86,13 @@ spec:
       #  hostNetwork: true
       #      nodeSelector:
       #        functiontype: tacacsgui
+      imagePullSecrets:
+      - name: ghcr-pull-secret
       containers:
       - name: tacacsgui
-        image: hoanganht1k27/tacacsgui:1.4
+        #image: hoanganht1k27/tacacsgui:1.4
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         # args:
         ports:
         - containerPort: 49
@@ -106,14 +110,14 @@ spec:
         - mountPath: /opt/tgui_data/default_vars.sh
           subPath: default_vars.sh
           name: default-vars
-        - mountPath: /opt/tacacsgui/tac_plus.cfg
-          subPath: tac_plus.cfg
-          name: tacgui-config
-        - mountPath: /opt/tacacsgui/tac_plus.cfg_test
-          subPath: tac_plus.cfg_test
-          name: tacgui-config
-        - mountPath: /opt/tgui_data/backups
-          name: tacgui-backups
+        #- mountPath: /opt/tacacsgui/tac_plus.cfg
+        #  subPath: tac_plus.cfg
+        #  name: tacgui-config
+        #- mountPath: /opt/tacacsgui/tac_plus.cfg_test
+        #  subPath: tac_plus.cfg_test
+        #  name: tacgui-config
+        #- mountPath: /opt/tgui_data/backups
+        #  name: tacgui-backups
         # livenessProbe:
         #   exec:
         #     command:
@@ -140,4 +144,4 @@ spec:
             claimName: tacgui-config-pvc
         - name: tacgui-backups
           persistentVolumeClaim:
-            claimeName: tacgui-backups-pvc
+            claimName: tacgui-backups-pvc
