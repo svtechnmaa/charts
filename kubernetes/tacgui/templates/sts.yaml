@@ -88,6 +88,21 @@ spec:
       #        functiontype: tacacsgui
       imagePullSecrets:
       - name: ghcr-pull-secret
+      {{- if .Values.init }}
+      initContainers:
+        - name: wait-for-mariadb
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              {{- if .Values.databaseConfig.host }}
+              until nc -zvw5 {{ .Values.databaseConfig.host }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+              {{- else }}
+              until nc -zvw5 mariadb 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+              {{- end }}
+      {{- end }}
       containers:
       - name: tacacsgui
         #image: hoanganht1k27/tacacsgui:1.4

@@ -2,6 +2,13 @@ global:
   imageRegistry: ghcr.io/moophat
   basePath: /opt/shared
 
+init:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: "1.33"
+    pullPolicy: IfNotPresent
+
 databaseConfig:
   host: mariadb
   port: 3306
