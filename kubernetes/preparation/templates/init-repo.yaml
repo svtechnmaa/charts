@@ -29,6 +29,12 @@ spec:
                   fi
                   mkdir -p /opt/$name
                   status=`ls -A /opt/$name | grep -v 'lost+found' | grep -v '.stfolder' | grep -v 'addition_toolkit' | wc -l`
+                  
+                  if [[ "$status" == "1" ]]; then
+                      cd /opt/$name
+                      rm -rf .git
+                  fi
+
                   if [[ "$status" == "0" ]]; then
                       echo "/opt/$name is Empty. Clone repo"
                       cd /opt/$name && \

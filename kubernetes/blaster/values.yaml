@@ -1,0 +1,116 @@
+global:
+  github:
+    user: ""
+    token: ""  
+  basePath: /opt/shared/
+  syncthing:
+    enabled: true
+
+syncthing:
+  replicaCount: 3
+  env:
+    LIST_FOLDER: "syncthing_config, blaster_config"
+
+replicaCount: 2
+revisionHistoryLimit: 0
+
+initRepo:
+  image:
+    registry: docker.io
+    repository: svtechnmaa/svtech_debuger
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+
+  repo: "BNGBlaster_web_client:latest"
+
+init:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: "1.33"
+    pullPolicy: IfNotPresent
+
+
+image:
+  repository: ghcr.io/moophat/moophat/bngblaster_web_client
+  tag: "v1.21"
+  pullPolicy: IfNotPresent
+
+commonAnnotations:
+  helm.sh/hook-weight: "0"
+commonLabels: {}
+
+updateStrategy: RollingUpdate
+podManagementPolicy: OrderedReady
+podAffinityPreset: ""
+podAntiAffinityPreset: soft
+nodeAffinityPreset:
+  ## Node affinity type
+  ### Allowed values: soft, hard
+  type: ""
+  ### Node label key to match
+  ### E.g.
+  ### key: "kubernetes.io/e2e-az-name"
+  ###
+  key: ""
+  ### Node label values to match
+  ### E.g.
+  ### values:
+  ###   - e2e-az1
+  ###   - e2e-az2
+  ###
+  values: []
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+sharedVolume:
+  volumeName: "blaster-data"
+  path: "/BNGBlaster_web_client"
+  pvcName: "blaster-data-pvc"
+  storageSize: 2Gi
+  accessModes: ReadWriteOnce
+  storageClass: blaster-repo-hostpath
+
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8505
+  ## Set the service SessionAffinity for session stickiness
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
+  sessionAffinity: ClientIP
+
+  # ## Customize the SessionAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 7200
+  
+resources: {}
+
+#livenessProbe:
+#  httpGet:
+#    path: /
+#    port: http
+#readinessProbe:
+#  httpGet:
+#    path: /
+#    port: http
+
+#autoscaling:
+#  enabled: false
+#  minReplicas: 1
+#  maxReplicas: 100
+#  targetCPUUtilizationPercentage: 80
+
+volumes: []
+
+volumeMounts: []
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
