@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: logstash-pipeline
+data:
+  pipelines.yml: |
+    - pipeline.id: svtechlab
+      pipeline.ecs_compatibility: disabled
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/jun-onlinelog.conf"
+
+    - pipeline.id: offline
+      pipeline.ecs_compatibility: disabled
+      path.config: "/etc/logstash/conf.d/offline/offline-log.conf"
+
+    - pipeline.id: dynamic_0
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_0.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_1
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_1.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_2
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_2.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_3
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_3.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_4
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_4.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_5
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_5.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_6
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_6.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_7
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_7.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_8
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_8.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_9
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_9.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_10
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_10.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_11
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_11.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_12
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_12.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_13
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_13.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_14
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_14.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_15
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_15.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_16
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_16.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_17
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_17.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_18
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_18.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_19
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_19.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_20
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_20.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_21
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_21.conf"
+      pipeline.ecs_compatibility: disabled
+    - pipeline.id: dynamic_22
+      path.config: "/etc/logstash/conf.d/svtech_lab_syslog/dynamic_pipeline_22.conf"
+      pipeline.ecs_compatibility: disabled

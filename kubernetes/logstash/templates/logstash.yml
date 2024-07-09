@@ -81,9 +81,8 @@ spec:
           - name: general-config
             mountPath: /usr/share/logstash/config/startup.options
             subPath: startup.options
-          - name: general-config
+          - name: pipeline-config
             mountPath: /usr/share/logstash/config/pipelines.yml
-            subPath: pipelines.yml
 
           # patterns and dictionary for junos device log
           - name: logstash-patterns
@@ -97,12 +96,15 @@ spec:
           # svtech-lab device management flow
           - name: svtech-lab-online
             mountPath: /etc/logstash/conf.d/svtech-lab-online/
-
+          
           # uploaded log from rundeck flow
           - name: offline-log
             mountPath: /etc/logstash/conf.d/offline/
           - name: var-log-file
             mountPath: /var/log/logstash
+
+          - name: svtech-lab-syslog
+            mountPath: /etc/logstash/conf.d/svtech_lab_syslog/
 
 
       volumes:
@@ -122,8 +124,10 @@ spec:
               path: jvm.options
             - key: startup.options
               path: startup.options
-            - key: pipelines.yml
-              path: pipelines.yml
+
+      - name: pipeline-config
+        configMap:
+          name: logstash-pipeline 
 
       # patterns and dictionary for junos device log
       - name: logstash-patterns
@@ -150,6 +154,11 @@ spec:
       - name: offline-log
         configMap:
           name: offline-log
+
+      - name: svtech-lab-syslog
+        configMap:
+          name: svtech-lab-syslog
+
       - name: var-log-file
         hostPath:
           path: /var/log/logstash
