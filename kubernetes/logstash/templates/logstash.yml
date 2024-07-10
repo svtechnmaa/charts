@@ -49,16 +49,14 @@ spec:
       containers:
         - name: logstash
           env:
+            - name: ES_HOST
+              value: https://master-es-http:9200
+            - name: ES_INDEX
+              value: dynamic-tagging
             - name: ES_USER
-              valueFrom:
-                secretKeyRef:
-                  name: es-basic-auth
-                  key: username
+              value: juniper
             - name: ES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: es-basic-auth
-                  key: password
+              value: juniper@123
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
           image: docker.elastic.co/logstash/logstash:{{.Values.global.elasticsearch.version}}
@@ -83,6 +81,7 @@ spec:
             subPath: startup.options
           - name: pipeline-config
             mountPath: /usr/share/logstash/config/pipelines.yml
+            subPath: pipelines.yml
 
           # patterns and dictionary for junos device log
           - name: logstash-patterns
@@ -156,8 +155,9 @@ spec:
           name: offline-log
 
       - name: svtech-lab-syslog
-        configMap:
-          name: svtech-lab-syslog
+        hostPath:
+          path: /opt/dynamic-tagging
+          type: DirectoryOrCreate
 
       - name: var-log-file
         hostPath:
