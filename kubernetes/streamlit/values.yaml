@@ -32,7 +32,7 @@ init:
 
 image:
   repository: ghcr.io/duchieu2k/streamlit
-  tag: "v4"
+  tag: "v5"
   pullPolicy: IfNotPresent
 
 commonAnnotations:
@@ -66,7 +66,6 @@ fullnameOverride: ""
 
 streamlitConfig:
   db_dir: "/Python-Development/streamlit_apps/database"
-  streamlit_config: "/Python-Development/streamlit_apps/conf/default_variable.yml"
 
 sharedVolume:
   enabled: true
