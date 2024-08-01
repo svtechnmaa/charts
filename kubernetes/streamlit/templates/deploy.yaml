@@ -98,7 +98,7 @@ spec:
           mountPath: {{ .Values.sharedVolume.path }}
         {{- end }}
       imagePullSecrets:
-      - name: ghcr-secret
+      - name: ghcr-pull-secret
       {{- if .Values.sharedVolume.enabled }}
       volumes:
       - name: {{ .Values.sharedVolume.volumeName }}
