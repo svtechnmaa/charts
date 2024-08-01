@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: juniper-syslog-api
+data:
+  conf.yaml: |
+    ES:
+      url: https://master-es-http:9200
+      username: elastic
+      passwd: juniper@123
+    LOG_TAGS:
+      link down:
+        operator: AND
+        events:
+        - field: junos_eventname
+          value: SNMP_TRAP_LINK_DOWN
+          junos_procsname: mib2d
+          junos_severitycode: 4
+          operation: "="
+        - field: junos_eventname
+          value: BFDD_STATE_UP_TO_DOWN
+          junos_procsname: bfdd
+          junos_severitycode: 4
+          operation: "="
+        - field: junos_eventname
+          value: BFDD_TRAP_SHOP_STATE_DOWN
+          junos_procsname: bfdd
+          junos_severitycode: 4
+          operation: "="
+      interface down:
+        operator: AND
+        events:
+        - field: junos_eventname
+          value: SNMP_TRAP_LINK_DOWN
+          junos_procsname: mib2d
+          junos_severitycode: 4
+          operation: "="
+        - field: junos_eventname
+          value: RPD_LDP_NBRDOWN
+          junos_procsname: rpd
+          junos_severitycode: 5
+          operation: "="
+        - field: junos_eventname
+          value: RPD_OSPF_NBRDOWN
+          junos_procsname: rpd
+          junos_severitycode: 5
+          operation: "="
+      OSPF down:
+        operator: AND
+        events:
+        - field: junos_eventname
+          value: RPD_OSPF_NBRDOWN
+          junos_procsname: rpd
+          junos_severitycode: 5
+          operation: "="
+      LDP down:
+        operator: OR
+        events:
+        - field: junos_eventname
+          value: RPD_LDP_NBRDOWN
+          junos_procsname: rpd
+          junos_severitycode: 5
+          operation: "="
+        - field: junos_eventname
+          value: RPD_LDP_SESSIONDOWN
+          junos_procsname: rpd
+          junos_severitycode: 5
+          operation: "="
+      BGP down:
+        operator: OR
+        events:
+        - field: junos_msg
+          value: bgp_bfd_callback
+          junos_procsname: rpd
+          junos_severitycode: 4
+          operation: "~"
+        - field: junos_eventname
+          value: BGP_NLRI_MISMATCH
+          junos_procsname: rpd
+          junos_severitycode: 4
+          operation: "="
+        - field: junos_eventname
+          value: BGP_IO_ERROR_CLOSE_SESSION
+          junos_procsname: rpd
+          junos_severitycode: 4
+          operation: "="
+    LIST_FIELDS:
+    - junos_procsname
+    - junos_msg
+    - junos_eventname
+    - junos_hostname
+    - '@timestamp'
+    - junos_severityname
+    - junos_facilityname
