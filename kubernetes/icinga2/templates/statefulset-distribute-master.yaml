@@ -372,6 +372,18 @@ spec:
             done
             EOF
 
+            # Add script to force rebalance
+            cat << 'EOF' > /usr/bin/rebalance
+            echo 'Force rebalancing...'
+            NAMESPACE=($(dig srv +search +short icinga2-headless | awk '{print $4}' | cut -d"." -f3))
+            STS_NAME=($(dig srv +search +short icinga2-satellite-headless | awk '{print $4}' | cut -d"." -f1 | sed 's/-.$//' | uniq))
+            python3 /opt/SVTECH-Junos-Automation/module_utils/ICINGA2_DISCOVERY.py --sts_name=${STS_NAME} --namespace=${NAMESPACE} --force_rebalance
+            EOF
+
+            chmod -R 775 /usr/bin/rebalance
+            chown icinga:icinga /usr/bin/rebalance
+
+
             if [ ! -e "/etc/icinga2/zones.d/master/${COMMON_NAME}.conf" ]; then
             cat << EOF > /etc/icinga2/zones.d/master/${COMMON_NAME}.conf
             object Host "${COMMON_NAME}" {
