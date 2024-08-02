@@ -51,6 +51,9 @@ spec:
         - name: config-volume
           mountPath: /juniper_syslog_api/syslog_dashboard/conf.yaml
           subPath: conf.yaml
+        env: 
+        - name: SYSLOG_ALARM_CONF_PATH
+          value: {{ .Values.env.SYSLOG_ALARM_CONF_PATH | default "/juniper_syslog_api/syslog_dashboard/conf.yaml" | quote }}
       volumes:
       - name: config-volume
         configMap:

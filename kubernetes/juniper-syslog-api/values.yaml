@@ -6,6 +6,9 @@ image:
   tag: v1.0.2
   pullPolicy: IfNotPresent
 
+env:
+  SYSLOG_ALARM_CONF_PATH: ""
+
 replicaCount: 2
 
 updateStrategy: RollingUpdate
