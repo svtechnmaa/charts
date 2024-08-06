@@ -24,3 +24,6 @@ Add new subchart into [kubernetes](/kubernetes/README.md), then merge code into 
 
 Wait for CI/CD finish its build, new subchart will be push to [artifacthub](/artifacthub/README.md) folder and then it will be public on (artifacthub.io)
 
+#### Usecase 3: Add new persistent volume to a subchart
+Follow this [document](/docs/pv.md) to add a new persistent volume to a subchart
+
