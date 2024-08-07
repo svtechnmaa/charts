@@ -94,7 +94,9 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_INSTALL_PLUGINS
-              value: briangann-datatable-panel
+              value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource
+            - name: GF_SERVER_ROOT_URL
+              value: "https://{{ .Values.global.frontendVip }}/grafana"
 
           ports:
             - name: grafana

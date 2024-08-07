@@ -4,9 +4,11 @@ metadata:
   name: {{ .Chart.Name }}-ingress
   annotations:
     nginx.ingress.kubernetes.io/affinity: "cookie"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/session-cookie-name: "bngblaster"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: '86400'
+    nginx.ingress.kubernetes.io/session-cookie-expires: '86400'
 spec:
-  ingressClassName: default
   rules:
   - http:
       paths:

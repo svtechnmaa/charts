@@ -90,8 +90,6 @@ spec:
         - bash
         - -ec
         - |
-          chmod +x /root/git_config.sh
-          /root/git_config.sh $USER_NAME $GIT_TOKEN
           cd $REPO && git stash && git pull
           /root/entrypoint.sh
         {{- if .Values.sharedVolume.enabled }}
@@ -100,7 +98,7 @@ spec:
           mountPath: {{ .Values.sharedVolume.path }}
         {{- end }}
       imagePullSecrets:
-      - name: ghcr-secret
+      - name: ghcr-pull-secret
       {{- if .Values.sharedVolume.enabled }}
       volumes:
       - name: {{ .Values.sharedVolume.volumeName }}
