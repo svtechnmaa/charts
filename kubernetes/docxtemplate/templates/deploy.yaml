@@ -4,7 +4,7 @@ metadata:
   name: {{ include "common.names.fullname" . }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: bngblaster
+    app.kubernetes.io/component: docxtemplate
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $) | nindent 4 }}
     {{- end }}
@@ -17,7 +17,7 @@ spec:
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: bngblaster
+      app.kubernetes.io/component: docxtemplate
   strategy: 
     type: {{ .Values.updateStrategy }}
     {{- if (eq "Recreate" .Values.updateStrategy) }}
@@ -27,10 +27,8 @@ spec:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: bngblaster
+        app.kubernetes.io/component: docxtemplate
     spec:
-      imagePullSecrets:
-        - name: ghcr-pull-secret
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
@@ -58,7 +56,7 @@ spec:
             - /bin/sh
             - -c
             - |
-                until [ `ls -l /BNGBlaster_web_client | grep -v "total" | wc -l` == 7 ];
+                until [ `ls -l /opt/Tender_Document_Generator | grep -v "total" | wc -l` == 3 ];
                 do
                   echo "Waiting for Init Repo...";
                   sleep 2;
@@ -74,33 +72,20 @@ spec:
         securityContext:
           runAsUser: {{ .Values.securityContext.runAsUser }}
         {{- end }}
-        name: bngblaster
+        name: docxtemplate
         ports:
-          - name: bngblaster
-            containerPort: 8505
+          - name: docxtemplate
+            containerPort: 8503
         volumeMounts:
           - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/configs
-            subPath: configs
+            mountPath: {{ .Values.sharedVolume.path }}/data
+            subPath: data
           - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/authen
-            subPath: authen
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/blaster.db
-            subPath: blaster.db
+            mountPath: {{ .Values.sharedVolume.path }}/output
+            subPath: output
           - name: {{ .Values.sharedVolume.volumeName }}
             mountPath: {{ .Values.sharedVolume.path }}/templates
             subPath: templates
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates_interfaces
-            subPath: templates_interfaces
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates_part
-            subPath: templates_part
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates_streams
-            subPath: templates_streams
-                     
       volumes:
       - name: {{ .Values.sharedVolume.volumeName }}
         persistentVolumeClaim:
