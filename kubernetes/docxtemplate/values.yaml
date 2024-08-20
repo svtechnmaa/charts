@@ -1,4 +1,5 @@
 global:
+  imageRegistry: ""
   github:
     user: ""
     token: ""  
@@ -6,19 +7,14 @@ global:
   syncthing:
     enabled: true
 
-syncthing:
-  replicaCount: 3
-  env:
-    LIST_FOLDER: "syncthing_config, docxtemplate_config"
-
 replicaCount: 2
 revisionHistoryLimit: 0
 
 initRepo:
   image:
-    registry: docker.io
+    registry: ghcr.io/moophat
     repository: svtechnmaa/svtech_debuger
-    tag: "v1.0.0"
+    tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
   repo: "Tender_Document_Generator:latest"
@@ -34,7 +30,7 @@ init:
 image:
   registry: ghcr.io/svtechnmaa
   repository: svtechnmaa/tender_document_generator
-  tag: v1.2
+  tag: v1.7
   pullPolicy: IfNotPresent
 
 commonAnnotations:

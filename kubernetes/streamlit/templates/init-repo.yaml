@@ -12,6 +12,8 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
       - name: init-repo
         image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image) }}
@@ -22,10 +24,10 @@ spec:
           - |
                   name=`echo $REPO | sed  "s/:.*//"`
                   mkdir -p $REPO_PATH
-                  status=`ls -A $REPO_PATH | wc -l`
+                  status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
                   if [[ "$status" == "0" ]]; then
                     echo "$REPO_PATH is Empty. Clone repo"
-                    git clone https://$GH_USER:$GH_TOKEN@github.com/moophat/$name.git $REPO_PATH
+                    git clone --branch Streamlit_test https://$GH_USER:$GH_TOKEN@github.com/moophat/$name.git $REPO_PATH
                     echo "true" > $REPO_PATH/completed
                   else
                     if [[ ! -f "$REPO_PATH/completed" ]]; then

@@ -11,6 +11,8 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
       - name: init-repo
         image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image) }}

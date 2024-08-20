@@ -60,16 +60,3 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
-
-
-{{/*
-Example
-{{ include "dockerconfigjson" ( dict "user" .Values.user "token" .Values.token ) }}
-*/}}
-{{- define "dockerconfigjson" -}}
-{{- $b64Token := printf "%s:%s" .user .token | b64enc -}}
-{{- $dockerConfigJson := printf "{ \"auths\": { \"https://ghcr.io\": { \"auth\": \"%s\" } } }" $b64Token | b64enc -}}
-{{- $dockerConfigJson -}}
-{{- end -}}
-
-

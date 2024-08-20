@@ -14,6 +14,8 @@ metadata:
 spec:
   replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  imagePullSecrets:
+    - name: ghcr-pull-secret
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
@@ -29,6 +31,8 @@ spec:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: docxtemplate
     spec:
+      imagePullSecrets:
+      - name: ghcr-pull-secret
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}

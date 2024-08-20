@@ -1,4 +1,5 @@
 global:
+  imageRegistry: ""
   github:
     user: ""
     token: ""  
@@ -6,19 +7,14 @@ global:
   syncthing:
     enabled: true
 
-syncthing:
-  replicaCount: 3
-  env:
-    LIST_FOLDER: "syncthing_config, blaster_config"
-
 replicaCount: 2
 revisionHistoryLimit: 0
 
 initRepo:
   image:
-    registry: docker.io
+    registry: ghcr.io/moophat
     repository: svtechnmaa/svtech_debuger
-    tag: "v1.0.0"
+    tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
   repo: "BNGBlaster_web_client:latest"
@@ -32,7 +28,8 @@ init:
 
 
 image:
-  repository: ghcr.io/svtechnmaa/svtechnmaa/bngblaster_web_client
+  registry: ghcr.io/svtechnmaa
+  repository: svtechnmaa/bngblaster_web_client
   tag: v1.4
   pullPolicy: IfNotPresent
 
