@@ -4,8 +4,6 @@ global:
     user: ""
     token: ""  
   basePath: /opt/shared/
-  syncthing:
-    enabled: true
 
 replicaCount: 2
 revisionHistoryLimit: 0
@@ -30,7 +28,7 @@ init:
 image:
   registry: ghcr.io/svtechnmaa
   repository: svtechnmaa/tender_document_generator
-  tag: v1.7
+  tag: v1.8
   pullPolicy: IfNotPresent
 
 commonAnnotations:
