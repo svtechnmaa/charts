@@ -372,17 +372,32 @@ spec:
             done
             EOF
 
+            # Add script to reload satellite
+            touch /usr/bin/reload-satellite
+            chmod -R 775 /usr/bin/reload-satellite
+            chown icinga:icinga /usr/bin/reload-satellite
+            cat << 'EOF' > /usr/bin/reload-satellite
+            echo 'Restarting satellite...'
+            SATELLITE_LIST=($(dig srv +search +short icinga2-satellite-headless |awk '{print $4}' | uniq | sed 's/.$//g'))
+            NAMESPACE=($(dig srv +search +short icinga2-headless | awk '{print $4}' | cut -d"." -f3))
+            for SATELLITE in "${SATELLITE_LIST[@]}"
+            do
+            satellite_index=$(cut -d'.' -f1 <<< $(echo $SATELLITE 2>/dev/null) | awk -F'-' '{print $NF}')
+            url="https://nms-icinga2-satellite-${satellite_index}.icinga2-satellite-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
+            curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST "$url"
+            done
+            EOF
+
             # Add script to force rebalance
+            touch /usr/bin/rebalance
+            chmod -R 775 /usr/bin/rebalance
+            chown icinga:icinga /usr/bin/rebalance
             cat << 'EOF' > /usr/bin/rebalance
             echo 'Force rebalancing...'
             NAMESPACE=($(dig srv +search +short icinga2-headless | awk '{print $4}' | cut -d"." -f3))
             STS_NAME=($(dig srv +search +short icinga2-satellite-headless | awk '{print $4}' | cut -d"." -f1 | sed 's/-.$//' | uniq))
             python3 /opt/SVTECH-Junos-Automation/module_utils/ICINGA2_DISCOVERY.py --sts_name=${STS_NAME} --namespace=${NAMESPACE} --force_rebalance
             EOF
-
-            chmod -R 775 /usr/bin/rebalance
-            chown icinga:icinga /usr/bin/rebalance
-
 
             if [ ! -e "/etc/icinga2/zones.d/master/${COMMON_NAME}.conf" ]; then
             cat << EOF > /etc/icinga2/zones.d/master/${COMMON_NAME}.conf

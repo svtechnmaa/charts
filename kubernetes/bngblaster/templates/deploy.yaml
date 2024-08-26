@@ -29,6 +29,8 @@ spec:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: bngblaster
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}

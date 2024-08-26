@@ -15,7 +15,7 @@ initRepo:
     tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
-  repo: "SVTECH-Junos-Automation:latest"
+  repo: "BNGBlaster_web_client:latest"
 
 init:
   image:
@@ -24,10 +24,11 @@ init:
     tag: "1.33"
     pullPolicy: IfNotPresent
 
+
 image:
-  registry: ghcr.io/moophat
-  repository: svtechnmaa/svtech_streamlit
-  tag: v1.0.1
+  registry: ghcr.io/svtechnmaa
+  repository: svtechnmaa/bngblaster_web_client
+  tag: v1.4
   pullPolicy: IfNotPresent
 
 commonAnnotations:
@@ -59,24 +60,20 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-streamlitConfig:
-  db_dir: "/Python-Development/streamlit_apps/database"
-
 sharedVolume:
-  enabled: true
-  volumeName: "streamlit-data"
-  path: "/data/SVTECH-Junos-Automation"
-  pvcName: "streamlit-data-pvc"
+  volumeName: "blaster-data"
+  path: "/BNGBlaster_web_client"
+  pvcName: "blaster-data-pvc"
   storageSize: 2Gi
   accessModes: ReadWriteOnce
-  storageClass: automation-repo-hostpath
+  storageClass: blaster-repo-hostpath
 
 
 securityContext: {}
 
 service:
   type: ClusterIP
-  port: 8501
+  port: 8505
   ## Set the service SessionAffinity for session stickiness
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
   sessionAffinity: ClientIP

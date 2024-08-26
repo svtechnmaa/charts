@@ -1,27 +1,21 @@
 global:
+  imageRegistry: ""
   github:
     user: ""
     token: ""  
   basePath: /opt/shared/
-  syncthing:
-    enabled: true
-
-syncthing:
-  replicaCount: 3
-  env:
-    LIST_FOLDER: "syncthing_config, blaster_config"
 
 replicaCount: 2
 revisionHistoryLimit: 0
 
 initRepo:
   image:
-    registry: docker.io
+    registry: ghcr.io/moophat
     repository: svtechnmaa/svtech_debuger
-    tag: "v1.0.0"
+    tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
-  repo: "BNGBlaster_web_client:latest"
+  repo: "Tender_Document_Generator:latest"
 
 init:
   image:
@@ -32,8 +26,9 @@ init:
 
 
 image:
-  repository: ghcr.io/moophat/moophat/bngblaster_web_client
-  tag: v1.31
+  registry: ghcr.io/svtechnmaa
+  repository: svtechnmaa/tender_document_generator
+  tag: v1.8
   pullPolicy: IfNotPresent
 
 commonAnnotations:
@@ -66,19 +61,19 @@ nameOverride: ""
 fullnameOverride: ""
 
 sharedVolume:
-  volumeName: "blaster-data"
-  path: "/BNGBlaster_web_client"
-  pvcName: "blaster-data-pvc"
+  volumeName: "docxtemplate-data"
+  path: "/opt/Tender_Document_Generator"
+  pvcName: "docxtemplate-data-pvc"
   storageSize: 2Gi
   accessModes: ReadWriteOnce
-  storageClass: blaster-repo-hostpath
+  storageClass: docxtemplate-data-hostpath
 
 
 securityContext: {}
 
 service:
   type: ClusterIP
-  port: 8505
+  port: 8503
   ## Set the service SessionAffinity for session stickiness
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
   sessionAffinity: ClientIP

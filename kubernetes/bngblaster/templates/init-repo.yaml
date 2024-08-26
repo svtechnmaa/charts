@@ -1,4 +1,3 @@
-{{- if .Values.sharedVolume.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -23,27 +22,19 @@ spec:
           - -ec
           - |
                   name=`echo $REPO | sed  "s/:.*//"`
-                  mkdir -p $REPO_PATH
-                  status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
+                  mkdir -p /$name
+                  status=`ls -A /$name | wc -l`
                   if [[ "$status" == "0" ]]; then
-                    echo "$REPO_PATH is Empty. Clone repo"
-                    git clone --branch Streamlit_test https://$GH_USER:$GH_TOKEN@github.com/moophat/$name.git $REPO_PATH
-                    echo "true" > $REPO_PATH/completed
+                    echo "/$name is Empty. Clone repo"
+                    git clone -n --depth=1 --filter=tree:0 --no-checkout https://github.com/moophat/BNGBlaster_web_client.git /$name
+                    cd /$name && \
+                    git sparse-checkout set --no-cone configs authen templates templates_streams templates_part templates_interfaces blaster.db && git checkout 
                   else
-                    if [[ ! -f "$REPO_PATH/completed" ]]; then
-                      echo "true" > $REPO_PATH/completed
-                    fi
-                    echo "$REPO_PATH is not Empty. Ignore"
+                    echo "/$name is not Empty. Ignore"
                   fi
         env:
-          - name: GH_TOKEN
-            value: {{ .Values.global.github.token }}
-          - name: GH_USER
-            value: {{ .Values.global.github.user }}
           - name: REPO
             value: {{ .Values.initRepo.repo | quote }}
-          - name: REPO_PATH
-            value: {{ .Values.sharedVolume.path }}
 
         volumeMounts:
           - name: {{ .Values.sharedVolume.volumeName }}
@@ -62,4 +53,4 @@ spec:
         - name: {{ .Values.sharedVolume.volumeName }}
           persistentVolumeClaim:
             claimName: {{ .Values.sharedVolume.pvcName }}
-{{- end }}
+

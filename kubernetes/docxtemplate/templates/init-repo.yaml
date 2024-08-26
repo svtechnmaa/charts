@@ -11,6 +11,8 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
       - name: init-repo
         image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image) }}
@@ -20,15 +22,15 @@ spec:
           - -ec
           - |
                   name=`echo $REPO | sed  "s/:.*//"`
-                  mkdir -p /$name
-                  status=`ls -A /$name | wc -l`
+                  mkdir -p /opt/$name
+                  status=`ls -A /opt/$name | wc -l`
                   if [[ "$status" == "0" ]]; then
-                    echo "/$name is Empty. Clone repo"
-                    git clone -n --depth=1 --filter=tree:0 --no-checkout https://github.com/moophat/BNGBlaster_web_client.git /$name
-                    cd /$name && \
-                    git sparse-checkout set --no-cone configs authen templates templates_streams templates_part templates_interfaces blaster.db && git checkout 
+                    echo "/opt/$name is Empty. Clone repo"
+                    git clone -n --depth=1 --filter=tree:0 -b update_db --no-checkout https://github.com/moophat/Tender_Document_Generator.git /opt/$name
+                    cd /opt/$name && \
+                    git sparse-checkout set --no-cone output data templates && git checkout 
                   else
-                    echo "/$name is not Empty. Ignore"
+                    echo "/opt/$name is not Empty. Ignore"
                   fi
         env:
           - name: REPO
