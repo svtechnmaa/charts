@@ -15,7 +15,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
       - name: init-repo
-        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image) }}
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}
         imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
         command:
           - bash
