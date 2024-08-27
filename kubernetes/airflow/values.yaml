@@ -19,6 +19,27 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+global:
+  sharedVolume:
+    enabled: true
+
+  sharedPersistenceVolume:
+    - volumeName: automation-repo-volume
+      pvcName: automation-repo-pvc
+      storageSize: 2Gi
+      path: /opt/SVTECH-Junos-Automation
+      accessModes: ReadWriteOnce #ReadWriteMany
+      shareFor:
+        - preparation
+        - rundeck
+        - rundeck-option-provider
+        - debuger
+        - csv-view
+        - init-data-grafana
+        - icinga2
+        - icinga2-satellite
+        - airflow
+      storageClass: automation-repo-hostpath
 # Provide a name to substitute for the full names of resources
 fullnameOverride: ""
 
