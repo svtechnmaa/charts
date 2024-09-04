@@ -10,7 +10,6 @@ revisionHistoryLimit: 0
 
 initRepo:
   image:
-    registry: ghcr.io/moophat
     repository: svtechnmaa/svtech_debuger
     tag: "v1.0.3"
     pullPolicy: IfNotPresent
@@ -25,9 +24,8 @@ init:
     pullPolicy: IfNotPresent
 
 image:
-  registry: ghcr.io/moophat
   repository: svtechnmaa/svtech_streamlit
-  tag: v1.0.1
+  tag: v1.0.2
   pullPolicy: IfNotPresent
 
 commonAnnotations:
