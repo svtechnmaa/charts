@@ -547,7 +547,16 @@ workers:
   # container finishes so Airflow can continue the worker shutdown process!
   extraContainers: []
   # Add additional init containers into workers.
-  extraInitContainers: []
+  # extraInitContainers: []
+  extraInitContainers:
+    - name: fix-volume-logs-permissions
+      image: busybox
+      command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /opt/airflow/logs/
+          name: logs
 
   # Mount additional volumes into worker.
   extraVolumes: []
@@ -1082,7 +1091,16 @@ triggerer:
   # Launch additional containers into triggerer.
   extraContainers: []
   # Add additional init containers into triggerers.
-  extraInitContainers: []
+  # extraInitContainers: []
+  extraInitContainers:
+    - name: fix-volume-logs-permissions
+      image: busybox
+      command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
+      securityContext:
+        runAsUser: 0
+      volumeMounts:
+        - mountPath: /opt/airflow/logs/
+          name: logs
 
   # Mount additional volumes into triggerer.
   extraVolumes: []
