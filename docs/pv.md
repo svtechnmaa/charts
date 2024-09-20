@@ -2,7 +2,7 @@
 
 There are 3 steps to add a new persistent volume to a subchart:
 
-- <b>Step 1: </b>Declare new block in global.sharedPersistenceVolume variable in values.yaml of a stackchart (example [values.yaml](https://github.com/moophat/SVTECH_Projects_Container/blob/master/kubernetes/nmaa/values.yaml) file of NMAA stack)
+- <b>Step 1: </b>Declare new block in global.sharedPersistenceVolume variable in values.yaml of a stackchart (example [values.yaml](https://github.com/svtechnmaa/stacked_charts/blob/master/kubernetes/nmaa/values.yaml) file of NMAA stack)
 
 - <b>Step 2: </b>Add helm template for the persistent volume in chart [host-path-pv](https://github.com/svtechnmaa/charts/tree/main/kubernetes/host-path-pv/templates)
 
