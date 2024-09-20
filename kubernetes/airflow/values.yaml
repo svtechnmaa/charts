@@ -67,7 +67,7 @@ airflowHome: /opt/airflow
 airflowDag: /opt/SVTECH-Junos-Automation/airflow
 
 # Default airflow repository -- overrides all the specific images below
-defaultAirflowRepository: svtechnmaa/svtech_airflow
+defaultAirflowRepository: ghcr.io/svtechnmaa/svtech_airflow
 
 # Default airflow tag to deploy
 defaultAirflowTag: "v1.0.0"
@@ -1453,7 +1453,8 @@ redis:
 # Auth secret for a private registry
 # This is used if pulling airflow images from a private registry
 registry:
-  secretName: ~
+  # secretName: ~
+  secretName: ghcr-pull-secret
 
   # Example:
   # connection:
