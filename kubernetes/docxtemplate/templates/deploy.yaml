@@ -14,8 +14,6 @@ metadata:
 spec:
   replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
-  imagePullSecrets:
-    - name: ghcr-pull-secret
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}

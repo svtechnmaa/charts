@@ -58,7 +58,7 @@ spec:
             - /bin/sh
             - -c
             - |
-                until [ `ls -l /BNGBlaster_web_client | grep -v "total" | wc -l` == 7 ];
+                until [ `ls -l /BNGBlaster_web_client | grep -v "total" | wc -l` == 8 ];
                 do
                   echo "Waiting for Init Repo...";
                   sleep 2;
@@ -100,6 +100,9 @@ spec:
           - name: {{ .Values.sharedVolume.volumeName }}
             mountPath: {{ .Values.sharedVolume.path }}/templates_streams
             subPath: templates_streams
+          - name: {{ .Values.sharedVolume.volumeName }}
+            mountPath: {{ .Values.sharedVolume.path }}/auth.log
+            subPath: auth.log
                      
       volumes:
       - name: {{ .Values.sharedVolume.volumeName }}
