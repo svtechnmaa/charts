@@ -10,7 +10,8 @@ image:
   tag: "v1.0.0"
   pullPolicy: IfNotPresent
   # debug: true
-
+env:
+  PHP_MEMORY_LIMIT: 256M
 clusterDomain: cluster.local
 commonAnnotations:
   helm.sh/hook-weight: "0"

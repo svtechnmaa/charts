@@ -58,6 +58,7 @@ spec:
             - bash
             - -ec
             - |
+                sed -i "s/memory_limit = 128M/memory_limit = ${PHP_MEMORY_LIMIT}/" /usr/local/etc/php/php.ini
                 mkdir -p /opt/gitlist/backup_config
                 check_exists=`ls -la /opt/gitlist/backup_config | grep .git | wc -l`
 
@@ -108,6 +109,8 @@ spec:
                   fieldPath: status.podIP
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+            - name: PHP_MEMORY_LIMIT
+              value: {{ .Values.env.PHP_MEMORY_LIMIT | quote }}
 
           ports:
             - name: gitlist
