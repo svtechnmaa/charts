@@ -18,7 +18,7 @@
 - Clone this Container repo to /opt:
     ```
     cd /opt
-    git clone https://github.com/moophat/SVTECH_Projects_Container.git
+    git clone https://github.com/svtechnmaa/stacked_charts.git
 
 - Edit values.yaml at /opt/SVTECH_Projects_Container/kubernetes/nms_project/charts/csv-view
     - You can change value at values.yaml file to apply your case:
