@@ -133,6 +133,9 @@ spec:
                               git config --global user.name rundeck && \
                               git config --global user.email rundeck@localhost'
                 cd /opt/SVTECH-Junos-Automation/Ansible-Development
+
+                cp /opt/SVTECH-Junos-Automation/Python-Development/streamlit_apps/conf/yamllint_conf/table.yaml /usr/local/lib/python3.10/dist-packages/yamllint/conf/table.yaml
+                
                 if [ -d "/opt/SVTECH-Junos-Automation/Ansible-Development/collections" ]; then
                   echo "Collections already installed"
                 else
