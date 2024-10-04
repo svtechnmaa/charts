@@ -11,10 +11,8 @@ commonAnnotations:
 
 initRepo:
   image:
-    registry: docker.io
     repository: svtechnmaa/svtech_debuger
-    tag: "v1.0.0"
-
+    tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
   repoList: "SVTECH-Junos-Automation:latest"
