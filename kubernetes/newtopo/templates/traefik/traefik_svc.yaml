@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - port: {{ .Values.traefik.service.port }}
+  selector:
+    app: traefik
+  type: {{ .Values.traefik.service.type }}
+  loadBalancerIP: {{ .Values.traefik.service.loadBalancerIP }}

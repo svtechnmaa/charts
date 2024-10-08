@@ -1,0 +1,13 @@
+{{- if .Values.mysql.enable }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: {{ .Values.namespace }}
+spec:
+  ports:
+  - port: {{ .Values.mysql.service.port }}
+  selector:
+    app: mysql
+
+{{- end }}

@@ -1,0 +1,14 @@
+{{- if .Values.mysql.enable }}
+apiVersion: v1
+data:
+  MYSQL_ALLOW_EMPTY_PASSWORD: "{{ .Values.mysql.configmap.data.MYSQL_ALLOW_EMPTY_PASSWORD }}"
+  MYSQL_DATABASE: "{{ .Values.mysql.configmap.data.MYSQL_DATABASE }}"
+  MYSQL_PASSWORD: "{{ .Values.mysql.configmap.data.MYSQL_PASSWORD }}"
+  MYSQL_ROOT_HOST: "{{ .Values.mysql.configmap.data.MYSQL_ROOT_HOST }}"
+  MYSQL_ROOT_PASSWORD: "{{ .Values.mysql.configmap.data.MYSQL_ROOT_PASSWORD }}"
+  MYSQL_USER: "{{ .Values.mysql.configmap.data.MYSQL_USER }}"
+kind: ConfigMap
+metadata:
+  name: db
+  namespace: {{ .Values.namespace }}
+{{- end }}

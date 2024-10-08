@@ -1,0 +1,47 @@
+{{- if .Values.mysql.enable }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: db
+            optional: false
+        image: {{ template "mysql_image" . }}
+        imagePullPolicy: {{ .Values.mysql.deployment.image.pullPolicy }}
+        name: mysql
+        ports:
+        - containerPort: 3306
+          name: mysql
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-persistent-storage
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /opt/new-frontend/mysql_data
+          type: DirectoryOrCreate
+        name: mysql-persistent-storage
+{{- end }}

@@ -1,0 +1,9 @@
+apiVersion: v1
+data:
+  BACKEND_URL: "{{ .Values.topology_frontend.configmap.data.BACKEND_URL }}"
+  NODE_ENV: "{{ .Values.topology_frontend.configmap.data.NODE_ENV }}"
+  PORT: "{{ .Values.topology_frontend.configmap.data.PORT }}"
+kind: ConfigMap
+metadata:
+  name: topology-frontend-conf
+  namespace: {{ .Values.namespace }}

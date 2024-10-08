@@ -1,0 +1,71 @@
+go_backend:
+  deployment:
+    image:
+      repository: ghcr.io/moophat/topology-app
+      pullPolicy: Always
+      tag: lastest
+  service:
+    port: "80"
+  configmap:
+    data:
+      BACKEND_URL: http://go-backend
+      DATABASE_URL: backend:backend@tcp(mariadb.nms.svc.cluster.local:3306)/svtech?parseTime=true
+      FRONTEND_URL: http://topology-frontend
+      PORT: "4000"
+      REDIS_ADDR: redis:6379
+      REDIS_ADDRESS: redis:6379
+      UPLOAD_DIR: /data
+namespace: nms
+topology_frontend:
+  deployment:
+    image:
+      repository: ghcr.io/moophat/topology-web
+      pullPolicy: Always
+      tag: lastest
+  service:
+    port: "80"
+    targetPort: "3000"
+  configmap:
+    data:
+      BACKEND_URL: http://go-backend:80
+      NODE_ENV: production
+      PORT: "3000"
+
+traefik:
+  deployment:
+    image:
+      repository: traefik
+      pullPolicy: Always
+      tag: v3.1.2
+  service:
+    port: "80"
+    type: LoadBalancer
+    loadBalancerIP: "10.98.250.244"
+
+redis:
+  deployment:
+    image:
+      repository: redis
+      pullPolicy: Always
+      tag: 7-alpine
+  service:
+    port: "6379"
+
+
+mysql:
+  enable: false
+  deployment:
+    image:
+      repository: mysql
+      pullPolicy: Always
+      tag: "8"
+  service:
+    port: "3306"
+  configmap:
+    data:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: svtech
+      MYSQL_PASSWORD: juniper123
+      MYSQL_ROOT_HOST: '%'
+      MYSQL_ROOT_PASSWORD: juniper123
+      MYSQL_USER: juniper

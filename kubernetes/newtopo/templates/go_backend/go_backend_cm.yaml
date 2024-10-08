@@ -1,0 +1,14 @@
+apiVersion: v1
+data:
+  BACKEND_URL: "{{ .Values.go_backend.configmap.data.BACKEND_URL }}"
+  DATABASE_URL: "{{ .Values.go_backend.configmap.data.DATABASE_URL }}"
+  FRONTEND_URL: "{{ .Values.go_backend.configmap.data.FRONTEND_URL }}"
+  PORT: "{{ .Values.go_backend.configmap.data.PORT }}"
+  REDIS_ADDR: "{{ .Values.go_backend.configmap.data.REDIS_ADDR }}"
+  REDIS_ADDRESS: "{{ .Values.go_backend.configmap.data.REDIS_ADDRESS }}"
+  UPLOAD_DIR: "{{ .Values.go_backend.configmap.data.UPLOAD_DIR }}"
+
+kind: ConfigMap
+metadata:
+  name: go-backend-conf
+  namespace: {{ .Values.namespace }}

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: topology-frontend
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: topology-frontend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: topology-frontend
+    spec:
+      # nodeSelector:
+      #   kubernetes.io/hostname: topology-01
+      volumes:
+      - hostPath:
+          path: /opt/new-frontend/SVTECH_Topology_Visualizer/web/
+          type: DirectoryOrCreate
+        name: source-code-front-volume
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: topology-frontend-conf
+            optional: false
+        image: {{ template "topology_frontend_image" . }}
+        imagePullPolicy: {{ .Values.topology_frontend.deployment.image.pullPolicy }}
+        name: topology-frontend
+        command: ["npm", "run" ,"start"]
+        #command: ["sleep","9000000"]
+        ports:
+        - containerPort: 3000
+          protocol: TCP
+        resources: {}
+        volumeMounts:
+        - mountPath: /app_1
+          name: source-code-front-volume
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: ghcrio
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30

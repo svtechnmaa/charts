@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-backend
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: go-backend
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: go-backend
+    spec:
+      initContainers:
+      - command:
+        - sh
+        - -c
+        - ../server -seed /opt/seed.yaml
+        envFrom:
+        - configMapRef:
+            name: go-backend-conf
+            optional: false
+        image: ghcr.io/moophat/topology-app:lastest
+        imagePullPolicy: {{ .Values.go_backend.deployment.image.pullPolicy }}
+        name: init-seed
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/seed.yaml
+          name: seed-config
+          subPath: seed.yaml
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: go-backend-conf
+            optional: false
+        image: {{ template "go_backend_image" . }}
+        imagePullPolicy: {{ .Values.go_backend.deployment.image.pullPolicy }}
+        name: app
+        ports:
+        - containerPort: 4000
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /data1
+          name: go-backend-persistent-storage
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: ghcrio
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: seed-config
+        name: seed-config
+      - hostPath:
+          path: /opt/upload_data
+          type: DirectoryOrCreate
+        name: go-backend-persistent-storage
+

@@ -1,0 +1,327 @@
+apiVersion: v1
+data:
+  seed.yaml: |-
+    Group:
+      - ID: 1
+        Name: Admin
+        Type: B
+      - ID: 2
+        Name: User
+        Type: B
+      - ID: 3
+        Name: Readonly
+        Type: B
+      - ID: 4
+        Name: Datasource manager
+        Type: C
+    User:
+      - ID: 1
+        Name: Admin
+        Email: 'admin@svtech.com.vn'
+        Password: 'P@ssw0rd1'
+        Groups:
+          - ID: 1
+      - ID: 2
+        Name: User
+        Email: user@svtech.com.vn
+        Password: P@ssw0rd2
+        Groups:
+          - ID: 2
+          - ID: 3
+      - ID: 3
+        Name: Readonly
+        Email: readonly@svtech.com.vn
+        Password: P@ssw0rd3
+        Groups:
+          - ID: 3
+      - ID: 4
+        Name: Datasource manager
+        Email: dsmanager@svtech.com.vn
+        Password: P@ssw0rd4
+        Groups:
+          - ID: 4
+    ResourceType:
+      - ID: 1
+        Name: User
+      - ID: 2
+        Name: Group
+      - ID: 3
+        Name: Permission
+      - ID: 4
+        Name: MenuItem
+      - ID: 5
+        Name: AppMenuItem
+      - ID: 6
+        Name: Dashboard
+      - ID: 7
+        Name: AppDashboard
+      - ID: 8
+        Name: Datasource
+      - ID: 9
+        Name: Query
+      - ID: 10
+        Name: Graph
+      - ID: 11
+        Name: State
+      - ID: 12
+        Name: Mapping
+      - ID: 13
+        Name: Template
+      - ID: 14
+        Name: Icon
+      - ID: 15
+        Name: AppGraph
+    Permission:
+      - ID: 1
+        GroupID: 1
+        ResourceTypeID: 1
+        Read: true
+        Write: true
+      - ID: 2
+        GroupID: 1
+        ResourceTypeID: 2
+        Read: true
+        Write: true
+      - ID: 3
+        GroupID: 1
+        ResourceTypeID: 3
+        Read: true
+        Write: true
+      - ID: 4
+        GroupID: 1
+        ResourceTypeID: 4
+        Read: true
+        Write: true
+      - ID: 5
+        GroupID: 1
+        ResourceTypeID: 5
+        Read: true
+        Write: true
+      - ID: 6
+        GroupID: 1
+        ResourceTypeID: 6
+        Read: true
+        Write: true
+      - ID: 7
+        GroupID: 1
+        ResourceTypeID: 7
+        Read: true
+        Write: true
+      - ID: 8
+        GroupID: 1
+        ResourceTypeID: 8
+        Read: true
+        Write: true
+      - ID: 9
+        GroupID: 1
+        ResourceTypeID: 9
+        Read: true
+        Write: true
+      - ID: 10
+        GroupID: 1
+        ResourceTypeID: 10
+        Read: true
+        Write: true
+      - ID: 11
+        GroupID: 1
+        ResourceTypeID: 11
+        Read: true
+        Write: true
+      - ID: 12
+        GroupID: 1
+        ResourceTypeID: 12
+        Read: true
+        Write: true
+      - ID: 13
+        GroupID: 1
+        ResourceTypeID: 13
+        Read: true
+        Write: true
+      - ID: 14
+        GroupID: 1
+        ResourceTypeID: 14
+        Read: true
+        Write: true
+      - ID: 15
+        GroupID: 2
+        ResourceTypeID: 1
+        Read: false
+        Write: false
+      - ID: 16
+        GroupID: 2
+        ResourceTypeID: 2
+        Read: false
+        Write: false
+      - ID: 17
+        GroupID: 2
+        ResourceTypeID: 3
+        Read: false
+        Write: false
+      - ID: 18
+        GroupID: 2
+        ResourceTypeID: 4
+        Read: false
+        Write: false
+      - ID: 19
+        GroupID: 2
+        ResourceTypeID: 5
+        Read: true
+        Write: false
+      - ID: 20
+        GroupID: 2
+        ResourceTypeID: 6
+        Read: false
+        Write: false
+      - ID: 21
+        GroupID: 2
+        ResourceTypeID: 7
+        Read: true
+        Write: true
+      - ID: 22
+        GroupID: 2
+        ResourceTypeID: 8
+        Read: false
+        Write: false
+      - ID: 23
+        GroupID: 2
+        ResourceTypeID: 9
+        Read: false
+        Write: false
+      - ID: 24
+        GroupID: 2
+        ResourceTypeID: 10
+        Read: true
+        Write: false
+      - ID: 25
+        GroupID: 2
+        ResourceTypeID: 11
+        Read: false
+        Write: false
+      - ID: 26
+        GroupID: 2
+        ResourceTypeID: 12
+        Read: false
+        Write: false
+      - ID: 27
+        GroupID: 2
+        ResourceTypeID: 13
+        Read: false
+        Write: false
+      - ID: 28
+        GroupID: 2
+        ResourceTypeID: 14
+        Read: false
+        Write: false
+      - ID: 29
+        GroupID: 3
+        ResourceTypeID: 1
+        Read: true
+        Write: false
+      - ID: 30
+        GroupID: 3
+        ResourceTypeID: 2
+        Read: true
+        Write: false
+      - ID: 31
+        GroupID: 3
+        ResourceTypeID: 3
+        Read: true
+        Write: false
+      - ID: 32
+        GroupID: 3
+        ResourceTypeID: 4
+        Read: true
+        Write: false
+      - ID: 33
+        GroupID: 3
+        ResourceTypeID: 5
+        Read: true
+        Write: false
+      - ID: 34
+        GroupID: 3
+        ResourceTypeID: 6
+        Read: true
+        Write: false
+      - ID: 35
+        GroupID: 3
+        ResourceTypeID: 7
+        Read: true
+        Write: false
+      - ID: 36
+        GroupID: 3
+        ResourceTypeID: 8
+        Read: true
+        Write: false
+      - ID: 37
+        GroupID: 3
+        ResourceTypeID: 9
+        Read: true
+        Write: false
+      - ID: 38
+        GroupID: 3
+        ResourceTypeID: 10
+        Read: true
+        Write: false
+      - ID: 39
+        GroupID: 3
+        ResourceTypeID: 11
+        Read: true
+        Write: false
+      - ID: 40
+        GroupID: 3
+        ResourceTypeID: 12
+        Read: true
+        Write: false
+      - ID: 41
+        GroupID: 3
+        ResourceTypeID: 13
+        Read: true
+        Write: false
+      - ID: 42
+        GroupID: 3
+        ResourceTypeID: 14
+        Read: true
+        Write: false
+      - ID: 43
+        GroupID: 1
+        ResourceTypeID: 15
+        Read: true
+        Write: true
+      - ID: 44
+        GroupID: 2
+        ResourceTypeID: 15
+        Read: true
+        Write: true
+      - ID: 45
+        GroupID: 3
+        ResourceTypeID: 15
+        Read: true
+        Write: false
+      - ID: 46
+        GroupID: 4
+        ResourceTypeID: 8
+        Read: true
+        Write: true
+      - ID: 47
+        GroupID: 4
+        ResourceTypeID: 9
+        Read: true
+        Write: true
+      - ID: 48
+        GroupID: 4
+        ResourceTypeID: 12
+        Read: true
+        Write: true
+    MenuItem:
+      - ID: 1
+        Title: Dashboard
+        Href: /app
+        Order: 0
+      - ID: 2
+        Title: Visualizer
+        Href: /app/visualizer
+        Order: 1
+kind: ConfigMap
+metadata:
+  name: seed-config
+  namespace: {{ .Values.namespace }}
