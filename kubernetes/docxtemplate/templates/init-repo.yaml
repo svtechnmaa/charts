@@ -26,9 +26,12 @@ spec:
                   status=`ls -A /opt/$name | wc -l`
                   if [[ "$status" == "0" ]]; then
                     echo "/opt/$name is Empty. Clone repo"
-                    git clone -n --depth=1 --filter=tree:0 -b update_db --no-checkout https://github.com/svtechnmaa/Tender_Document_Generator.git /opt/$name
+                    git clone -n --depth=1 --filter=tree:0 -b main --no-checkout https://github.com/svtechnmaa/Tender_Document_Generator.git /opt/$name
                     cd /opt/$name && \
-                    git sparse-checkout set --no-cone output data templates && git checkout 
+                    git sparse-checkout set --no-cone output data && git checkout 
+                    cd /opt/Tender_Document_Generator
+                    mkdir templates_inventory
+                    mkdir templates_set
                   else
                     echo "/opt/$name is not Empty. Ignore"
                   fi
