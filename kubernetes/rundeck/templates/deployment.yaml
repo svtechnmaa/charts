@@ -120,6 +120,7 @@ spec:
                     fi
                 }
                 check_empty_dir /home/rundeck/server/config /tmp/config
+                check_empty_dir /home/rundeck/etc /tmp/etc
                 git config --global --add safe.directory "*"
                 chown rundeck:rundeck /etc/icinga2/zones.d -R
                 chmod 777 /etc/icinga2/zones.d -R

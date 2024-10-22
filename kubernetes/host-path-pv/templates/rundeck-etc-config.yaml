@@ -1,0 +1,26 @@
+---
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+
+{{- range .Values.global.sharedPersistenceVolume }}
+{{- if eq .storageClass "rundeck-etc-config-hostpath" }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-rundeck-etc-config-pv"
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  storageClassName: {{ $namespace }}-rundeck-etc-config-hostpath
+  capacity:
+    # storage: 1Gi 
+    storage: {{ .storageSize }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    # path: /opt/shared/nmaa/rundeck_etc-config
+    path: {{ $basePath }}/{{ $namespace }}/rundeck-etc-config
+{{- end }}
+
+{{- end  }}
