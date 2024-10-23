@@ -11,9 +11,13 @@ kind: ClusterRole
 metadata:
   name: icinga-exec-role
 rules:
-  - apiGroups: [""]
+  - apiGroups: ["*"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: ["*"]
     resources: ["pods/exec"]
-    verbs: ["get", "list", "create"]  # Permissions needed to exec commands in pods
+    resourceNames: ["{{ .Release.Name }}-icinga2-master-0", "{{ .Release.Name }}-icinga2-master-1"]
+    verbs: ["create"]  # Permissions needed to exec commands in pods
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

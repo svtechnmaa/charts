@@ -11,9 +11,11 @@ spec:
       template:
         spec:
           serviceAccountName: icinga-sa  # Use the ServiceAccount for permissions
+          imagePullSecrets:
+            - name: ghcr-pull-secret
           containers:
             - name: icingaweb-health-check
-              image: svtechnmaa/kubectl:latest  # Minimal image with kubectl & bash
+              image: ghcr.io/svtechnmaa/svtechnmaa_kubectl:latest  # Minimal image with kubectl & bash
               command:
               - /bin/bash
               - -c
