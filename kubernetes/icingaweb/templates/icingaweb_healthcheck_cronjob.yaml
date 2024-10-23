@@ -1,0 +1,53 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: icingaweb-health-check
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "*/30 * * * *"  # Run every 30 minutes
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 100
+      template:
+        spec:
+          serviceAccountName: icinga-sa  # Use the ServiceAccount for permissions
+          containers:
+            - name: icingaweb-health-check
+              image: svtechnmaa/kubectl:latest  # Minimal image with kubectl & bash
+              command:
+              - /bin/bash
+              - -c
+              - |
+                # Curl the IcingaWeb health endpoint
+                RESPONSE=$(curl -k -H "Accept: application/json" -u icingaweb:juniper@123 https://ingress-frontend/icingaweb/health)
+                if [[ -z "$RESPONSE" ]]; then
+                  echo "IcingaWeb health check failed, exiting. Please check the connection to https://ingress-frontend/icingaweb/health"
+                  exit 1
+                fi
+
+                # Parse the response
+                ICINGA_DB_STATE=$(echo "$RESPONSE" | jq -r '.data[] | select(.name == "Icinga DB") | .state')
+                REDIS_STATE=$(echo "$RESPONSE" | jq -r '.data[] | select(.name == "Redis") | .state')
+
+                if [[ "$ICINGA_DB_STATE" -eq 0 && "$REDIS_STATE" -eq 0 ]]; then
+                  echo "IcingaWeb health check passed."
+                  exit 0
+                fi
+
+                # Check if icingadb module is unhealthy
+                if [[ "$ICINGA_DB_STATE" -ne 0 ]]; then
+                  echo "Icinga DB state is $ICINGA_DB_STATE (ne 0), restarting Icinga DB container."
+                  kubectl get pod -n {{ .Release.Namespace }} | grep icinga2-master | awk '{print $1}' | while read -r POD ; do
+                    kubectl -n {{ .Release.Namespace }} exec $POD -c icingadb -- /bin/bash -c "kill 1"
+                  done 
+                fi
+                # Check if redis module is unhealthy
+                if [[ "$REDIS_STATE" -ne 0 ]]; then
+                  echo "Redis state is $REDIS_STATE (ne 0), restarting Redis container."
+                  kubectl get pod | grep icinga2-master | awk '{print $1}' | while read -r POD ; do
+                    kubectl -n {{ .Release.Namespace }} exec $POD -c redis -- /bin/bash -c "kill 1"
+                  done
+                  # Reload icinga2-master pods to re-establish the connection to redis
+                  kubectl -n {{ .Release.Namespace }} exec $(kubectl get pod -n {{ .Release.Namespace }} | grep icinga2-master | awk 'NR==1{print $1}') -c icinga2 -- /bin/bash -c "reload"
+                fi
+          restartPolicy: OnFailure
