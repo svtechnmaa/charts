@@ -1,3 +1,4 @@
+{{- if not .Values.global.ci }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -11,9 +12,11 @@ spec:
       template:
         spec:
           serviceAccountName: icinga-sa  # Use the ServiceAccount for permissions
+          imagePullSecrets:
+            - name: ghcr-pull-secret
           containers:
             - name: icingaweb-health-check
-              image: svtechnmaa/kubectl:latest  # Minimal image with kubectl & bash
+              image: ghcr.io/svtechnmaa/svtech_kubectl:latest  # Minimal image with kubectl & bash
               command:
               - /bin/bash
               - -c
@@ -51,3 +54,4 @@ spec:
                   kubectl -n {{ .Release.Namespace }} exec $(kubectl get pod -n {{ .Release.Namespace }} | grep icinga2-master | awk 'NR==1{print $1}') -c icinga2 -- /bin/bash -c "reload"
                 fi
           restartPolicy: OnFailure
+{{- end }}
