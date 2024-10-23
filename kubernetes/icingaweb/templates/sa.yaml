@@ -1,3 +1,4 @@
+{{- if not .Values.global.ci }}
 ---
 # SA
 apiVersion: v1
@@ -31,3 +32,4 @@ subjects:
   - kind: ServiceAccount
     name: icinga-sa
     namespace: {{ .Release.Namespace }}
+{{- end }}
