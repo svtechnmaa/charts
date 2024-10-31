@@ -16,7 +16,7 @@ metadata:
   {{- end }}
 spec:
   # restartPolicy: Never
-  replicas: {{ .Values.postgresql.replicaCount }}
+  replicas:  {{ include "common.replicas" ( dict "replicaCount" .Values.postgresql.replicaCount "global" .Values.global ) }}
   podManagementPolicy: Parallel
   serviceName: {{ printf "%s-headless" (include "postgresql-ha.postgresql" .) }}
   updateStrategy: {{- toYaml .Values.postgresql.updateStrategy | nindent 4 }}

@@ -37,7 +37,7 @@ spec:
                   fi
         env:
           - name: GH_TOKEN
-            value: {{ .Values.global.github.token }}
+            value: {{ .Values.global.github.fg_token }}
           - name: GH_USER
             value: {{ .Values.global.github.user }}
           - name: REPO
