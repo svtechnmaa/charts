@@ -21,12 +21,12 @@
     cd /opt
     git clone https://github.com/svtechnmaa/stacked_charts.git
 
-- Edit values.yaml at /opt/SVTECH_Projects_Container/kubernetes/nms_project/charts/preparation
+- Edit values.yaml at /opt/charts/kubernetes/preparation
     - You can change value at values.yaml file to apply your case:
-        - initRepo: repoList, GH_TOKEN
+        - initRepo: repoList, fg_token
 - Start chart alone:
     ```
-    helm install preparation /opt/SVTECH_Projects_Container/kubernetes/nms_project/charts/preparation
+    helm install preparation /opt/charts/kubernetes/preparation
     ```
 
 - Verify:
