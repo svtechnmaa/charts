@@ -27,7 +27,7 @@ spec:
                   status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
                   if [[ "$status" == "0" ]]; then
                     echo "$REPO_PATH is Empty. Clone repo"
-                    git clone --branch Streamlit_test https://$GH_USER:$GH_TOKEN@github.com/svtechnmaa/$name.git $REPO_PATH
+                    git clone --branch Streamlit_test https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git $REPO_PATH
                     echo "true" > $REPO_PATH/completed
                   else
                     if [[ ! -f "$REPO_PATH/completed" ]]; then
@@ -36,8 +36,8 @@ spec:
                     echo "$REPO_PATH is not Empty. Ignore"
                   fi
         env:
-          - name: GH_TOKEN
-            value: {{ .Values.global.github.token }}
+          - name: GH_FG_TOKEN
+            value: {{ .Values.global.github.fg_token }}
           - name: GH_USER
             value: {{ .Values.global.github.user }}
           - name: REPO
