@@ -40,6 +40,16 @@ spec:
           name: http
           protocol: TCP
         resources: {}
+        volumeMounts:
+        - mountPath: /tls
+          name: selfsignedcert
+          readOnly: true
+      volumes:
+      - hostPath:
+          path: /opt/shared/nms/upload_data
+          type: DirectoryOrCreate
+        name: selfsignedcert
+
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
       dnsPolicy: ClusterFirst

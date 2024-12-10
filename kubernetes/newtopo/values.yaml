@@ -9,7 +9,7 @@ go_backend:
   configmap:
     data:
       BACKEND_URL: http://go-backend
-      DATABASE_URL: backend:backend@tcp(mariadb.nms.svc.cluster.local:3306)/svtech?parseTime=true
+      DATABASE_URL: backend:backend@tcp(10.98.0.186:3307)/svtech?parseTime=true
       FRONTEND_URL: http://topology-frontend
       PORT: "4000"
       REDIS_ADDR: redis:6379
@@ -38,9 +38,9 @@ traefik:
       pullPolicy: Always
       tag: v3.1.2
   service:
-    port: "80"
+    port: "443"
     type: LoadBalancer
-    loadBalancerIP: "10.98.250.244"
+    loadBalancerIP: "10.98.0.186"
 
 redis:
   deployment:
