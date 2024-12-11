@@ -9,13 +9,13 @@ init:
   image:
     registry: docker.io
     repository: busybox
-    tag: "1.33"
+    tag: 1.33
 
     pullPolicy: IfNotPresent
 
 image:
   repository: svtechnmaa/svtech_rundeck_option_provider
-  tag: "v1.1.1"
+  tag: v1.1.1
 
   pullPolicy: IfNotPresent
   # debug: true
