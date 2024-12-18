@@ -29,7 +29,7 @@ server {
     }
     {{- end  }}
 
-    {{- if and .Values.global.ci .Values.global.proxy.enabled .Values.global.grafana.enabled }}
+    {{- if and .Values.global.ci ( index .Values "global" "icinga2-report" "enabled" ) }}
     location /grafana/send_request {
         rewrite  ^/grafana/send_request/(.*)  /$1 break;
         proxy_pass http://icinga2-report:8888/;
@@ -37,7 +37,9 @@ server {
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
+    {{- end  }}
 
+    {{- if and .Values.global.ci .Values.global.proxy.enabled .Values.global.grafana.enabled }}
     location /grafana {
         rewrite  ^/grafana/(.*)  /$1 break;
         proxy_pass http://grafana:3000;
