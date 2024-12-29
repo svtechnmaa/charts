@@ -68,14 +68,16 @@ server {
     }
     {{- end  }}
 
-    {{- if and .Values.global.ci ( index .Values "global" "csv-view" "enabled" ) }}
+    {{- if ( index .Values "global" "csv-view" "enabled" ) }}
     location /static_csv/ {
         alias /opt/SVTECH-Junos-Automation/addition_toolkit/csv-to-html-table/static/;
     }
+    {{- if .Values.global.ci }}
     location /csv {
         rewrite /csv/(.*) /$1  break;
         proxy_pass http://csv-view:8000;
     }
+    {{- end  }}
     {{- end  }}
 
     {{- if and .Values.global.ci .Values.global.proxy.enabled .Values.global.kibana.enabled }}
