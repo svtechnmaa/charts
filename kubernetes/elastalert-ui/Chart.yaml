@@ -1,0 +1,11 @@
+apiVersion: v2
+description: Customized ElastAlert2 as a UI for automating rule-based alerting in Elasticsearch
+name: elastalert-ui
+annotations:
+  category: elastalert-ui
+  basedOn: elastalert2
+name: filebeat
+engine: gotpl
+
+version: 1.0.0
+appVersion: "v1.0.0"
