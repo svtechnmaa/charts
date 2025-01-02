@@ -32,15 +32,15 @@ In detail:
 
 | Parameter                                    | Description                                                                                                | Default                             |
 |----------------------------------------------|------------------------------------------------------------------------------------------------------------|-------------------------------------|
-| `elastalertUIConfig.useHostPathRule`         | define if using Rule mount from hostPath or not                                                            | true                                |
-| `elastalertUIConfig.hostPathRuleDir`         | folder in k8s host that used to mount Rule folder                                                          |                                     |
-| `elastalertUIConfig.hostPathAlertDir`        | folder in k8s host that used to mount Alert folder                                                         |                                     |
-| `elastalertUIConfig.elastalertUIConfigPath`  | file in pod which includes config for elastalert UI                                                        | /opt/elastalert/config-ui.yaml      |
-| `elastalertUIConfig.ruleTestFile`            | file in pod that includes rule for testing                                                                 | /opt/elastalert/test_rule.yaml      |
-| `elastalertUIConfig.elastalertConfigPath`    | file in pod that includes config for elastalert backend                                                    | /opt/elastalert/config.yaml         |
-| `elastalertUIConfig.alertDir`                | file in pod that includes Alerts                                                                           | /opt/elastalert/alerts              |
-| `elastalertUIConfig.templatePath`            | file in pod that includes templates for elastalert UI                                                      | /opt/elastalert/code/template       |
-| `elastalertUIConfig.esConnection`            | this is config that define the connection to the target elasticsearch cluster that used to apply rules     |                                     |
+| `elastalertUIConfig.useHostPathRule`         | Define if using Rule mount from hostPath or not                                                            | true                                |
+| `elastalertUIConfig.hostPathRuleDir`         | Folder in K8s host used to mount the Rule folder                                                           |                                     |
+| `elastalertUIConfig.hostPathAlertDir`        | Folder in K8s host used to mount the Alert folder                                                          |                                     |
+| `elastalertUIConfig.elastalertUIConfigPath`  | File in the pod containing the configuration for ElastAlert UI                                             | /opt/elastalert/config-ui.yaml      |
+| `elastalertUIConfig.ruleTestFile`            | File in the pod containing the rule for testing                                                            | /opt/elastalert/test_rule.yaml      |
+| `elastalertUIConfig.elastalertConfigPath`    | File in the pod containing the configuration for ElastAlert backend                                        | /opt/elastalert/config.yaml         |
+| `elastalertUIConfig.alertDir`                | File in the pod containing Alerts                                                                          | /opt/elastalert/alerts              |
+| `elastalertUIConfig.templatePath`            | File in the pod containing templates for ElastAlert UI                                                     | /opt/elastalert/code/template       |
+| `elastalertUIConfig.esConnection`            | Configuration defining the connection to the target Elasticsearch cluster used to apply rules              |                                     |
 
 - Start chart alone:
     ```
