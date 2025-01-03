@@ -215,9 +215,7 @@ replicaCount: 1
 
 updateStrategy: RollingUpdate
 podManagementPolicy: OrderedReady
-podAffinityPreset:
-  type: "hard"
-  key: "icinga2"
+podAffinityPreset: ""
 podAntiAffinityPreset: soft
 nodeAffinityPreset:
   ## Node affinity type
