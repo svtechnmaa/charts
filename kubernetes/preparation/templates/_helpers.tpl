@@ -7,3 +7,13 @@ Return the proper Debuger image name
 {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}
 {{- end -}}
 
+{{/*
+Return http_proxy
+{{ include "http_proxy" ( dict "proxy" .Values.global.http_proxy ) }}
+*/}}
+{{- define "http_proxy" -}}
+{{- $proxy := default "" .proxy -}}
+{{- if not (empty $proxy) -}}
+{{- printf "http://%s:3128" $proxy -}}
+{{- end -}}
+{{- end -}}

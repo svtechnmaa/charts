@@ -12,12 +12,12 @@ init:
   image:
     registry: docker.io
     repository: busybox
-    tag: "1.33"
+    tag: 1.33
     pullPolicy: IfNotPresent
 
 image:
   repository: svtechnmaa/svtech_grafana
-  tag: "v1.2.2"
+  tag: v1.2.2
   pullPolicy: IfNotPresent
   # debug: true
 
