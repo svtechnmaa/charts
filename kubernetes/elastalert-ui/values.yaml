@@ -1,7 +1,10 @@
+global:
+  externalIP: "" # externalIP for CICD
+  
 ## Chart information
-nameOverride: "elastalert2"
-fullnameOverride: "elastalert2"
-namespaceOverride: "elastalert2"
+nameOverride: "elastalert"
+fullnameOverride: "elastalert"
+namespaceOverride: "elastalert"
 commonLabels: {}
 commonAnnotations: {}
 appKubernetesIoComponent: elastalert2
@@ -157,6 +160,7 @@ extraConfigOptions: {}
 #     slack_channel_override: '#alerts'
 
 elastalertUIConfig:
+  basePath: elastalert-ui
   useHostPathRule: true
   hostPathRuleDir: "/opt/elastalert/rules"
   hostPathAlertDir: "/opt/elastalert/alerts"
@@ -167,19 +171,39 @@ elastalertUIConfig:
   alertDir: "/opt/elastalert/alerts"
   templatePath: "/opt/elastalert/code/template"
   esConnection:
-    TEST_HIENNGUYEN:
-      esHost: 10.98.4.70
-      esPort: 9200
-      esUsername: elastic
-      esPassword: juniper@123
-      useSsl: True
     TEST:
       esHost: 10.98.100.109
       esPort: 9200
       esUsername: elastic
       esPassword: juniper@123
       useSsl: True
+service:
+  ## Service type
+  ##
+  type: ClusterIP
+  port: 8501
 
+  # loadBalancerIP:
+  # loadBalancerSourceRanges:
+  # - 10.10.10.0/24
+
+  externalIPs: []
+
+  ## Set the Cluster IP to use
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+  ##
+  # clusterIP: None
+  ## Provide any additional annotations which may be required
+  ##
+  annotations: {}
+  ## Set the service SessionAffinity for session stickiness
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
+  sessionAffinity: ClientIP
+
+  ## Customize the SessionAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 7200
 # To load ElastAlert's rules via secret, uncomment the line below
 #secretRulesName: elastalert-rules-secret
 

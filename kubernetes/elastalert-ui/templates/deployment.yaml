@@ -56,12 +56,16 @@ spec:
 {{- end }}
       - name: elastalert
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-        envFrom:
-        - configMapRef:
-            name: elastalert-ui-config
+        env:
+        - name: ELASTALERT_UI_CONFIG
+          value: {{ .Values.elastalertUIConfig.elastalertUIConfigPath }}
+        - name: STREAMLIT_BASE_URL_PATH
+          value: {{ default "elastalert-ui" .Values.elastalertUIConfig.basePath }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-{{- if .Values.metrics.enabled }}
         ports:
+        - name: elastalert-ui
+          containerPort: 8501
+{{- if .Values.metrics.enabled }}
         - containerPort: {{ .Values.metrics.prometheusPort }}
           protocol: TCP
           name: {{ .Values.metrics.prometheusPortName }}
@@ -99,7 +103,7 @@ spec:
 {{- if .Values.elastalertUIConfig.elastalertUIConfigPath }}
           - name: config-ui
             mountPath: {{ .Values.elastalertUIConfig.elastalertUIConfigPath }}
-            subPath: elastalert_ui_config
+            subPath: config-ui.yaml
 {{- end }}
 
 {{- if .Values.elasticsearch.certsVolumeMounts }}
@@ -151,7 +155,10 @@ spec:
       volumes:
         - name: config-ui
           configMap:
-            name: elastalert-ui-config
+            name: {{ template "elastalert.fullname" . }}-config-ui
+            items:
+            - key: elastalert_ui_config
+              path: config-ui.yaml
 {{- if .Values.elastalertUIConfig.hostPathAlertDir }}
         - name: alerts
           hostPath:
