@@ -1,5 +1,6 @@
 global:
   externalIP: "" # externalIP for CICD
+  basePath: /opt/shared
   
 ## Chart information
 nameOverride: "elastalert"
@@ -7,7 +8,7 @@ fullnameOverride: "elastalert"
 namespaceOverride: "elastalert"
 commonLabels: {}
 commonAnnotations: {}
-appKubernetesIoComponent: elastalert2
+appKubernetesIoComponent: elastalert
 
 # Folder where Helm can find local rules prior to deployment to the k8s cluster. By default,
 # 'rules' folder must be located in the root of the chart directory. Note that this setting
@@ -49,11 +50,10 @@ realertIntervalMins: ""
 writebackIndex: elastalert
 
 image:
-  # docker image
-  # repository: jertel/elastalert2
-  repository: tuongvx/svtech_elastalert_ui
+  # docker image ghcr.io/svtechnmaa/elastalert-ui:latest
+  repository: svtechnmaa/elastalert-ui
   # docker image tag
-  tag: latest
+  tag: v1.1
   pullPolicy: Always
   pullSecret: ""
 
@@ -67,13 +67,13 @@ podAnnotations: {}
 
 elasticsearch:
   # elasticsearch endpoint e.g. (svc.namespace||svc)
-  host: 10.98.4.70
+  host: 10.98.100.109
   # elasticsearch port
   port: 9200
   # whether or not to connect to es_host using TLS
   useSsl: "True"
   # Username if authenticating to ES with basic auth
-  username: "elastic"
+  username: "test0"
   # Password if authenticating to ES with basic auth
   password: "juniper@123"
   # Specifies an existing secret to be used for the ES username/password
@@ -162,19 +162,28 @@ extraConfigOptions: {}
 elastalertUIConfig:
   basePath: elastalert-ui
   useHostPathRule: true
-  hostPathRuleDir: "/opt/elastalert/rules"
-  hostPathAlertDir: "/opt/elastalert/alerts"
+  # hostPathRuleDir: "/opt/elastalert/rules"
+  # hostPathAlertDir: "/opt/elastalert/alerts"
+  hostPathRuleDir: "elastalert-ui-rules"
+  hostPathAlertDir: "elastalert-ui-alerts"
   elastalertUIConfigPath: /opt/elastalert/config-ui.yaml
   # RULE_DIR: "/opt/elastalert/rules" # Use rulesFolder instead
   ruleTestFile: "/opt/elastalert/test_rule.yaml"
   elastalertConfigPath: "/opt/elastalert/config.yaml"
   alertDir: "/opt/elastalert/alerts"
   templatePath: "/opt/elastalert/code/template"
+  volumes:
+    alerts:
+      accessModes: "ReadWriteOnce"
+      storageSize: "10Gi"
+    rules:
+      accessModes: "ReadWriteOnce"
+      storageSize: "10Gi"
   esConnection:
     TEST:
       esHost: 10.98.100.109
       esPort: 9200
-      esUsername: elastic
+      esUsername: test1
       esPassword: juniper@123
       useSsl: True
 service:
