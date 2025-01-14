@@ -1,0 +1,11 @@
+apiVersion: v2
+name: docxtemplate
+description: A Helm chart for Tender Document Generator app
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: x.x.x
+
+version: v0.6.1
+appVersion: "v1.0.0"

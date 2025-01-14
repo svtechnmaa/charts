@@ -48,13 +48,13 @@ init:
 
 image:
   repository: svtechnmaa/svtech_icinga2
-  tag: "v1.1.6"
+  tag: "v1.1.7"
   pullPolicy: IfNotPresent
 
 sidecar:
   image:
     repository: svtechnmaa/svtech_icinga2
-    tag: "v1.1.6"
+    tag: "v1.1.7"
     pullPolicy: IfNotPresent
 
 clusterDomain: cluster.local
@@ -187,9 +187,9 @@ master:
   # icingadb container
   icingadb:
     image:
-      registry: docker.io
+      registry: ghcr.io
       repository: svtechnmaa/svtech_icingadb
-      tag: v1.1.2
+      tag: v1.1.5
       pullPolicy: IfNotPresent
       debug: false
     env:

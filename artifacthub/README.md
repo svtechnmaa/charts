@@ -10,7 +10,7 @@ Example result for grafana subchart (https://artifacthub.io/packages/helm/svtech
 
 Below is how to install grafana subchart:
 ```
-helm repo add svtech-public-helm-charts https://moophat.github.io/SVTECH_Public_Helmchart/artifacthub/
+helm repo add svtech-public-helm-charts https://svtechnmaa.github.io/charts/artifacthub/
 ```
 
 ```

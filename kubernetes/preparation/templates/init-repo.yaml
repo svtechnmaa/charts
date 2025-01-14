@@ -29,11 +29,17 @@ spec:
                   fi
                   mkdir -p /opt/$name
                   status=`ls -A /opt/$name | grep -v 'lost+found' | grep -v '.stfolder' | grep -v 'addition_toolkit' | wc -l`
+                  
+                  if [[ "$status" == "1" ]]; then
+                      cd /opt/$name
+                      rm -rf .git
+                  fi
+
                   if [[ "$status" == "0" ]]; then
                       echo "/opt/$name is Empty. Clone repo"
                       cd /opt/$name && \
                       git init
-                      git remote add origin https://${GH_USERNAME}:${GH_TOKEN}@github.com/moophat/${name}.git
+                      git remote add origin https://${GH_USERNAME}:${GH_FG_TOKEN}@github.com/svtechnmaa/${name}.git
 
                       if [[ "$tag" == "latest" ]] || [[ "$tag" == "HEAD" ]]; then
                           cd /opt/$name 
@@ -66,18 +72,18 @@ spec:
                       fi
                       # Clearing the token from repository
                       git remote remove origin
-                      git remote add origin https://github.com/moophat/${name}.git
+                      git remote add origin https://github.com/svtechnmaa/${name}.git
 
                   else
                       echo "/opt/$name is not Empty. Ignore"
                   fi
               done
         env:
-          - name: GH_TOKEN
+          - name: GH_FG_TOKEN
             valueFrom:
               secretKeyRef:
-                name: gh-token
-                key: GH_TOKEN
+                name: gh-fg-token
+                key: GH_FG_TOKEN
                 optional: false
           - name: GH_USERNAME
             value: {{ .Values.global.github.user | quote }}

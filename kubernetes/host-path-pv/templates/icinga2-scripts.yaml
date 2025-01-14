@@ -1,0 +1,26 @@
+---
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+
+{{- range .Values.global.sharedPersistenceVolume }}
+{{- if eq .storageClass "icinga2-scripts-hostpath" }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-icinga2-scripts-pv"
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  storageClassName: {{ $namespace }}-icinga2-scripts-hostpath
+  capacity:
+    # storage: 100Mi 
+    storage: {{ .storageSize }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    # path: /opt/shared/icinga2_scripts
+    path: {{ $basePath }}/{{ $namespace }}/icinga2_scripts
+{{- end }}
+
+{{- end  }}

@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "init-repo"
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+      - name: init-repo
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
+        command:
+          - bash
+          - -ec
+          - |
+                  name=`echo $REPO | sed  "s/:.*//"`
+                  mkdir -p /opt/$name
+                  status=`ls -A /opt/$name | wc -l`
+                  if [[ "$status" == "0" ]]; then
+                    echo "/opt/$name is Empty. Clone repo"
+                    git clone -n --depth=1 --filter=tree:0 -b main --no-checkout https://github.com/svtechnmaa/Tender_Document_Generator.git /opt/$name
+                    cd /opt/$name && \
+                    git sparse-checkout set --no-cone output data && git checkout 
+                    cd /opt/Tender_Document_Generator
+                    mkdir templates_inventory
+                    mkdir templates_set
+                  else
+                    echo "/opt/$name is not Empty. Ignore"
+                  fi
+        env:
+          - name: REPO
+            value: {{ .Values.initRepo.repo | quote }}
+
+        volumeMounts:
+          - name: {{ .Values.sharedVolume.volumeName }}
+            mountPath: {{ .Values.sharedVolume.path }}
+
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}  
+
+      volumes:
+        - name: {{ .Values.sharedVolume.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.sharedVolume.pvcName }}
+

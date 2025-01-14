@@ -2,7 +2,7 @@ apiVersion: {{ include "common.capabilities.statefulset.apiVersion" . }}
 kind: StatefulSet
 metadata:
   name: {{ include "postgresql-ha.postgresql" . }}
-  namespace: {{ include "common.names.namespace" . | quote }}
+  namespace: {{ .Release.Namespace }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: postgresql
     {{- if .Values.postgresql.labels }}
@@ -16,7 +16,7 @@ metadata:
   {{- end }}
 spec:
   # restartPolicy: Never
-  replicas: {{ .Values.postgresql.replicaCount }}
+  replicas:  {{ include "common.replicas" ( dict "replicaCount" .Values.postgresql.replicaCount "global" .Values.global ) }}
   podManagementPolicy: Parallel
   serviceName: {{ printf "%s-headless" (include "postgresql-ha.postgresql" .) }}
   updateStrategy: {{- toYaml .Values.postgresql.updateStrategy | nindent 4 }}
@@ -161,7 +161,7 @@ spec:
           args: {{- include "common.tplvalues.render" (dict "value" .Values.postgresql.args "context" $) | nindent 12 }}
           {{- end }}
           # Auxiliary vars to populate environment variables
-          {{- $postgresqlReplicaCount := int .Values.postgresql.replicaCount }}
+          {{- $postgresqlReplicaCount := int (include "common.replicas" ( dict "replicaCount" .Values.postgresql.replicaCount "global" .Values.global )) }}
           {{- $postgresqlFullname := include "postgresql-ha.postgresql" . }}
           {{- $postgresqlHeadlessServiceName := printf "%s-headless" (include "postgresql-ha.postgresql" .) }}
           {{- $clusterDomain:= .Values.clusterDomain }}
@@ -346,7 +346,7 @@ spec:
             {{- end }}
             {{- if .Values.postgresql.syncReplication }}
             - name: POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS
-              value: {{ sub (int .Values.postgresql.replicaCount) 1 | quote }}
+              value: {{ sub (int (include "common.replicas" ( dict "replicaCount" .Values.postgresql.replicaCount "global" .Values.global ))) 1 | quote }}
             {{- end }}
             {{- if .Values.postgresql.extraEnvVars }}
             {{- include "common.tplvalues.render" (dict "value" .Values.postgresql.extraEnvVars "context" $) | nindent 12 }}

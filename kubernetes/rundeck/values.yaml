@@ -2,7 +2,8 @@ global:
   externalIP: "" # externalIP for CICD
   rundeck:
     offlineLogFolder: /data/offlineLogFolder/
-
+  mariadb-galera:
+    enabled: true
   sharedVolume:
     enabled: true
   # Define the shared persistence volume here. So that the sub-chart will loop via this list to create the PVClaim if sub-chart name is exists in `shareFor`
@@ -118,15 +119,15 @@ global:
         - rundeck
       storageClass: nagvis-auth-db-hostpath
 
-    - volumeName: rundeck-project-volume
-      pvcName: rundeck-project-pvc
+    - volumeName: rundeck-etc-config-volume
+      pvcName: rundeck-etc-config-pvc
       storageSize: 1Gi
-      path: /home/rundeck/projects
+      path: /home/rundeck/etc
       accessModes: ReadWriteOnce #ReadWriteMany
       shareFor:
         - rundeck
         - debuger
-      storageClass: rundeck-project-hostpath
+      storageClass: rundeck-etc-config-hostpath
 
     - volumeName: rundeck-jsnapy-volume
       pvcName: rundeck-jsnapy-pvc
@@ -201,7 +202,7 @@ init:
 
 image:
   repository: svtechnmaa/svtech_rundeck
-  tag: "v1.2.2"
+  tag: v1.2.7
 
   pullPolicy: IfNotPresent
 
@@ -339,7 +340,8 @@ rundeckConfig:
   RUNDECK_GRAILS_URL: http://rundeck:4440/rundeck
   RUNDECK_SERVER_ADDRESS: "0.0.0.0"
   # RUNDECK_DATABASE_URL: jdbc:h2:file:/home/rundeck/server/data/grailsdb;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=MONTH,HOUR,MINUTE,YEAR,SECONDS
-  RUNDECK_DATABASE_URL: jdbc:mysql://mariadb/rundeck?autoReconnect=true&useSSL=false
+  # RUNDECK_DATABASE_URL: jdbc:mysql://mariadb/rundeck?autoReconnect=true&useSSL=false
+  RUNDECK_DATABASE: rundeck
   RUNDECK_DATABASE_DRIVER: org.mariadb.jdbc.Driver
   RUNDECK_DATABASE_USERNAME: rundeck
   RUNDECK_DATABASE_PASSWORD: juniper@123

@@ -104,7 +104,7 @@ spec:
       {{- include "common.tplvalues.render" (dict "value" .Values.pgpool.initContainers "context" $) | nindent 8 }}
       {{- end }}
       # Auxiliary vars to populate environment variables
-      {{- $postgresqlReplicaCount := int .Values.postgresql.replicaCount }}
+      {{- $postgresqlReplicaCount := int (include "common.replicas" ( dict "replicaCount" .Values.postgresql.replicaCount "global" .Values.global )) }}
       {{- $postgresqlFullname := include "postgresql-ha.postgresql" . }}
       {{- $postgresalContainerPort := int .Values.postgresql.containerPorts.postgresql }}
       {{- $postgresqlHeadlessServiceName := printf "%s-headless" (include "postgresql-ha.postgresql" .) }}

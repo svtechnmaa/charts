@@ -120,6 +120,7 @@ spec:
                     fi
                 }
                 check_empty_dir /home/rundeck/server/config /tmp/config
+                check_empty_dir /home/rundeck/etc /tmp/etc
                 git config --global --add safe.directory "*"
                 chown rundeck:rundeck /etc/icinga2/zones.d -R
                 chmod 777 /etc/icinga2/zones.d -R
@@ -133,6 +134,9 @@ spec:
                               git config --global user.name rundeck && \
                               git config --global user.email rundeck@localhost'
                 cd /opt/SVTECH-Junos-Automation/Ansible-Development
+
+                cp /opt/SVTECH-Junos-Automation/Python-Development/streamlit_apps/conf/yamllint_conf/table.yaml /usr/local/lib/python3.10/dist-packages/yamllint/conf/table.yaml
+                
                 if [ -d "/opt/SVTECH-Junos-Automation/Ansible-Development/collections" ]; then
                   echo "Collections already installed"
                 else
@@ -171,7 +175,11 @@ spec:
             - name: RUNDECK_SERVER_ADDRESS
               value: {{ .Values.rundeckConfig.RUNDECK_SERVER_ADDRESS | quote }}
             - name: RUNDECK_DATABASE_URL
-              value: {{ .Values.rundeckConfig.RUNDECK_DATABASE_URL | quote }}
+            {{- if index (index .Values.global "mariadb-galera") "enabled" }}
+              value: "jdbc:mysql://{{ .Values.rundeckConfig.mysqlHost }}/{{ .Values.rundeckConfig.RUNDECK_DATABASE }}?autoReconnect=true&useSSL=false"
+            {{- else }}
+              value: "jdbc:mysql://{{ .Values.rundeckConfig.mysqlHost }}/{{ .Release.Namespace}}_{{ .Values.rundeckConfig.RUNDECK_DATABASE }}?autoReconnect=true&useSSL=false"
+            {{- end }}
             - name: RUNDECK_DATABASE_DRIVER
               value: {{ .Values.rundeckConfig.RUNDECK_DATABASE_DRIVER | quote }}
             - name: RUNDECK_DATABASE_USERNAME

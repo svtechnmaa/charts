@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: juniper-syslog-api
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: juniper-syslog-api
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: juniper-syslog-api
+    spec:
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      containers:
+      - name: juniper-syslog-api
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        ports:
+        - name: main
+          containerPort: 8502
+        volumeMounts:
+        - name: config-volume
+          mountPath: /juniper_syslog_api/syslog_dashboard/conf.yaml
+          subPath: conf.yaml
+        env: 
+        - name: SYSLOG_ALARM_CONF_PATH
+          value: {{ .Values.env.SYSLOG_ALARM_CONF_PATH | default "/juniper_syslog_api/syslog_dashboard/conf.yaml" | quote }}
+      volumes:
+      - name: config-volume
+        configMap:
+          name: juniper-syslog-api

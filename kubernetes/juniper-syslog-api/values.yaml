@@ -1,0 +1,62 @@
+global:
+  externalIP: "" # externalIP for CICD
+
+image:
+  repository: svtechnmaa/svtech_juniper_syslog_api
+  tag: v1.0.2
+  pullPolicy: IfNotPresent
+
+env:
+  SYSLOG_ALARM_CONF_PATH: ""
+
+replicaCount: 2
+
+updateStrategy: RollingUpdate
+podManagementPolicy: OrderedReady
+podAffinityPreset: ""
+podAntiAffinityPreset: soft
+nodeAffinityPreset:
+  ## Node affinity type
+  ## Allowed values: soft, hard
+  type: ""
+  ## Node label key to match
+  ## E.g.
+  ## key: "kubernetes.io/e2e-az-name"
+  ##
+  key: ""
+  ## Node label values to match
+  ## E.g.
+  ## values:
+  ##   - e2e-az1
+  ##   - e2e-az2
+  ##
+  values: []
+
+
+## Affinity for pod assignment
+## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
+##
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: juniper_syslog_api
+          app.kubernetes.io/name: juniper_syslog_api
+      topologyKey: app.kubernetes.io/hostname
+
+## Node labels for pod assignment
+nodeSelector: {}
+
+## Tolerations for pod assignment
+tolerations: []
+
+## Extra volumes to add to the deployment
+extraVolumes: []
+
+## Extra volume mounts to add to the container
+extraVolumeMounts: []
+
+service:
+  type: ClusterIP
+  port: 8502

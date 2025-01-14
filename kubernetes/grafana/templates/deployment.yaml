@@ -78,7 +78,11 @@ spec:
             - name: MYSQL_PORT
               value: {{ .Values.grafanaConfig.mysqlPort | quote }}
             - name: MYSQL_DB
+            {{- if index (index .Values.global "mariadb-galera") "enabled" }}
               value: {{ .Values.grafanaConfig.mysqlDB | quote }}
+            {{- else }}
+              value: "{{ .Release.Namespace }}_{{ .Values.grafanaConfig.mysqlDB }}"
+            {{- end }}
             - name: MYSQL_USER
               value: {{ .Values.grafanaConfig.mysqlUser | quote }}
             - name: MYSQL_PASSWORD
@@ -90,7 +94,9 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_INSTALL_PLUGINS
-              value: briangann-datatable-panel
+              value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource
+            - name: GF_SERVER_ROOT_URL
+              value: "https://{{ .Values.global.frontendVip }}/grafana"
 
           ports:
             - name: grafana

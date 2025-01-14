@@ -1,0 +1,11 @@
+apiVersion: v2
+name: bngblaster
+description: A Helm chart for Streamlit app
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: x.x.x
+
+version: v0.6.2
+appVersion: "v1.0.0"
