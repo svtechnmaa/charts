@@ -26,7 +26,7 @@ spec:
                   status=`ls -A /$name | wc -l`
                   if [[ "$status" == "0" ]]; then
                     echo "/$name is Empty. Clone repo"
-                    git clone -n --depth=1 --filter=tree:0 --no-checkout https://github.com/moophat/BNGBlaster_web_client.git /$name
+                    git clone -n --depth=1 --filter=tree:0 --no-checkout https://github.com/svtechnmaa/BNGBlaster_web_client.git /$name
                     cd /$name && \
                     git sparse-checkout set --no-cone configs authen templates templates_streams templates_part templates_interfaces blaster.db && git checkout 
                   else

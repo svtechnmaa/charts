@@ -4,17 +4,15 @@ global:
     enabled: false
   github:
     user: ""
-    token: ""
+    fg_token: ""
 
 commonAnnotations:
   helm.sh/hook-weight: "10"
 
 initRepo:
   image:
-    registry: docker.io
     repository: svtechnmaa/svtech_debuger
-    tag: "v1.0.0"
-
+    tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
   repoList: "SVTECH-Junos-Automation:latest"

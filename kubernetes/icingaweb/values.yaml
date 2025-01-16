@@ -7,169 +7,6 @@ global:
   icingadb:
     enabled: true
   sharedPersistenceVolume:
-    - volumeName: automation-repo-volume
-      pvcName: automation-repo-pvc
-      storageSize: 2Gi
-      path: /opt/SVTECH-Junos-Automation
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - preparation
-        - rundeck
-        - rundeck-option-provider
-        - debuger
-        - csv-view
-        - init-data-grafana
-        - icinga2
-        - icinga2-satellite
-      storageClass: automation-repo-hostpath
-
-    - volumeName: icinga2-zones-volume
-      pvcName: icinga2-zones-pvc
-      storageSize: 2Gi
-      path: /etc/icinga2/zones.d
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - icinga2
-        - rundeck
-        - rundeck-option-provider
-        - debuger
-      storageClass: icinga2-zones-hostpath
-
-    - volumeName: icinga2-conf-volume
-      pvcName: icinga2-conf-pvc
-      storageSize: 100Mi
-      path: /etc/icinga2/conf.d
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - icinga2
-        - debuger
-      storageClass: icinga2-conf-hostpath
-
-    # - volumeName: icinga2-scripts-volume
-    #   pvcName: icinga2-scripts-pvc
-    #   storageSize: 100Mi
-    #   path: /etc/icinga2/scripts
-    #   accessModes: ReadWriteOnce #ReadWriteMany
-    #   shareFor:
-    #     - preparation
-    #     - icinga2
-    #     - debuger
-
-    - volumeName: icinga2-plugins-volume
-      pvcName: icinga2-plugins-pvc
-      storageSize: 2Gi
-      path: /usr/share/icinga2/plugins/libexec
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - icinga2
-        - debuger
-        - icinga2-satellite
-      storageClass: icinga2-plugins-hostpath
-
-    # - volumeName: icinga2-output-volume
-    #   pvcName: icinga2-output-pvc
-    #   storageSize: 3Gi
-    #   path: /var/tmp/output/
-    #   accessModes: ReadWriteOnce #ReadWriteMany
-    #   shareFor:
-    #     - icinga2
-    #     - debuger
-
-    - volumeName: gitlist-data-volume
-      pvcName: gitlist-data-pvc
-      storageSize: 2Gi
-      path: /opt/gitlist
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - gitlist
-        - rundeck
-        - debuger
-      storageClass: gitlist-data-hostpath
-
-    - volumeName: nagvis-maps-volume
-      pvcName: nagvis-maps-pvc
-      storageSize: 2Gi
-      path: /usr/share/nagvis/etc/maps
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - nagvis
-        - rundeck
-        - debuger
-      storageClass: nagvis-maps-hostpath
-
-    - volumeName: rundeck-var-volume
-      pvcName: rundeck-var-pvc
-      storageSize: 10Gi
-      path: /home/rundeck/var
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - rundeck
-        - debuger
-      storageClass: rundeck-var-hostpath
-
-    - volumeName: nagvis-auth-db-volume
-      pvcName: nagvis-auth-db-pvc
-      storageSize: 1Gi
-      path: /usr/share/nagvis/etc
-      subPath: auth.db
-      accessModes: ReadWriteOnce
-      shareFor:
-        - nagvis
-        - rundeck
-      storageClass: nagvis-auth-db-hostpath
-
-    - volumeName: rundeck-project-volume
-      pvcName: rundeck-project-pvc
-      storageSize: 1Gi
-      path: /home/rundeck/projects
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - rundeck
-        - debuger
-      storageClass: rundeck-project-hostpath
-
-    - volumeName: rundeck-jsnapy-volume
-      pvcName: rundeck-jsnapy-pvc
-      storageSize: 10Gi
-      path: /var/lib/rundeck/jsnapy
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - rundeck
-        - rundeck-option-provider
-        - debuger
-      storageClass: rundeck-jsnapy-hostpath
-
-    - volumeName: rundeck-backup-volume
-      pvcName: rundeck-backup-pvc
-      storageSize: 10Gi
-      path: /opt/backup
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - rundeck
-        - debuger
-      storageClass: rundeck-backup-hostpath
-
-    - volumeName: csv-output-volume
-      pvcName: csv-output-pvc
-      storageSize: 10Gi
-      path: /opt/csv-output
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - rundeck
-        - csv-view
-        - debuger
-      storageClass: csv-output-hostpath
-
-    - volumeName: thruk-volume
-      pvcName: thruk-pvc
-      storageSize: 30Mi
-      path: /etc/thruk
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - thruk
-        - rundeck
-      storageClass: thruk-hostpath
-
     - volumeName: icingaweb-volume
       pvcName: icingaweb-pvc
       storageSize: 10Mi
@@ -177,17 +14,9 @@ global:
       accessModes: ReadWriteOnce #ReadWriteMany
       shareFor:
         - icingaweb
+        - rundeck
       storageClass: icingaweb-hostpath
-    
-    # snmp-manager volume
-    - volumeName: snmp-manager-volume
-      pvcName: snmp-manager-pvc
-      storageSize: 10Mi
-      path: /etc/snmptt/
-      accessModes: ReadWriteOnce #ReadWriteMany
-      shareFor:
-        - snmp-manager
-      storageClass: snmp-manager-hostpath
+
   database:
     director:
       enabled: true
@@ -225,7 +54,6 @@ global:
 
 
 timezone: Asia/Ho_Chi_Minh
-
 
 init:
   image:

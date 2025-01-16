@@ -3,6 +3,7 @@ global:
   github:
     user: ""
     token: ""  
+    fg_token: ""
   basePath: /opt/shared/
 
 replicaCount: 2
@@ -26,7 +27,7 @@ init:
 
 image:
   repository: svtechnmaa/tender_document_generator
-  tag: v1.13
+  tag: v1.31
   pullPolicy: IfNotPresent
 
 commonAnnotations:

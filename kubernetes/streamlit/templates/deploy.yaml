@@ -74,7 +74,7 @@ spec:
         name: streamlit
         env:
         - name: GIT_TOKEN
-          value: {{ .Values.global.github.token }}
+          value: {{ .Values.global.github.fg_token }}
         - name: USER_NAME
           value: {{ .Values.global.github.user }}
         {{- if .Values.sharedVolume.enabled }}
