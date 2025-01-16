@@ -69,3 +69,12 @@ mysql:
       MYSQL_ROOT_HOST: '%'
       MYSQL_ROOT_PASSWORD: juniper123
       MYSQL_USER: juniper
+
+asynqmon:
+  deployment:
+    image:
+      repository: webconnex/asynqmon
+      pullPolicy: Always
+      tag: latest
+  service:
+    port: "4000"

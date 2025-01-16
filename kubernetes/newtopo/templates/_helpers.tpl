@@ -86,3 +86,7 @@ Create the name of the service account to use
 {{ define "mysql_image" -}}
 {{ printf "%s:%s" .Values.mysql.deployment.image.repository .Values.mysql.deployment.image.tag }}
 {{- end }}
+
+{{ define "asynqmon_image" -}}
+{{ printf "%s:%s" .Values.asynqmon.deployment.image.repository .Values.asynqmon.deployment.image.tag }}
+{{- end }}
