@@ -43,18 +43,18 @@ init:
   image:
     registry: docker.io
     repository: busybox
-    tag: "1.33"
+    tag: 1.33
     pullPolicy: IfNotPresent
 
 image:
   repository: svtechnmaa/svtech_icinga2
-  tag: "v1.1.7"
+  tag: v1.1.7
   pullPolicy: IfNotPresent
 
 sidecar:
   image:
     repository: svtechnmaa/svtech_icinga2
-    tag: "v1.1.7"
+    tag: v1.1.7
     pullPolicy: IfNotPresent
 
 clusterDomain: cluster.local
