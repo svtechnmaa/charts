@@ -15,6 +15,14 @@ go_backend:
       REDIS_ADDR: redis:6379
       REDIS_ADDRESS: redis:6379
       UPLOAD_DIR: /data
+      PERMISSIONS_ENABLED: "true"
+  # seed_file:
+  #   datasources:
+  #     arangodb: 
+  #       url: http://arangodb:8529
+  #       username: root
+  #       password: juniper@123
+
 namespace: nms
 topology_frontend:
   deployment:

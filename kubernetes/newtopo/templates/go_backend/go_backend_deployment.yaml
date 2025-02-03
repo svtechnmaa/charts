@@ -28,7 +28,7 @@ spec:
         - configMapRef:
             name: go-backend-conf
             optional: false
-        image: ghcr.io/moophat/topology-app:lastest
+        image: {{ template "go_backend_image" . }}
         imagePullPolicy: {{ .Values.go_backend.deployment.image.pullPolicy }}
         name: init-seed
         resources: {}
@@ -39,6 +39,21 @@ spec:
           name: seed-config
           subPath: seed.yaml
       containers:
+      - args:
+        - -migrate
+        - -worker
+        command:
+        - /server
+        envFrom:
+        - configMapRef:
+            name: go-backend-conf
+            optional: false
+        image: ghcr.io/moophat/topology-app:lastest
+        imagePullPolicy: Always
+        name: worker
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
       - envFrom:
         - configMapRef:
             name: go-backend-conf
@@ -46,6 +61,11 @@ spec:
         image: {{ template "go_backend_image" . }}
         imagePullPolicy: {{ .Values.go_backend.deployment.image.pullPolicy }}
         name: app
+        args:
+        - -migrate
+        - -server
+        command:
+        - /server
         ports:
         - containerPort: 4000
           protocol: TCP
@@ -53,7 +73,7 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /data1
+        - mountPath: /data
           name: go-backend-persistent-storage
       dnsPolicy: ClusterFirst
       imagePullSecrets:

@@ -7,7 +7,7 @@ data:
   REDIS_ADDR: "{{ .Values.go_backend.configmap.data.REDIS_ADDR }}"
   REDIS_ADDRESS: "{{ .Values.go_backend.configmap.data.REDIS_ADDRESS }}"
   UPLOAD_DIR: "{{ .Values.go_backend.configmap.data.UPLOAD_DIR }}"
-  PERMISSIONS_ENABLED: "true"
+  PERMISSIONS_ENABLED:  "{{ .Values.go_backend.configmap.data.PERMISSIONS_ENABLED }}"
 
 kind: ConfigMap
 metadata:
