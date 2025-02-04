@@ -16,6 +16,7 @@ go_backend:
       REDIS_ADDRESS: redis:6379
       UPLOAD_DIR: /data
       PERMISSIONS_ENABLED: "true"
+      TRAEFIK_TEMPLATE: /data/sample-traefik-config-template.yaml # this template file will be used to generate traefik config, user can provide their own template file based on their requirement
   # seed_file:
   #   datasources:
   #     arangodb: 

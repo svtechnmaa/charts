@@ -18,7 +18,6 @@ spec:
       containers:
       - args:
         - --providers.http.endpoint=http://go-backend/api/v1/traefik
-        - --providers.file.fileName=/tls/traefik.yaml
         - --api.dashboard=true
         - --log.level=DEBUG
         - --entryPoints.web.address=:80

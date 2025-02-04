@@ -8,6 +8,7 @@ data:
   REDIS_ADDRESS: "{{ .Values.go_backend.configmap.data.REDIS_ADDRESS }}"
   UPLOAD_DIR: "{{ .Values.go_backend.configmap.data.UPLOAD_DIR }}"
   PERMISSIONS_ENABLED:  "{{ .Values.go_backend.configmap.data.PERMISSIONS_ENABLED }}"
+  TRAEFIK_TEMPLATE: "{{ .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
 
 kind: ConfigMap
 metadata:
