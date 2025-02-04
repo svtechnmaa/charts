@@ -3,7 +3,7 @@ http:
     -auth:
       headers:
         customRequestHeaders:
-          Authorization: "Basic YWRtaW46YWRtaW4="
+          Authorization: "<dummy-fill up when applying>"
     cors:
       headers:
         frameDeny: false
@@ -18,11 +18,11 @@ http:
     dashboard-auth:
       basicAuth:
         users:
-          - "thrukadmin:$apr1$pQYgqo1w$FFSO5TyP2sh6vmlF8nGmv1"
+          - "<dummy-fill up when applying>"
     grafana-auth:
       headers:
         customRequestHeaders:
-          Authorization: "Basic dGhydWthZG1pbjp0aHJ1a2FkbWlu"
+          Authorization: "<dummy-fill up when applying>"
 
   routers:
     default:
