@@ -1,0 +1,22 @@
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+{{- $hostPathAlertDir := .Values.elastalertUIConfig.hostPathAlertDir }}
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-elastalert-ui-alerts-pv" 
+  labels:
+    tier: elastalert-ui
+    component: elastalert-ui-alerts-pvc
+    release: {{ .Release.Name }}
+
+spec:
+  storageClassName: {{ $namespace }}-elastalert-ui-alerts-hostpath
+  capacity:
+    storage: {{ .Values.elastalertUIConfig.volumes.alerts.storageSize }}
+  accessModes:
+    - {{ .Values.elastalertUIConfig.volumes.alerts.accessModes }}
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: {{ $basePath }}/{{ $namespace }}/{{ $hostPathAlertDir }}

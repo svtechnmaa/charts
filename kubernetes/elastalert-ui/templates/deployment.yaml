@@ -161,15 +161,13 @@ spec:
               path: config-ui.yaml
 {{- if .Values.elastalertUIConfig.hostPathAlertDir }}
         - name: alerts
-          hostPath:
-            path: {{ .Values.elastalertUIConfig.hostPathAlertDir | quote }}
-            type: DirectoryOrCreate
+          persistentVolumeClaim:
+            claimName: elastalert-ui-alerts-pvc
 {{ end }}          
         - name: rules
 {{- if .Values.elastalertUIConfig.useHostPathRule }}
-          hostPath:
-            path: {{ .Values.elastalertUIConfig.hostPathRuleDir | quote }}
-            type: DirectoryOrCreate
+          persistentVolumeClaim:
+            claimName: elastalert-ui-rules-pvc
 {{- else if .Values.secretRulesName }}
           secret:
             secretName: {{ .Values.secretRulesName }}
