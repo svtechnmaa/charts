@@ -55,6 +55,32 @@ spec:
             mkdir -p /data/etc/icingaweb2/enabledModules
             mkdir -p /data/var/lib/icingaweb2
             mkdir -p /data/etc/icingaweb2/modules/grafana
+            # Create default navigations
+            if [ ! -d /data/etc/icingaweb2/navigation ]; then
+              mkdir -p /data/etc/icingaweb2/navigation
+              cat > /data/etc/icingaweb2/navigation/menu.ini << EOF
+            [NMAA]
+            type = "menu-item"
+            target = "_main"
+            groups = "*"
+            owner = "icingaweb"
+            users = "*"
+
+            [Hosts]
+            type = "menu-item"
+            parent = "NMAA"
+            target = "_main"
+            url = "icingadb/hosts?columns=host.name,host.address,host.state.last_update,host.state.check_source,host.state.output&sort=host.state.last_update%20desc"
+            owner = "icingaweb"
+
+            [Services]
+            type = "menu-item"
+            parent = "NMAA"
+            target = "_main"
+            url = "icingadb/services?columns=host.name,service.name,service.state.hard_state,service.state.last_update,service.state.check_source,service.state.output&sort=service.state.last_update%20desc"
+            owner = "icingaweb"
+            EOF
+            fi
             chown -R www-data:www-data /data
             until nc -zvw5 {{ .Release.Name }}-icinga2-master-0.icinga2-headless 5665; do echo "Waiting for icinga master..."; sleep 2; done
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
