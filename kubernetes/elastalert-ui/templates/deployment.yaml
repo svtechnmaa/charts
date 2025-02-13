@@ -1,15 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "elastalert.fullname" . }}
+  name: {{ include "common.names.fullname" . }}
   labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: elastalert-ui
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
-    app: {{ template "elastalert.name" . }}
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
   {{- if .Values.deploymentAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.deploymentAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -17,13 +15,12 @@ spec:
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: elastalert-ui
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
   minReadySeconds: {{ .Values.minReadySeconds }}
   template:
     metadata:
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
 {{- if .Values.metrics.enabled  }}
 {{ toYaml .Values.metrics.prometheusScrapeAnnotations | indent 8 }}
         prometheus.io/port: {{ .Values.metrics.prometheusPort | quote}}
@@ -31,8 +28,9 @@ spec:
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
-      labels: {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: {{ .Values.appKubernetesIoComponent }}
+      labels: 
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: elastalert-ui
         {{- if .Values.commonLabels }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
         {{- end }}
@@ -55,7 +53,7 @@ spec:
 {{ .Values.extraContainers | toYaml | indent 6}}
 {{- end }}
       - name: elastalert
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
         env:
         - name: ELASTALERT_UI_CONFIG
           value: {{ .Values.elastalertUIConfig.elastalertUIConfigPath }}

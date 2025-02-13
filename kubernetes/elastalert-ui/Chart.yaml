@@ -6,5 +6,10 @@ annotations:
   basedOn: elastalert2
 engine: gotpl
 
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: 1.x.x
+
 version: 1.0.0
 appVersion: "v1.0.0"
