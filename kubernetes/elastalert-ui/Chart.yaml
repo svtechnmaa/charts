@@ -1,0 +1,15 @@
+apiVersion: v2
+description: Customized ElastAlert2 as a UI for automating rule-based alerting in Elasticsearch
+name: elastalert-ui
+annotations:
+  category: elastalert-ui
+  basedOn: elastalert2
+engine: gotpl
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: 1.x.x
+
+version: 1.0.0
+appVersion: "v1.0.0"

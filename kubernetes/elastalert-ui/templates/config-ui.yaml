@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "elastalert.fullname" . }}-config-ui
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  {{- if .Values.commonLabels }}
+  {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+  {{- end }}
+data:
+  elastalert_ui_config: |-
+    ---
+    RULE_DIR: {{ .Values.rulesFolder }}
+{{- if .Values.elastalertUIConfig.ruleTestFile }}    
+    RULE_TEST_FILE: {{ .Values.elastalertUIConfig.ruleTestFile }}
+{{- end }}
+{{- if .Values.elastalertUIConfig.elastalertConfigPath }}    
+    ELASTALERT_CONFIG_PATH: {{ .Values.elastalertUIConfig.elastalertConfigPath }}
+{{- end }}
+{{- if .Values.elastalertUIConfig.alertDir }}    
+    ALERT_DIR: {{ .Values.elastalertUIConfig.alertDir }}
+{{- end }}
+{{- if .Values.elastalertUIConfig.templatePath }}    
+    TEMPLATE_PATH: {{ .Values.elastalertUIConfig.templatePath }}
+{{- end }}
+{{- if .Values.elastalertUIConfig.esConnection }}
+    ES_CONNECTION:
+{{- range $connectionName, $connectionConfig := .Values.elastalertUIConfig.esConnection }}
+      {{ $connectionName }}:
+        ES_HOST: {{ $connectionConfig.esHost }}
+        ES_PORT: {{ $connectionConfig.esPort }}
+        ES_USERNAME: {{ $connectionConfig.esUsername }}
+        ES_PASSWORD: {{ $connectionConfig.esPassword }}
+        USE_SSL: {{ $connectionConfig.useSsl }}
+{{- end }}
+{{- if .Values.extraConfigOptions }}
+{{ toYaml .Values.extraConfigOptions | indent 4 }}
+{{- end }}
+{{- end }}
+
