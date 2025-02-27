@@ -1,0 +1,31 @@
+---
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ $namespace }}-console-pv
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ .Values.console.sharedPersistenceVolume.accessModes }}
+  capacity:
+    storage: {{ .Values.console.sharedPersistenceVolume.storageSize }}
+  hostPath:
+    path: {{ $basePath }}/{{ $namespace }}/console
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ $namespace }}-{{ .Values.console.sharedPersistenceVolume.storageClass }}
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.console.sharedPersistenceVolume.pvcName }}
+spec:
+  storageClassName: {{ $namespace }}-{{ .Values.console.sharedPersistenceVolume.storageClass }}
+  accessModes:
+    - {{ .Values.console.sharedPersistenceVolume.accessModes }}
+  resources:
+    requests:
+      storage: {{ .Values.console.sharedPersistenceVolume.storageSize }}

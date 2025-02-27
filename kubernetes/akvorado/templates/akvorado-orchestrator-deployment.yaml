@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: {{ .Release.Name }}-orchestrator
+  name: {{ .Release.Name }}-orchestrator
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.orchestrator.replicaCount "global" .Values.global ) }}
+  revisionHistoryLimit: {{ .Values.console.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ .Release.Name }}-orchestrator
+  strategy:
+    type: {{ .Values.orchestrator.updateStrategy }}
+    rollingUpdate: null
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: {{ .Release.Name }}-orchestrator
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -zvw5 {{ .Release.Name }}-kafka-external-bootstrap.{{ .Release.Namespace }}.svc.cluster.local 9094; do echo "Waiting for MariaDB..."; sleep 2; done
+
+      containers:
+        - name: {{ .Release.Name }}-geoip-sidecar
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.geoip.image ) }}
+          env:
+            - name: IPINFO_TOKEN
+              value: {{ .Values.geoip.env.ipinfo_token | quote }}
+            - name: IPINFO_DATABASES
+              value:  {{ .Values.geoip.env.ipinfo_db | quote }}
+            - name: UPDATE_FREQUENCY
+              value:  {{ .Values.geoip.env.update_time | quote }}
+          volumeMounts:
+            - mountPath: /data
+              name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
+        - args:
+            - orchestrator
+            - /etc/akvorado/akvorado.yaml
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.orchestrator.image ) }} 
+          name: {{ .Release.Name }}-orchestrator
+          env:
+          - name: AKVORADO_CFG_ORCHESTRATOR_CLICKHOUSE_CLUSTER
+            value: {{ .Values.orchestrator.clickhouse_cluster }}
+          volumeMounts:
+            - mountPath: /etc/akvorado
+              name: {{ .Release.Name }}-orchestrator-config
+              readOnly: true
+            - mountPath: {{ .Values.geoip.sharedPersistenceVolume.path }}
+              name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: {{ .Release.Name }}-orchestrator-configmap
+          name: {{ .Release.Name }}-orchestrator-config
+        - name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.geoip.sharedPersistenceVolume.pvcName }}

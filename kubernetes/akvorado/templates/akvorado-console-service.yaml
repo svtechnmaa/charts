@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: {{ .Release.Name }}-console
+  name: {{ .Release.Name }}-console
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/component: {{ .Release.Name }}-console
+  type: {{ .Values.console.service.type }}
+  {{- if and (eq .Values.console.service.type "LoadBalancer") (not (empty .Values.global.frontendVip)) }}
+  loadBalancerIP: {{ .Values.global.frontendVip }}
+  {{- end }}

@@ -1,0 +1,31 @@
+------
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ $namespace }}-geoip-pv
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ .Values.geoip.sharedPersistenceVolume.accessModes }}
+  capacity:
+    storage: {{ .Values.geoip.sharedPersistenceVolume.storageSize }}
+  hostPath:
+    path: {{ $basePath }}/{{ $namespace }}/geoip
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ $namespace }}-{{ .Values.geoip.sharedPersistenceVolume.storageClass }}
+  
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.geoip.sharedPersistenceVolume.pvcName }}
+spec:
+  storageClassName: {{ $namespace }}-{{ .Values.geoip.sharedPersistenceVolume.storageClass }}
+  accessModes:
+    - {{ .Values.geoip.sharedPersistenceVolume.accessModes }}
+  resources:
+    requests:
+      storage: {{ .Values.geoip.sharedPersistenceVolume.storageSize }}
