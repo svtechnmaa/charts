@@ -38,6 +38,9 @@ spec:
         - mountPath: /opt/seed.yaml
           name: seed-config
           subPath: seed.yaml
+        - name: traefik-config
+          mountPath: "{{ .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
+          subPath: "{{ base .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
       containers:
       - args:
         - -migrate
@@ -48,8 +51,8 @@ spec:
         - configMapRef:
             name: go-backend-conf
             optional: false
-        image: ghcr.io/moophat/topology-app:lastest
-        imagePullPolicy: Always
+        image: {{ template "go_backend_image" . }}
+        imagePullPolicy: {{ .Values.go_backend.deployment.image.pullPolicy }}
         name: worker
         resources: {}
         terminationMessagePath: /dev/termination-log
@@ -75,9 +78,12 @@ spec:
         volumeMounts:
         - mountPath: /data
           name: go-backend-persistent-storage
+        - name: traefik-config
+          mountPath: "{{ .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
+          subPath: "{{ base .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
       dnsPolicy: ClusterFirst
       imagePullSecrets:
-      - name: ghcrio
+      - name: "{{ .Values.image.pullSecret }}"
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
@@ -91,4 +97,10 @@ spec:
           path: /opt/upload_data
           type: DirectoryOrCreate
         name: go-backend-persistent-storage
+      - name: traefik-config
+        configMap:
+          name: traefik-template-conf
+          items:
+            - key: traefik_config_template.yml
+              path: "{{ base .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
 

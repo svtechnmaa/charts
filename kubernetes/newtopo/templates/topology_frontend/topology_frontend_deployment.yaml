@@ -45,7 +45,7 @@ spec:
         terminationMessagePolicy: File
       dnsPolicy: ClusterFirst
       imagePullSecrets:
-      - name: ghcrio
+      - name: "{{ .Values.image.pullSecret }}"
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
