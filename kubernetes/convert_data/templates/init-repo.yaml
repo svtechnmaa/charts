@@ -1,0 +1,65 @@
+{{- if .Values.sharedVolume.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "init-repo"
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+      - name: init-repo
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
+        command:
+          - bash
+          - -ec
+          - |
+                  name=`echo $REPO | sed  "s/:.*//"`
+                  mkdir -p $REPO_PATH
+                  status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
+                  if [[ "$status" == "0" ]]; then
+                    echo "$REPO_PATH is Empty. Clone repo"
+                    git clone --branch test_phase2_convert_data https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git $REPO_PATH
+                    echo "true" > $REPO_PATH/completed
+                  else
+                    if [[ ! -f "$REPO_PATH/completed" ]]; then
+                      echo "true" > $REPO_PATH/completed
+                    fi
+                    echo "$REPO_PATH is not Empty. Ignore"
+                  fi
+        env:
+          - name: GH_FG_TOKEN
+            value: {{ .Values.global.github.fg_token }}
+          - name: GH_USER
+            value: {{ .Values.global.github.user }}
+          - name: REPO
+            value: {{ .Values.initRepo.repo | quote }}
+          - name: REPO_PATH
+            value: {{ .Values.sharedVolume.path }}
+
+        volumeMounts:
+          - name: {{ .Values.sharedVolume.volumeName }}
+            mountPath: {{ .Values.sharedVolume.path }}
+
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}  
+
+      volumes:
+        - name: {{ .Values.sharedVolume.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.sharedVolume.pvcName }}
+{{- end }}
