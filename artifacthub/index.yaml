@@ -109,7 +109,7 @@ entries:
           url: https://airflow.apache.org/docs/apache-airflow/2.3.0/_images/context.png
     apiVersion: v2
     appVersion: 2.3.0
-    created: "2025-03-12T09:26:07.661692955+07:00"
+    created: "2025-03-12T09:59:53.455400978+07:00"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -242,7 +242,7 @@ entries:
           url: https://airflow.apache.org/docs/apache-airflow/2.3.0/_images/context.png
     apiVersion: v2
     appVersion: 2.3.0
-    created: "2025-03-12T09:26:07.781839632+07:00"
+    created: "2025-03-12T09:59:53.573203019+07:00"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -375,7 +375,7 @@ entries:
           url: https://airflow.apache.org/docs/apache-airflow/2.3.0/_images/context.png
     apiVersion: v2
     appVersion: 2.3.0
-    created: "2025-03-12T09:26:07.753440767+07:00"
+    created: "2025-03-12T09:59:53.547224772+07:00"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -508,7 +508,7 @@ entries:
           url: https://airflow.apache.org/docs/apache-airflow/2.3.0/_images/context.png
     apiVersion: v2
     appVersion: 2.3.0
-    created: "2025-03-12T09:26:07.722649849+07:00"
+    created: "2025-03-12T09:59:53.514120051+07:00"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -641,7 +641,7 @@ entries:
           url: https://airflow.apache.org/docs/apache-airflow/2.3.0/_images/context.png
     apiVersion: v2
     appVersion: 2.3.0
-    created: "2025-03-12T09:26:07.690840414+07:00"
+    created: "2025-03-12T09:59:53.482606693+07:00"
     dependencies:
     - condition: postgresql.enabled
       name: postgresql
@@ -671,7 +671,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 14.5.0
-    created: "2025-03-12T09:26:07.859884998+07:00"
+    created: "2025-03-12T09:59:53.651614724+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -708,7 +708,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 14.5.0
-    created: "2025-03-12T09:26:07.844226467+07:00"
+    created: "2025-03-12T09:59:53.636147269+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -745,7 +745,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 14.5.0
-    created: "2025-03-12T09:26:07.8308594+07:00"
+    created: "2025-03-12T09:59:53.622684537+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -782,7 +782,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 14.5.0
-    created: "2025-03-12T09:26:07.815337927+07:00"
+    created: "2025-03-12T09:59:53.608165811+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -819,7 +819,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 14.5.0
-    created: "2025-03-12T09:26:07.799313613+07:00"
+    created: "2025-03-12T09:59:53.591442452+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -855,7 +855,20 @@ entries:
   bngblaster:
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.932994629+07:00"
+    created: "2025-03-12T09:59:53.729247343+07:00"
+    dependencies:
+    - name: common
+      repository: https://svtechnmaa.github.io/charts/artifacthub/
+      version: x.x.x
+    description: A Helm chart for Streamlit app
+    digest: 1076cfec73b03ccd6b7b7e10c014c6dcab4a1b32c87a01d8244f9bfc9599dcc2
+    name: bngblaster
+    urls:
+    - bngblaster-0.6.24.tgz
+    version: 0.6.24
+  - apiVersion: v2
+    appVersion: v1.0.0
+    created: "2025-03-12T09:59:53.726040293+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -868,7 +881,7 @@ entries:
     version: 0.6.23
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.929937259+07:00"
+    created: "2025-03-12T09:59:53.722395499+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -881,7 +894,7 @@ entries:
     version: 0.6.22
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.926212144+07:00"
+    created: "2025-03-12T09:59:53.717067718+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -894,7 +907,7 @@ entries:
     version: 0.6.21
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.922647266+07:00"
+    created: "2025-03-12T09:59:53.713883875+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -907,7 +920,7 @@ entries:
     version: 0.6.20
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.919576868+07:00"
+    created: "2025-03-12T09:59:53.710892443+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -920,7 +933,7 @@ entries:
     version: 0.6.19
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.916732659+07:00"
+    created: "2025-03-12T09:59:53.707888973+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -933,7 +946,7 @@ entries:
     version: 0.6.18
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.913771631+07:00"
+    created: "2025-03-12T09:59:53.705025379+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -946,7 +959,7 @@ entries:
     version: 0.6.17
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.910434301+07:00"
+    created: "2025-03-12T09:59:53.702009352+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -959,7 +972,7 @@ entries:
     version: 0.6.16
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.907567233+07:00"
+    created: "2025-03-12T09:59:53.698647841+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -972,7 +985,7 @@ entries:
     version: 0.6.15
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.901225095+07:00"
+    created: "2025-03-12T09:59:53.69477898+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -985,7 +998,7 @@ entries:
     version: 0.6.14
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.898332685+07:00"
+    created: "2025-03-12T09:59:53.689866719+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -998,7 +1011,7 @@ entries:
     version: 0.6.13
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.895382873+07:00"
+    created: "2025-03-12T09:59:53.687003392+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1011,7 +1024,7 @@ entries:
     version: 0.6.12
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.892514373+07:00"
+    created: "2025-03-12T09:59:53.684094403+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1024,7 +1037,7 @@ entries:
     version: 0.6.11
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.889547752+07:00"
+    created: "2025-03-12T09:59:53.681136634+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1037,7 +1050,7 @@ entries:
     version: 0.6.10
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.956220976+07:00"
+    created: "2025-03-12T09:59:53.752291115+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1050,7 +1063,7 @@ entries:
     version: 0.6.9
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.953119046+07:00"
+    created: "2025-03-12T09:59:53.748254958+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1063,7 +1076,7 @@ entries:
     version: 0.6.8
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.94809879+07:00"
+    created: "2025-03-12T09:59:53.744060329+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1076,7 +1089,7 @@ entries:
     version: 0.6.7
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.945254477+07:00"
+    created: "2025-03-12T09:59:53.741089196+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1089,7 +1102,7 @@ entries:
     version: 0.6.6
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.942456708+07:00"
+    created: "2025-03-12T09:59:53.738141779+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1102,7 +1115,7 @@ entries:
     version: 0.6.5
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.939611404+07:00"
+    created: "2025-03-12T09:59:53.73521807+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1115,7 +1128,7 @@ entries:
     version: 0.6.4
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.936658685+07:00"
+    created: "2025-03-12T09:59:53.732197995+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1128,7 +1141,7 @@ entries:
     version: 0.6.3
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.959665968+07:00"
+    created: "2025-03-12T09:59:53.755818093+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1141,7 +1154,7 @@ entries:
     version: v0.6.2
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.886613301+07:00"
+    created: "2025-03-12T09:59:53.678243036+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1154,7 +1167,7 @@ entries:
     version: 0.6.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.883657653+07:00"
+    created: "2025-03-12T09:59:53.674796015+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1167,7 +1180,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.880571691+07:00"
+    created: "2025-03-12T09:59:53.671760887+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1180,7 +1193,7 @@ entries:
     version: 0.4.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.875107472+07:00"
+    created: "2025-03-12T09:59:53.668799078+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1193,7 +1206,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.872199231+07:00"
+    created: "2025-03-12T09:59:53.664669946+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1210,7 +1223,7 @@ entries:
     version: 0.2.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.866409094+07:00"
+    created: "2025-03-12T09:59:53.65838814+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1230,7 +1243,7 @@ entries:
       category: Infrastructure
     apiVersion: v2
     appVersion: 1.4.3
-    created: "2025-03-12T09:26:07.961491199+07:00"
+    created: "2025-03-12T09:59:53.757540904+07:00"
     description: A Library Helm Chart for grouping common logic between bitnami charts.
       This chart is not deployable by itself.
     digest: 6de98516cfe1286a50c29da41d22e19da99fddafd85255b672e42518f93fd524
@@ -1243,7 +1256,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.972604985+07:00"
+    created: "2025-03-12T09:59:53.768917454+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1260,7 +1273,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.969867803+07:00"
+    created: "2025-03-12T09:59:53.766100896+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1277,7 +1290,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.967087506+07:00"
+    created: "2025-03-12T09:59:53.763239374+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1294,7 +1307,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.964366155+07:00"
+    created: "2025-03-12T09:59:53.760508503+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1310,7 +1323,7 @@ entries:
   daloradius:
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2025-03-12T09:26:07.988538089+07:00"
+    created: "2025-03-12T09:59:53.783780643+07:00"
     description: A Helm chart for Kubernetes
     digest: 415d1c29cb6eebd6d364b30b565941358051afbd2f3cf158035c79d5f8921d31
     name: daloradius
@@ -1320,7 +1333,7 @@ entries:
     version: 1.1.2
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2025-03-12T09:26:07.985007261+07:00"
+    created: "2025-03-12T09:59:53.780461216+07:00"
     description: A Helm chart for Kubernetes
     digest: 2db6ab6dc166a662016b808796a06a2fcb13d9535a2b481fa4a3b7c609d22957
     name: daloradius
@@ -1330,7 +1343,7 @@ entries:
     version: 1.1.1
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2025-03-12T09:26:07.981650558+07:00"
+    created: "2025-03-12T09:59:53.775556821+07:00"
     description: A Helm chart for Kubernetes
     digest: b6f60337740dbd5b8f1e3e22289dbb8a47a4edbc6f11c6a84922f64430d0c493
     name: daloradius
@@ -1340,7 +1353,7 @@ entries:
     version: 1.0.1
   - apiVersion: v2
     appVersion: 1.0.0
-    created: "2025-03-12T09:26:07.977281275+07:00"
+    created: "2025-03-12T09:59:53.772134365+07:00"
     description: A Helm chart for Kubernetes
     digest: 82e3dfacfd554577a2e6cba28586aa1d2552c38e369ca172a4b296fb9303f59d
     name: daloradius
@@ -1353,7 +1366,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.999395602+07:00"
+    created: "2025-03-12T09:59:53.795968951+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1370,7 +1383,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.996735304+07:00"
+    created: "2025-03-12T09:59:53.793112238+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1387,7 +1400,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.994041525+07:00"
+    created: "2025-03-12T09:59:53.790053119+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1404,7 +1417,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:07.991323899+07:00"
+    created: "2025-03-12T09:59:53.78723619+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1420,7 +1433,7 @@ entries:
   docxtemplate:
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.036825539+07:00"
+    created: "2025-03-12T09:59:53.833471684+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1433,7 +1446,7 @@ entries:
     version: 0.6.8
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.032682437+07:00"
+    created: "2025-03-12T09:59:53.830529808+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1446,7 +1459,7 @@ entries:
     version: 0.6.7
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.029554661+07:00"
+    created: "2025-03-12T09:59:53.825113504+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1459,7 +1472,7 @@ entries:
     version: 0.6.6
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.026583398+07:00"
+    created: "2025-03-12T09:59:53.822208419+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1472,7 +1485,7 @@ entries:
     version: 0.6.5
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.023586049+07:00"
+    created: "2025-03-12T09:59:53.818968256+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1485,7 +1498,7 @@ entries:
     version: 0.6.4
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.020394051+07:00"
+    created: "2025-03-12T09:59:53.815996278+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1498,7 +1511,7 @@ entries:
     version: 0.6.3
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.017240458+07:00"
+    created: "2025-03-12T09:59:53.813143109+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1511,7 +1524,7 @@ entries:
     version: 0.6.2
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.039840387+07:00"
+    created: "2025-03-12T09:59:53.836328995+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1524,7 +1537,7 @@ entries:
     version: v0.6.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.014071235+07:00"
+    created: "2025-03-12T09:59:53.809703483+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1537,7 +1550,7 @@ entries:
     version: 0.6.0
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.010999018+07:00"
+    created: "2025-03-12T09:59:53.806726247+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1550,7 +1563,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.005136306+07:00"
+    created: "2025-03-12T09:59:53.802679248+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1563,7 +1576,7 @@ entries:
     version: 0.4.0
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.002207351+07:00"
+    created: "2025-03-12T09:59:53.799099113+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1580,7 +1593,7 @@ entries:
       category: elastalert-ui
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.044447884+07:00"
+    created: "2025-03-12T09:59:53.841064467+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1597,7 +1610,7 @@ entries:
       category: elasticsearch
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.04724807+07:00"
+    created: "2025-03-12T09:59:53.843797797+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1613,7 +1626,7 @@ entries:
       category: filebeat
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.049645454+07:00"
+    created: "2025-03-12T09:59:53.846686459+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1629,7 +1642,7 @@ entries:
       category: AccessManagement
     apiVersion: v2
     appVersion: 3.0.26
-    created: "2025-03-12T09:26:08.12225285+07:00"
+    created: "2025-03-12T09:59:53.915882512+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1647,7 +1660,7 @@ entries:
       category: AccessManagement
     apiVersion: v2
     appVersion: 3.0.26
-    created: "2025-03-12T09:26:08.103660305+07:00"
+    created: "2025-03-12T09:59:53.898415933+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1665,7 +1678,7 @@ entries:
       category: AccessManagement
     apiVersion: v2
     appVersion: 3.0.26
-    created: "2025-03-12T09:26:08.087253618+07:00"
+    created: "2025-03-12T09:59:53.883273992+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1683,7 +1696,7 @@ entries:
       category: AccessManagement
     apiVersion: v2
     appVersion: 3.0.26
-    created: "2025-03-12T09:26:08.068363137+07:00"
+    created: "2025-03-12T09:59:53.864996532+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1702,7 +1715,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.131349615+07:00"
+    created: "2025-03-12T09:59:53.925010974+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1717,7 +1730,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.128491274+07:00"
+    created: "2025-03-12T09:59:53.922091072+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1732,7 +1745,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.125464545+07:00"
+    created: "2025-03-12T09:59:53.919180635+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1748,7 +1761,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.150835551+07:00"
+    created: "2025-03-12T09:59:53.945334279+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1763,7 +1776,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.147619245+07:00"
+    created: "2025-03-12T09:59:53.941851265+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1778,7 +1791,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.143601635+07:00"
+    created: "2025-03-12T09:59:53.93839266+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1793,7 +1806,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.138403665+07:00"
+    created: "2025-03-12T09:59:53.931756143+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1808,7 +1821,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.134959197+07:00"
+    created: "2025-03-12T09:59:53.928305899+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1824,7 +1837,7 @@ entries:
       category: Storage
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.159447328+07:00"
+    created: "2025-03-12T09:59:53.955354703+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1839,7 +1852,7 @@ entries:
       category: Storage
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.155636556+07:00"
+    created: "2025-03-12T09:59:53.950907968+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1854,7 +1867,7 @@ entries:
       category: Storage
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.153302644+07:00"
+    created: "2025-03-12T09:59:53.948379773+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1870,7 +1883,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.200944483+07:00"
+    created: "2025-03-12T09:59:53.998583731+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1885,7 +1898,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.195489806+07:00"
+    created: "2025-03-12T09:59:53.993924717+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1900,7 +1913,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.189228787+07:00"
+    created: "2025-03-12T09:59:53.987674977+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1915,7 +1928,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.184689891+07:00"
+    created: "2025-03-12T09:59:53.983019373+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1930,7 +1943,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.180184027+07:00"
+    created: "2025-03-12T09:59:53.978467573+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1945,7 +1958,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.175600394+07:00"
+    created: "2025-03-12T09:59:53.973834511+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1960,7 +1973,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.171090088+07:00"
+    created: "2025-03-12T09:59:53.969231649+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1975,7 +1988,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.16457385+07:00"
+    created: "2025-03-12T09:59:53.961016481+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -1991,7 +2004,7 @@ entries:
       category: backend
     apiVersion: v2
     appVersion: v1.7.0
-    created: "2025-03-12T09:26:08.211111405+07:00"
+    created: "2025-03-12T09:59:54.008661196+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2006,7 +2019,7 @@ entries:
       category: backend
     apiVersion: v2
     appVersion: v1.7.0
-    created: "2025-03-12T09:26:08.207708671+07:00"
+    created: "2025-03-12T09:59:54.005296865+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2021,7 +2034,7 @@ entries:
       category: backend
     apiVersion: v2
     appVersion: v1.7.0
-    created: "2025-03-12T09:26:08.204322787+07:00"
+    created: "2025-03-12T09:59:54.001980068+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2037,7 +2050,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.252038709+07:00"
+    created: "2025-03-12T09:59:54.054149882+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2051,7 +2064,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.248129633+07:00"
+    created: "2025-03-12T09:59:54.047267931+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2065,7 +2078,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.244036572+07:00"
+    created: "2025-03-12T09:59:54.043219794+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2079,7 +2092,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.240157619+07:00"
+    created: "2025-03-12T09:59:54.039266371+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2093,7 +2106,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.235968687+07:00"
+    created: "2025-03-12T09:59:54.034674021+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2107,7 +2120,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.232081558+07:00"
+    created: "2025-03-12T09:59:54.030603789+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2121,7 +2134,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.228207962+07:00"
+    created: "2025-03-12T09:59:54.026255325+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2135,7 +2148,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.221446394+07:00"
+    created: "2025-03-12T09:59:54.01908311+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2149,7 +2162,7 @@ entries:
       category: icingaweb
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.216448643+07:00"
+    created: "2025-03-12T09:59:54.013708249+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2164,7 +2177,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 2.0.6
-    created: "2025-03-12T09:26:08.268502151+07:00"
+    created: "2025-03-12T09:59:54.07159462+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2185,7 +2198,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 2.0.6
-    created: "2025-03-12T09:26:08.260994786+07:00"
+    created: "2025-03-12T09:59:54.063527458+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2207,7 +2220,7 @@ entries:
       category: Infrastructure
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.271577992+07:00"
+    created: "2025-03-12T09:59:54.074694926+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2221,7 +2234,7 @@ entries:
   juniper-syslog-api:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.281636361+07:00"
+    created: "2025-03-12T09:59:54.08684456+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2235,7 +2248,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.279101371+07:00"
+    created: "2025-03-12T09:59:54.084366728+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2249,7 +2262,7 @@ entries:
     version: 0.2.1
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.276623569+07:00"
+    created: "2025-03-12T09:59:54.081810845+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2263,7 +2276,7 @@ entries:
     version: 0.1.1
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.274057728+07:00"
+    created: "2025-03-12T09:59:54.078767294+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2280,7 +2293,7 @@ entries:
       category: kibana
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.285753889+07:00"
+    created: "2025-03-12T09:59:54.089214627+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2296,7 +2309,7 @@ entries:
       category: logstash
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.30207026+07:00"
+    created: "2025-03-12T09:59:54.106053199+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2311,7 +2324,7 @@ entries:
       category: logstash
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.294080357+07:00"
+    created: "2025-03-12T09:59:54.096983223+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2327,7 +2340,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 10.5.8
-    created: "2025-03-12T09:26:08.317505246+07:00"
+    created: "2025-03-12T09:59:54.118293526+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2343,7 +2356,7 @@ entries:
       category: Database
     apiVersion: v2
     appVersion: 10.5.8
-    created: "2025-03-12T09:26:08.310653535+07:00"
+    created: "2025-03-12T09:59:54.112278184+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2360,7 +2373,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.339220284+07:00"
+    created: "2025-03-12T09:59:54.139733808+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2375,7 +2388,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.336079323+07:00"
+    created: "2025-03-12T09:59:54.137389073+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2390,7 +2403,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.332803173+07:00"
+    created: "2025-03-12T09:59:54.134970128+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2405,7 +2418,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.330292103+07:00"
+    created: "2025-03-12T09:59:54.131822954+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2420,7 +2433,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.327792951+07:00"
+    created: "2025-03-12T09:59:54.128280017+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2435,7 +2448,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.325388039+07:00"
+    created: "2025-03-12T09:59:54.125590907+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2450,7 +2463,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.322871006+07:00"
+    created: "2025-03-12T09:59:54.123134325+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2465,7 +2478,7 @@ entries:
       category: Maxscale
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.320113668+07:00"
+    created: "2025-03-12T09:59:54.120791813+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2481,7 +2494,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.351541859+07:00"
+    created: "2025-03-12T09:59:54.152234946+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2496,7 +2509,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.348504352+07:00"
+    created: "2025-03-12T09:59:54.149282107+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2511,7 +2524,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.345164472+07:00"
+    created: "2025-03-12T09:59:54.146308098+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2526,7 +2539,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.34226802+07:00"
+    created: "2025-03-12T09:59:54.143049393+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2542,7 +2555,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.364954267+07:00"
+    created: "2025-03-12T09:59:54.167377387+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2557,7 +2570,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.360363417+07:00"
+    created: "2025-03-12T09:59:54.163620229+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2572,7 +2585,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.357513735+07:00"
+    created: "2025-03-12T09:59:54.159852769+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2587,7 +2600,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.354629447+07:00"
+    created: "2025-03-12T09:59:54.155509742+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2603,7 +2616,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.385052334+07:00"
+    created: "2025-03-12T09:59:54.188286659+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2618,7 +2631,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.382595707+07:00"
+    created: "2025-03-12T09:59:54.185917153+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2633,7 +2646,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.380153529+07:00"
+    created: "2025-03-12T09:59:54.182398675+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2648,7 +2661,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.377740898+07:00"
+    created: "2025-03-12T09:59:54.179916842+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2663,7 +2676,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.375265863+07:00"
+    created: "2025-03-12T09:59:54.177227327+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2678,7 +2691,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.372899664+07:00"
+    created: "2025-03-12T09:59:54.17487095+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2693,7 +2706,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.370449177+07:00"
+    created: "2025-03-12T09:59:54.172509637+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2708,7 +2721,7 @@ entries:
       category: Preparation
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.367539811+07:00"
+    created: "2025-03-12T09:59:54.16998598+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2724,7 +2737,7 @@ entries:
       category: Proxy
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.422990396+07:00"
+    created: "2025-03-12T09:59:54.226398659+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2739,7 +2752,7 @@ entries:
       category: Proxy
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.413725838+07:00"
+    created: "2025-03-12T09:59:54.217495084+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2754,7 +2767,7 @@ entries:
       category: Proxy
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.404658679+07:00"
+    created: "2025-03-12T09:59:54.207687075+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2769,7 +2782,7 @@ entries:
       category: Proxy
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.395395322+07:00"
+    created: "2025-03-12T09:59:54.198345886+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2785,7 +2798,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.484616056+07:00"
+    created: "2025-03-12T09:59:54.289299826+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2800,7 +2813,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.479616377+07:00"
+    created: "2025-03-12T09:59:54.284316362+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2815,7 +2828,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.474697505+07:00"
+    created: "2025-03-12T09:59:54.279703766+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2830,7 +2843,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.469880252+07:00"
+    created: "2025-03-12T09:59:54.274799925+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2845,7 +2858,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.464996493+07:00"
+    created: "2025-03-12T09:59:54.268347356+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2860,7 +2873,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.458488802+07:00"
+    created: "2025-03-12T09:59:54.262717934+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2875,7 +2888,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.453553265+07:00"
+    created: "2025-03-12T09:59:54.256764089+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2890,7 +2903,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.448634447+07:00"
+    created: "2025-03-12T09:59:54.251301646+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2905,7 +2918,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.443543217+07:00"
+    created: "2025-03-12T09:59:54.24657706+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2920,7 +2933,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.438298264+07:00"
+    created: "2025-03-12T09:59:54.240878371+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2935,7 +2948,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.433647899+07:00"
+    created: "2025-03-12T09:59:54.235637515+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2950,7 +2963,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.1.0
-    created: "2025-03-12T09:26:08.427764774+07:00"
+    created: "2025-03-12T09:59:54.231022697+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2966,7 +2979,7 @@ entries:
       category: API
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.499213477+07:00"
+    created: "2025-03-12T09:59:54.303495157+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2981,7 +2994,7 @@ entries:
       category: API
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.495990266+07:00"
+    created: "2025-03-12T09:59:54.298662059+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -2996,7 +3009,7 @@ entries:
       category: API
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.491173861+07:00"
+    created: "2025-03-12T09:59:54.295613632+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3011,7 +3024,7 @@ entries:
       category: API
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.488116103+07:00"
+    created: "2025-03-12T09:59:54.292392153+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3027,7 +3040,7 @@ entries:
       category: Template
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.506358333+07:00"
+    created: "2025-03-12T09:59:54.311404374+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3042,7 +3055,7 @@ entries:
       category: Template
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.502735296+07:00"
+    created: "2025-03-12T09:59:54.307976491+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3056,7 +3069,7 @@ entries:
   snmp-manager:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.517478081+07:00"
+    created: "2025-03-12T09:59:54.322893574+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3070,7 +3083,7 @@ entries:
     version: 1.1.2
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.514125721+07:00"
+    created: "2025-03-12T09:59:54.319441004+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3084,7 +3097,7 @@ entries:
     version: 1.1.1
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.510872179+07:00"
+    created: "2025-03-12T09:59:54.315887055+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3099,7 +3112,7 @@ entries:
   streamlit:
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.559265832+07:00"
+    created: "2025-03-12T09:59:54.364651302+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3112,7 +3125,7 @@ entries:
     version: 0.6.5
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.556285085+07:00"
+    created: "2025-03-12T09:59:54.360768892+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3125,7 +3138,7 @@ entries:
     version: 0.6.4
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.550930244+07:00"
+    created: "2025-03-12T09:59:54.357021495+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3138,7 +3151,7 @@ entries:
     version: 0.6.3
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.547470379+07:00"
+    created: "2025-03-12T09:59:54.354079369+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3151,7 +3164,7 @@ entries:
     version: 0.6.2
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.544463212+07:00"
+    created: "2025-03-12T09:59:54.351192372+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3164,7 +3177,7 @@ entries:
     version: 0.6.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.541434562+07:00"
+    created: "2025-03-12T09:59:54.348331323+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3177,7 +3190,7 @@ entries:
     version: 0.5.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.538424244+07:00"
+    created: "2025-03-12T09:59:54.345500278+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3190,7 +3203,7 @@ entries:
     version: 0.4.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.534636636+07:00"
+    created: "2025-03-12T09:59:54.342256444+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3203,7 +3216,7 @@ entries:
     version: 0.3.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.53168101+07:00"
+    created: "2025-03-12T09:59:54.338635019+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3220,7 +3233,7 @@ entries:
     version: 0.2.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.525697104+07:00"
+    created: "2025-03-12T09:59:54.328910684+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3240,7 +3253,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.581720644+07:00"
+    created: "2025-03-12T09:59:54.388237691+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3255,7 +3268,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.578446762+07:00"
+    created: "2025-03-12T09:59:54.383928626+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3270,7 +3283,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.575391615+07:00"
+    created: "2025-03-12T09:59:54.380984613+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3285,7 +3298,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.572519924+07:00"
+    created: "2025-03-12T09:59:54.377914836+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3300,7 +3313,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.569419278+07:00"
+    created: "2025-03-12T09:59:54.374717271+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3315,7 +3328,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.566296715+07:00"
+    created: "2025-03-12T09:59:54.37126776+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3330,7 +3343,7 @@ entries:
       category: Backend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.562397994+07:00"
+    created: "2025-03-12T09:59:54.368111471+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3344,7 +3357,7 @@ entries:
   tacgui:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.594661506+07:00"
+    created: "2025-03-12T09:59:54.40045942+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3358,7 +3371,7 @@ entries:
     version: 0.5.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.590013517+07:00"
+    created: "2025-03-12T09:59:54.395660023+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3372,7 +3385,7 @@ entries:
     version: 0.4.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.587685742+07:00"
+    created: "2025-03-12T09:59:54.393320151+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3386,7 +3399,7 @@ entries:
     version: 0.3.0
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2025-03-12T09:26:08.585225544+07:00"
+    created: "2025-03-12T09:59:54.390764401+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3403,7 +3416,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.607789499+07:00"
+    created: "2025-03-12T09:59:54.417797671+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3418,7 +3431,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.604577477+07:00"
+    created: "2025-03-12T09:59:54.413254214+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3433,7 +3446,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.601265946+07:00"
+    created: "2025-03-12T09:59:54.409613574+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3448,7 +3461,7 @@ entries:
       category: Frontend
     apiVersion: v2
     appVersion: v1.0.0
-    created: "2025-03-12T09:26:08.598064103+07:00"
+    created: "2025-03-12T09:59:54.403865304+07:00"
     dependencies:
     - name: common
       repository: https://svtechnmaa.github.io/charts/artifacthub/
@@ -3459,4 +3472,4 @@ entries:
     urls:
     - thruk-1.0.0.tgz
     version: 1.0.0
-generated: "2025-03-12T09:26:07.631794998+07:00"
+generated: "2025-03-12T09:59:53.425657688+07:00"
