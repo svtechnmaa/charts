@@ -74,9 +74,15 @@ spec:
         name: streamlit
         env:
         - name: GIT_TOKEN
-          value: {{ .Values.global.github.fg_token }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Chart.Name }}-secret
+              key: fg_token
         - name: USER_NAME
-          value: {{ .Values.global.github.user }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Chart.Name }}-secret
+              key: user
         {{- if .Values.sharedVolume.enabled }}
         - name: REPO
           value: {{ .Values.sharedVolume.path }}
