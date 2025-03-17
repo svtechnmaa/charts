@@ -1,0 +1,26 @@
+{{- if and .Values.persistence .Values.persistence.enabled -}}
+
+{{- if not .Values.persistence.dynamicProvisioning }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-{{ include "mageai.fullname" . }}
+  labels:
+    deployment: {{ include "mageai.fullname" . }}
+spec:
+  capacity:
+    storage: {{ .Values.persistence.size}}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ .Values.persistence.storageClassName}}
+  hostPath:
+    path: {{ .Values.persistence.basePath }}/{{ .Release.Namespace }}/{{ .Values.persistence.hostPathRuleDir }}
+  {{- with .Values.persistence.csi }}
+  csi:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+{{- end }}
+{{- end }}
