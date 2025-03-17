@@ -1,0 +1,232 @@
+# Default values for mageai.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+standaloneScheduler: true
+
+# Effective if standaloneScheduler is true
+scheduler:
+  replicaCount: 1
+  name: mageai-scheduler
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  # hpa:
+  #   minReplicas: 1
+  #   maxReplicas: 10
+  #   targetCPUUtilizationPercentage: 50
+
+# Effective if standaloneScheduler is true
+webServer:
+  replicaCount: 1
+  name: mageai-webserver
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  # hpa:
+  #   minReplicas: 1
+  #   maxReplicas: 10
+  #   targetCPUUtilizationPercentage: 50
+
+# Enable Postgres as the DB
+postgresql:
+  enabled: false
+  fullnameOverride: "postgresql-service"
+  auth:
+    username: postgres
+    password: "juniper@123"
+    database: "mageai_nmaa"
+
+postgresqlExternal:
+  enabled: true
+  fullnameOverride: "postgresql-ha-pgpool"
+  auth:
+    username: postgres
+    password: "juniper@123"
+    database: "etl_nmaa"
+
+logFolderExternal:
+  enabled: true
+  path: /home/src/logs_dir
+
+# Enable redis if you want more replica
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+  # Your custom redis url (make sure redis.enabled is set to false)
+  customRedisURL: ""
+
+image:
+  # repository: mageai/mageai
+  # repository: tuongvx/svtech_mageai
+  # repository: tuongvx/svtech_mageai_new
+  repository: ghcr.io/svtechnmaa/svtech_netlogic_etl
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "v1.5"
+
+imagePullSecrets: 
+  - name: "ghcr-pull-secret"
+nameOverride: "mageai"
+fullnameOverride: "mageai"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "mageai"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: LoadBalancer
+  port: 6789
+  # Annotations to add to the service
+  annotations: {}
+
+# Configure extra options for containers' liveness probes
+# If not configured, the probe is enabled using the following values
+livenessProbe:
+  enabled: true
+  path: /api/status
+  port: http
+  initialDelaySeconds: 5
+  # failureThreshold:
+  # periodSeconds:
+  # successThreshold:
+  # terminationGracePeriodSeconds:
+  timeoutSeconds: 10
+
+# Configure extra options for containers' readiness probes
+# If not configured, the probe is enabled using the following values
+readinessProbe:
+  enabled: true
+  path: /api/status
+  port: http
+  initialDelaySeconds: 5
+  # failureThreshold:
+  # periodSeconds:
+  # successThreshold:
+  # terminationGracePeriodSeconds:
+  timeoutSeconds: 1
+
+# Custom liveness probe
+customLivenessProbe: {}
+
+# Custom readiness probe
+customReadinessProbe: {}
+
+# Horizontal pod autoscaler
+# hpa:
+#   minReplicas: 1
+#   maxReplicas: 10
+#   targetCPUUtilizationPercentage: 50
+
+# We recommend creating the ingress separately instead of creating it using this chart.
+# There is a corresponding Mage-Ingress chart to create an ingress for Mage if needed.
+# This section is kept here for backwards compatibility.
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+volumeEnabled: true
+
+extraVolumeMounts:
+  - name: mage-log
+    mountPath: /home/src/logs_dir
+
+extraVolumes:
+  - name: mage-log
+    hostPath:
+      path: /data/mageai/logs_dir
+
+persistence:
+  enabled: true
+  storageClassName: storage-class-name
+  size: 5Gi
+  dynamicProvisioning: false
+  # csi:
+  #   driver: efs.csi.aws.com
+  #   volumeHandle: fs-0123456789
+  basePath: /data
+  hostPathRuleDir: mageai
+
+# config: Default configuration for mageai as environment variables. These get injected directly in the container.
+config: {}
+
+# existingSecret: Specifies an existing secret to be used as environment variables. These get injected directly in the container.
+existingSecret: ""
+
+# secrets: Default secrets for mageai as environment variables. These get injected directly in the container.
+# Consider using a secret manager first, before sourcing secrets as environment variables.
+secrets: {}
+
+# extraEnvs: Extra environment variables
+extraEnvs:
+  - name: KUBE_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
