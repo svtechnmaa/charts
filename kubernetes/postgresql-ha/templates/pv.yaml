@@ -1,0 +1,31 @@
+{{- if .Values.persistence.enabled }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ $.Values.persistence.storageClass | quote }}
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+
+{{- range $index, $topping := until (int (include "common.replicas" ( dict "replicaCount" .Values.postgresql.replicaCount "global" .Values.global ))) }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "data-{{ $.Release.Namespace }}-postgresql-{{ $index }}"
+  labels:
+    app.kubernetes.io/instance: postgresql-ha
+    app.kubernetes.io/name: postgresql
+spec:
+  storageClassName: {{ $.Values.persistence.storageClass | quote }}
+  capacity:
+    storage: {{ $.Values.persistence.size | quote }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /data/{{ $.Release.Namespace }}-postgresql-{{ $index }}
+    type: DirectoryOrCreate
+
+{{- end }}
+{{- end }}
