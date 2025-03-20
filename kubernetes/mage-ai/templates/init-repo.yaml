@@ -1,0 +1,81 @@
+{{- if .Values.global.pullCode }}
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "init-repo"
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+      - name: init-repo
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
+        command:
+          - bash
+          - -ec
+          - |
+                  name=`echo $REPO | sed  "s/:.*//"`
+                  mkdir -p $REPO_PATH
+                  status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
+                  if [[ "$status" == "0" ]]; then
+                    echo "$REPO_PATH is Empty. Clone repo"
+                    git clone --branch $BRANCH https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git $REPO_PATH
+                    echo "true" > $REPO_PATH/completed
+                    echo "Finished clone!"
+                  else
+                    if [[ ! -f "$REPO_PATH/completed" ]]; then
+                      check_branch=`git branch | grep -e '*'`
+                      if [[ "$check_branch" != "* $BRANCH" ]]; then
+                        echo "Branch is not $BRANCH. Checkout"
+                        git checkout $BRANCH
+                      fi
+                      echo "true" > $REPO_PATH/completed
+                    fi
+                    echo "$REPO_PATH is not Empty. Ignore"
+                  fi
+        env:
+          - name: GH_FG_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mageai.secretName" . }}
+                key: fg_token
+          - name: GH_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "mageai.secretName" . }}
+                key: user_github_repo
+          - name: BRANCH
+            value: {{ .Values.initRepo.branch | quote }}
+          - name: REPO
+            value: {{ .Values.initRepo.repo | quote }}
+          - name: REPO_PATH
+            value: /home/src/NMAA-piplines-source
+
+        volumeMounts:
+          - name: {{ include "mageai.fullname" . }}-pipelines
+            mountPath: /home/src/NMAA-piplines-source
+
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}  
+
+      volumes:
+        - name: {{ include "mageai.fullname" . }}-pipelines
+          persistentVolumeClaim:
+            claimName: pvc-{{ include "mageai.fullname" . }}-pipelines
+
+{{- end }}
