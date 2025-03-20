@@ -129,6 +129,10 @@ spec:
               value: web_server
           {{- if .Values.volumeEnabled }}
           volumeMounts:
+          {{- if .Values.global.pullCode }}
+            - name: {{ include "mageai.fullname" . }}-pipelines
+              mountPath: /home/src/
+          {{- end }}
           {{- if .Values.volumes }}
             - name: mage-fs
               mountPath: /home/src
@@ -150,6 +154,11 @@ spec:
       {{- end }}
       {{- if .Values.volumeEnabled }}
       volumes:
+      {{- if .Values.global.pullCode }}
+        - name: {{ include "mageai.fullname" . }}-pipelines
+          persistentVolumeClaim:
+            claimName: pvc-{{ include "mageai.fullname" . }}-pipelines
+      {{- end }}
       {{- if .Values.volumes }}
         {{- toYaml .Values.volumes | nindent 8 }}
       {{- else if .Values.extraVolumes -}}
