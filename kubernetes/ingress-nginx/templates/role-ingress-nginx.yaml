@@ -2,11 +2,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ .Release.Namespace }}-ingress-nginx
+  name: {{ .Release.Name }}-ingress-nginx
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: {{ .Release.Namespace }}-ingress-nginx
-    app.kubernetes.io/part-of: {{ .Release.Namespace }}-ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
 rules:
   - apiGroups: [""]
     resources: ["namespaces"]

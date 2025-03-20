@@ -6,8 +6,8 @@ metadata:
   name: tcp-services
   namespace: {{ $ns }}
   labels:
-    app.kubernetes.io/name: {{ $ns }}-ingress-nginx
-    app.kubernetes.io/part-of: {{ $ns }}-ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
 data:
 {{- range .Values.service.portBackend }}
 {{- if eq .protocol "TCP" }}
