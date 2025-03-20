@@ -1,6 +1,45 @@
 # Default values for mageai.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+global:
+  pullCode: true
+  projectName: "NMAA_pipelines"
+  imageRegistry: ""
+  github:
+    user: ""
+    token: ""
+    fg_token: ""  
+  basePath: /opt/shared/
+
+initRepo:
+  image:
+    repository: svtechnmaa/svtech_debuger
+    tag: v1.0.3
+    pullPolicy: IfNotPresent
+
+  repo: "netlogic_ETL_pipelines:latest"
+  branch: "main"
+updateStrategy: RollingUpdate
+podManagementPolicy: OrderedReady
+podAffinityPreset: ""
+podAntiAffinityPreset: soft
+nodeAffinityPreset:
+  ## Node affinity type
+  ### Allowed values: soft, hard
+  type: ""
+  ### Node label key to match
+  ### E.g.
+  ### key: "kubernetes.io/e2e-az-name"
+  ###
+  key: ""
+  ### Node label values to match
+  ### E.g.
+  ### values:
+  ###   - e2e-az1
+  ###   - e2e-az2
+  ###
+  values: []
+
 
 replicaCount: 1
 standaloneScheduler: true
@@ -205,14 +244,13 @@ extraVolumes:
 
 persistence:
   enabled: true
-  storageClassName: storage-class-name
+  storageClassName: storage-class-mageai
   size: 5Gi
   dynamicProvisioning: false
   # csi:
   #   driver: efs.csi.aws.com
   #   volumeHandle: fs-0123456789
-  basePath: /data
-  hostPathRuleDir: mageai
+  pathFolder: mageai
 
 # config: Default configuration for mageai as environment variables. These get injected directly in the container.
 config: {}
