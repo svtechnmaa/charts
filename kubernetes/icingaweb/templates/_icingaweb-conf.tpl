@@ -20,6 +20,10 @@
   value: "*"
 - name: icingaweb.roles.Administrators.groups
   value: Administrators
+- name: icingaweb.roles.Views.groups
+  value: Views
+- name: icingaweb.roles.Views.permissions
+  value: "application/announcements,user/share/navigation,module/grafana,grafana/graph,grafana/showall,user/password-change,icingadb/*,module/icingadb"
 {{/* Director module */}}
 {{- if .Values.modules.director.enabled }}
 - name: icingaweb.modules.director.config.db.resource
@@ -80,5 +84,15 @@
   value: "iframe"
 - name: icingaweb.modules.grafana.config.grafana.debug
   value: "0"
+- name: icingaweb.modules.grafana.graphs.hostalive.dashboard
+  value: "icinga2-hostalive"
+- name: icingaweb.modules.grafana.graphs.hostalive.panelId
+  value: "1"
+- name: icingaweb.modules.grafana.graphs.hostalive.orgId
+  value: "1"
+- name: icingaweb.modules.grafana.graphs.hostalive.repeatable
+  value: "no"
+- name: icingaweb.modules.grafana.graphs.hostalive.dashboarduid
+  value: "icinga2-hostalive"
 {{- end }}
 {{- end }}

@@ -1,10 +1,11 @@
+{{ $workloadType := .Values.workloadType }}
 apiVersion: apps/v1
-kind: Deployment
+kind: {{ $workloadType | default "Deployment" }}
 metadata:
   name: {{ include "common.names.fullname" . }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: icingaweb
+    app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
@@ -12,22 +13,31 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
+  {{- if eq $workloadType "StatefulSet" }}
+  serviceName: {{ .Chart.Name }}-headless
+  {{- end }}
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
-  strategy:
-    type: {{ .Values.updateStrategy }}
-    {{- if (eq "Recreate" .Values.updateStrategy) }}
-    rollingUpdate: null
-    {{- end }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: icingaweb
+      app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
+  {{- if and (eq $workloadType "Deployment") .Values.strategy }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  {{- end }}
+  {{- if and (eq $workloadType "StatefulSet") .Values.updateStrategy }}
+  updateStrategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: icingaweb
+        app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
     spec:
+      # Allocate pods to nodes
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
@@ -42,143 +52,165 @@ spec:
       {{- if .Values.tolerations }}
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
       {{- end }}
-      {{- if .Values.init }}
-      # Init contaiter: change own for icingaweb config directory and waiting for icinga master
-      initContainers:
-      - name: icingaweb-init
-        image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }} # {{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}
-        imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
-        command:
-          - /bin/sh
-          - -c
-          - |
-            mkdir -p /data/etc/icingaweb2/enabledModules
-            mkdir -p /data/var/lib/icingaweb2
-            mkdir -p /data/etc/icingaweb2/modules/grafana
-            # Create default navigations
-            if [ ! -d /data/etc/icingaweb2/navigation ]; then
-              mkdir -p /data/etc/icingaweb2/navigation
-              cat > /data/etc/icingaweb2/navigation/menu.ini << EOF
-            [NMAA]
-            type = "menu-item"
-            target = "_main"
-            groups = "*"
-            owner = "icingaweb"
-            users = "*"
 
-            [Hosts]
-            type = "menu-item"
-            parent = "NMAA"
-            target = "_main"
-            url = "icingadb/hosts?columns=host.name,host.address,host.state.last_update,host.state.check_source,host.state.output&sort=host.state.last_update%20desc"
-            owner = "icingaweb"
-
-            [Services]
-            type = "menu-item"
-            parent = "NMAA"
-            target = "_main"
-            url = "icingadb/services?columns=host.name,service.name,service.state.hard_state,service.state.last_update,service.state.check_source,service.state.output&sort=service.state.last_update%20desc"
-            owner = "icingaweb"
-            EOF
-            fi
-            chown -R www-data:www-data /data
-            until nc -zvw5 {{ .Release.Name }}-icinga2-master-0.icinga2-headless 5665; do echo "Waiting for icinga master..."; sleep 2; done
-        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-        volumeMounts:
-          {{- range .Values.global.sharedPersistenceVolume }}
-          {{- if has "icingaweb" .shareFor }}
-          - name: {{ .volumeName }}
-            mountPath: {{ .path }}
-          {{- end }}
-          {{- end }}
-        {{- end }}
-      {{- end }}
       imagePullSecrets:
       - name: ghcr-pull-secret
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      # Init contaiter: change own for icingaweb config directory and waiting for icinga master
+      initContainers:
+        - name: icingaweb-init
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              # Create directories
+              mkdir -p /data/etc/icingaweb2/enabledModules
+              mkdir -p /data/var/lib/icingaweb2
+              mkdir -p /data/etc/icingaweb2/modules/grafana
+
+              # Create default navigations
+              if [ ! -d /data/etc/icingaweb2/navigation ]; then
+                mkdir -p /data/etc/icingaweb2/navigation
+                cat > /data/etc/icingaweb2/navigation/menu.ini << EOF
+              [NMAA]
+              type = "menu-item"
+              target = "_main"
+              groups = "*"
+              owner = "icingaweb"
+              users = "*"
+
+              [Hosts]
+              type = "menu-item"
+              parent = "NMAA"
+              target = "_main"
+              url = "icingadb/hosts?columns=host.name,host.address,host.state.last_update,host.state.check_source,host.state.output&sort=host.state.last_update%20desc"
+              owner = "icingaweb"
+
+              [Services]
+              type = "menu-item"
+              parent = "NMAA"
+              target = "_main"
+              url = "icingadb/services?columns=host.name,service.name,service.state.hard_state,service.state.last_update,service.state.check_source,service.state.output&sort=service.state.last_update%20desc"
+              owner = "icingaweb"
+              EOF
+              fi
+              chown -R www-data:www-data /data
+
+              # Wait for icinga master
+              until nc -zvw5 {{ .Release.Name }}-icinga2-master-0.icinga2-headless 5665; do echo "Waiting for icinga master..."; sleep 2; done
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+
+      # Containers config
       containers:
-      # icingaweb container
-      - name: icingaweb
-        image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }} # {{ .Values.image.repository }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-        {{- if .Values.securityContext.enabled }}
-        securityContext:
-          runAsUser: {{ .Values.securityContext.runAsUser }}
-          runAsGroup: {{ .Values.securityContext.runAsGroup }}
-        {{- end }}
-        {{- range $key, $value := .Values.containerPort }}
-        ports:
-        - name: {{ $key }}
-          containerPort: {{ $value }}
-        {{- end}}
-        ## ENV
-        env:
-        {{- range $key, $value := .Values.env }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
-        {{- end }}
-        - name: icingaweb.enabledModules
-          value: {{ include "icingaweb2.enabledModules" . }}
-        {{- include "icingaweb.conf" . | indent 8 }}
-        {{- include "icingaweb.resources" . | indent 8 }}
-      # Volume and volumeMount
-        volumeMounts:
-          # icingaweb http config
-          - name: icingaweb-http
-            mountPath: /etc/apache2/conf-enabled/icingaweb2.conf
-            subPath: icingaweb2.conf
-          # icingaweb graphs
-          - name: icingaweb-graphs
-            mountPath: /data/etc/icingaweb2/modules/grafana/graphs.ini
-            subPath: graphs.ini
-          # shareVolume
-          {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-          {{- range .Values.global.sharedPersistenceVolume }}
-          {{- if has "icingaweb" .shareFor }}
-          - name: {{ .volumeName }}
-            mountPath: {{ .path }}
+        # icingaweb container
+        - name: {{ .Chart.Name }} # replace if needed
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: icingaweb.enabledModules
+              value: {{ include "icingaweb2.enabledModules" . }}
+            {{- include "icingaweb.conf" . | indent 12 }}
+            {{- include "icingaweb.resources" . | indent 12 }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
           {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
           {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+
+        # director container
+        {{- if .Values.modules.director.enabled }}
+        - name: {{ .Chart.Name }}-director # replace if needed
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            - name: icingaweb.enabledModules
+              value: {{ include "icingaweb2.enabledModules" . }}
+            {{- include "icingaweb.conf" . | indent 12 }}
+            {{- include "icingaweb.resources" . | indent 12 }}
+          args:
+            - /bin/bash
+            - -ce
+            - |
+              icingacli director migration run
+              (icingacli director kickstart required && icingacli director kickstart run && icingacli director config deploy) || true
+              icingacli director daemon run
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
           {{- end }}
-      # director module container
-      {{- if .Values.modules.director.enabled }}
-      - name: director
-        image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }} # {{ .Values.image.repository }}:{{ .Values.image.tag }}
-        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-        ## ENV
-        env:
-        {{- range $key, $value := .Values.env }}
-        - name: {{ $key }}
-          value: {{ $value | quote }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
         {{- end }}
-        - name: icingaweb.enabledModules
-          value: {{ include "icingaweb2.enabledModules" . }}
-        {{- include "icingaweb.conf" . | indent 8 }}
-        {{- include "icingaweb.resources" . | indent 8 }}
-        command: []
-        args:
-          - /bin/bash
-          - -ce
-          - |
-            icingacli director migration run
-            (icingacli director kickstart required && icingacli director kickstart run && icingacli director config deploy) || true
-            icingacli director daemon run
-      {{- end }}
+
       volumes:
-        # icingaweb http 
-        - name: icingaweb-http
-          configMap:
-            name: icingaweb-http
-        # icingaweb graphs
-        - name: icingaweb-graphs
-          configMap:
-            name: icingaweb-graphs
-        # shareVome
+      # shareVolume(volume): define in the global values
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has "icingaweb" .shareFor }}
+        {{- if has $.Chart.Name .shareFor }}
         - name: {{ .volumeName }}
           persistentVolumeClaim:
             claimName: {{ .pvcName }}
         {{- end }}
         {{- end }}
+        {{- end }}
+      # unshareVolume(volume): define in the chart's values.yaml
+        {{- if .Values.volumes }}
+        {{- toYaml .Values.volumes | nindent 8 }}
         {{- end }}
