@@ -4,13 +4,13 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: icinga-sa
+  name: {{ .Release.Name }}-icinga-sa
   namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: icinga-exec-role
+  name: {{ .Release.Name }}-icinga-exec-role
 rules:
   - apiGroups: ["*"]
     resources: ["pods"]
@@ -21,15 +21,15 @@ rules:
     verbs: ["create"]  # Permissions needed to exec commands in pods
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
-  name: icinga-exec-role-binding
+  name: {{ .Release.Name }}-icinga-exec-role-binding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: icinga-exec-role
+  kind: Role
+  name: {{ .Release.Name }}-icinga-exec-role
 subjects:
   - kind: ServiceAccount
-    name: icinga-sa
+    name: {{ .Release.Name }}-icinga-sa
     namespace: {{ .Release.Namespace }}
 {{- end }}
