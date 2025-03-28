@@ -42,7 +42,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  ingressClassName: {{ .Release.Namespace }}
+  ingressClassName: {{ .Release.Name }}
   {{- if and .Values.ingress.web.hosts (.Values.ingress.web.hosts | first | kindIs "string" | not) }}
   {{- $anyTlsHosts := false -}}
   {{- range .Values.ingress.web.hosts }}
