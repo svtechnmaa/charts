@@ -73,7 +73,9 @@ spec:
         {{- end }}
         name: streamlit
         env:
-        - name: GIT_TOKEN
+        - name: BRANCH_GIT
+          value: {{ .Values.streamlitConfig.branch }}
+        - name: TOKEN_GIT
           valueFrom:
             secretKeyRef:
               name: {{ .Chart.Name }}-secret
