@@ -101,7 +101,7 @@ spec:
               value: scheduler
           {{- if .Values.volumeEnabled }}
           volumeMounts:
-          {{- if .Values.global.pullCode }}
+          {{- if .Values.global.mageai.pullCode }}
             - name: {{ include "mageai.fullname" . }}-pipelines
               mountPath: /home/src
           {{- end }}
@@ -126,7 +126,7 @@ spec:
       {{- end }}
       {{- if .Values.volumeEnabled }}
       volumes:
-      {{- if .Values.global.pullCode }}
+      {{- if .Values.global.mageai.pullCode }}
         - name: {{ include "mageai.fullname" . }}-pipelines
           persistentVolumeClaim:
             claimName: pvc-{{ include "mageai.fullname" . }}-pipelines

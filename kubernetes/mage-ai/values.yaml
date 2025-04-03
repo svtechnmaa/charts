@@ -2,9 +2,9 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 global:
-  pullCode: true
-  projectName: "NMAA_pipelines"
-  imageRegistry: ""
+  mageai:
+    pullCode: true
+    projectName: "NMAA_pipelines"
   github:
     user: ""
     token: ""
@@ -198,15 +198,14 @@ customReadinessProbe: {}
 # There is a corresponding Mage-Ingress chart to create an ingress for Mage if needed.
 # This section is kept here for backwards compatibility.
 ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+  enabled: true
+  # className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
   hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
+    - paths:
+        - path: /mageai
           pathType: ImplementationSpecific
   tls: []
   #  - secretName: chart-example-tls
