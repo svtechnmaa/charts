@@ -1,0 +1,242 @@
+################### svtech-lab device management pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: online-log
+data:
+  jun-svtechlab-onlinelog.conf: |
+    input {
+      tcp {
+        port => 5515
+        type => syslog
+        tags => junos_log
+      }
+      udp {
+        port => 5515
+        type => syslog
+        tags => junos_log
+      }
+    }
+
+    filter {
+      if "junos_log" in [tags] {
+        mutate {
+          add_field => [ "received_at", "%{@timestamp}" ]
+          add_field => [ "received_from", "%{host}" ]
+        }
+        if ([message] =~ /nginx health check/) {
+            drop {}
+        }
+        if ([message] =~ /haproxy/) {
+            drop {}
+        }
+        if ([message] =~ /username=\"icinga\"/) {
+            drop {}
+        }
+        if [message] =~ "- - - - fpc" {
+            drop {}
+        }
+        else {
+          grok {
+            match => { "message" => "<%{PRIORITYCODE:junos_priocode}>1 %{TIMESTAMP_ISO8601:junos_time} %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}|\-) (%{PROCESSID:junos_procsid}|\-) (%{EVENTNAME:junos_eventname}|\-) %{MESSAGE:junos_msg}" }
+            patterns_dir => ["/etc/logstash/patterns"]
+            patterns_files_glob => "structured_log"
+          }
+        }
+
+        mutate {
+          convert => { "junos_priocode" => "integer" }
+          gsub => [
+            "junos_hostname", "[-_]RE\d*", ""
+          ]
+        }
+        ruby {
+          code => 'event.set("junos_facilitycode", event.get("junos_priocode")/8)'
+        }
+        ruby {
+          code => 'event.set("junos_severitycode", event.get("junos_priocode")%8)'
+        }
+        translate {
+          field => "[junos_severitycode]"
+          destination => "[junos_severityname]"
+          # dictionary_path => "/etc/logstash/dictionary/facilitycode.yml"
+          dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+        }
+        translate {
+          field => "[junos_facilitycode]"
+          destination => "[junos_facilityname]"
+          dictionary_path => "/etc/logstash/dictionary/facilitycode.yml"
+        }
+
+        if "AUTHORIZATION" in [junos_facilityname] or "sshd|login" in [junos_procsname] {
+          mutate {
+            add_tag => "access_log"
+          }
+        }
+
+        if "UI_LOGOUT_EVENT|UI_LOGIN_EVENT|UI_AUTH_EVENT|UI_CMDLINE_READ_LINE" in [junos_eventname] or "INTERACTIVE-COMMANDS" in [junos_facilityname] or "mgd" in [junos_procsname] {
+          mutate {
+            add_tag => "access_log"
+          }
+        }
+
+        if "UI_JUNOSCRIPT_CMD" in [junos_eventname] {
+          mutate { add_field => {"login_session" => "junos_script"} }
+        }
+
+        if "access_log" in [tags] {
+          mutate { add_field => {"login_session" => "pending"} }
+          grok {
+              # TELNET/SSH FAILED
+              match => { "junos_msg" =>
+                [
+                  "\[%{GREEDYDATA:} username=\"%{GREEDYDATA:login_user}\" source-address=\"%{IP:login_source}\"\] %{GREEDYDATA:}",
+                  "\[%{GREEDYDATA} username=\"%{GREEDYDATA:login_user}\" source-address=\"%{IP:login_source}\"\]"
+                ]
+              }
+              add_field => { "login_protocol" => "login failed" }
+              add_tag => "login_trigger"
+              tag_on_failure => []
+          }
+
+          grok {
+              # TELNET OK
+              match => { "junos_msg" => "\[%{GREEDYDATA:} username=\"%{GREEDYDATA:login_user}\" hostname=\"%{IP:login_source}\" tty-name=\"%{GREEDYDATA:client_mode}\"\] %{GREEDYDATA:}" }
+              # SSH OK
+              match => { "junos_msg" =>
+                [
+                  "\[%{DATA} username=\"%{GREEDYDATA:login_user}\" class-name=\"%{GREEDYDATA:class}\" local-peer=\"%{DATA}\" ssh-connection=\"%{IP:login_source} %{DATA}\" client-mode=\"%{GREEDYDATA:client_mode}\"\] %{GREEDYDATA:}",
+                  "\[%{DATA} username=\"%{GREEDYDATA:login_user}\" class-name=\"%{GREEDYDATA:class}\" local-peer=\"%{DATA}\" ssh-connection=\"%{IP:login_source} %{DATA}\" client-mode=\"%{GREEDYDATA:client_mode}\"\]"
+                ]
+              }
+              # Junoscript
+              match => { "junos_msg" => "\[%{DATA} username=\"%{GREEDYDATA:login_user}\" class-name=\"%{GREEDYDATA:class}\" local-peer=\"%{DATA}\" %{GREEDYDATA:} client-mode=\"(?<client_mode>\junoscript)\"\] %{GREEDYDATA:}" }
+              add_tag => "login_trigger"
+              tag_on_failure => []
+          }
+
+          grok {
+              # TELNET/SSH COMMAND - Interacetive User
+              match => {
+                "junos_msg" => [
+                  "\[%{GREEDYDATA:} username=\"%{GREEDYDATA:login_user}\" command=\"%{GREEDYDATA:junos_command}\"\] %{GREEDYDATA:}",
+                  "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}', command '%{GREEDYDATA:junos_command}'",
+                  "\[%{GREEDYDATA} username=\"%{GREEDYDATA:login_user}\" command=\"%{GREEDYDATA:junos_command}\"\]"
+                  ]
+                }
+              # match => { "junos_msg" => "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}', command '%{GREEDYDATA:junos_command}'" }
+              add_tag => "interactive_user"
+              tag_on_failure => []
+          }
+
+          grok {
+              # NETCONF COMMAND - NETCONF User
+              match => { "junos_msg" => "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}' used NETCONF client to run command '%{GREEDYDATA:junos_command}'" }
+              match => { "junos_msg" => "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}', command 'xml-mode netconf need-trailer '" }
+              match => { "junos_msg" => "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}', command 'command rpc rpc command start shell command %{GREEDYDATA:}" }
+              add_tag => "netconf_user"
+              add_field => { "client_mode" => "netconf" }
+              tag_on_failure => []
+          }
+
+          translate {
+            exact => true
+            regex => true
+            field => "[client_mode]"
+            destination => "[login_protocol]"
+            dictionary_path => "/etc/logstash/dictionary/client_mode.yml"
+          }
+        }
+
+        date {
+          match => [ "junos_time", "ISO8601" ]
+        }
+
+        if "USER" in [junos_facilityname] and "smid" in [junos_procsname] and "WARNING" in [junos_severityname] {
+          if "watermark" in [junos_msg] {
+            mutate {
+              add_tag => "alert_watermark"
+            }
+        }
+      }
+      # if ["message"] {
+      mutate {
+          remove_field => [ "message" ]
+        }
+      # }
+    }
+
+
+    output {
+      # if "junos_log" in [tags] or "access_log" in [tags] or "interactive_user" in [tags] or "netconf_user" in [tags] or "login_trigger" in [tags] {
+      if "junos_log" in [tags] and "alert_watermark" not in [tags] {
+        elasticsearch {
+          hosts => ["{{ join "\", \"https://" $newArray }}"]
+          index => '{{ first  .Values.global.elasticsearch.index.name }}' # "junos-svtechlab-log"
+          # cacert => "/etc/logstash/certs/NMS01.pem"
+          user => '{{.Values.global.elasticsearch.adminUser.name}}' #{{.Values.global.user}}
+          password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+          ssl_certificate_verification => false
+        }
+      }
+      # stdout {codec => rubydebug}
+      # stdout { codec => rubydebug { metadata => true } }
+
+      if "_grokparsefailure" in [tags] {
+        file { path => "/var/log/logstash/login_failed_onlinelog_events-%{+YYYY-MM}" }
+      }
+    }
+################### End of svtech-lab device management pipeline config ###################
+
+################### movitel MX devices log stream pipeline config ###################
+---
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: movitel-online-log
+# data:
+#   movitel.conf: |
+#     input {
+#       http {
+#         port => 9000
+#         additional_codecs => { "application/json" => "json_lines" }
+#       }
+#     }
+#     filter {
+#       # mutate {
+#       #   remove_field => [ "headers", "user_agent", "uIrl", "port", "domain", "http", "mime_type", "host", "@version"]
+#       # }
+#       mutate {
+#         remove_field => [ "headers"]
+#       }
+
+
+#       if [log][file][name][1] {
+#         mutate {
+#           remove_field => "[log][file][name][1]"
+#         }
+#       }
+#     }
+#     output {
+#       # stdout {codec => rubydebug}
+#       # if "junos_offlog" in [fields][type] or "access_log" in [tags] or "interactive_user" in [tags] or "netconf_user" in [tags] or "login_trigger" in [tags] {
+#       if "junos_log" in [tags] and "alert_watermark" not in [tags] {
+#         elasticsearch {
+#           hosts => ["{{ join "\", \"https://" $newArray }}"]
+#           index => "junos-log"I
+#           # cacert => "/etc/logstash/certs/NMS01.pem"
+#           user => {{.Values.global.elasticsearch.adminUser.name}} #{{.Values.global.user}}
+#           password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+#           ssl_certificate_verification => false
+#         }
+#       }
+#     }
+################### End of movitel MX devices log stream pipeline config ###################
