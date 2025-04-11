@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-pipelines
+data:
+  pipelines.yml: |
+    - pipeline.id: svtechlab
+      pipeline.ecs_compatibility: disabled
+      path.config: "/etc/logstash/conf.d/svtech-lab-online/jun-svtechlab-onlinelog.conf"
+
+    - pipeline.id: offline
+      pipeline.ecs_compatibility: disabled
+      path.config: "/etc/logstash/conf.d/offline/offline-log.conf"
