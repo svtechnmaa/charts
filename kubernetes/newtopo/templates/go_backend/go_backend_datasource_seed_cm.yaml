@@ -1,0 +1,68 @@
+apiVersion: v1
+data:
+  seed-datasource.yaml: |-
+    {
+      "Datasource": [
+        {
+          "ID": 1,
+          "ParentID": null,
+          "ExternalID": null,
+          "Title": "Redis",
+          "Type": "Redis",
+          "Url": "{{ .Values.seed_file.datasources.redis.url }}",
+          "Storage": true,
+          "Username": "{{ .Values.seed_file.datasources.redis.username }}",
+          "Password": "{{ .Values.seed_file.datasources.redis.password }}",
+          "Details": null,
+          "Schema": "0",
+          "Query": ""
+        },
+        {
+          "ID": 2,
+          "ParentID": null,
+          "ExternalID": null,
+          "Title": "arango_storage",
+          "Type": "Arango",
+          "Url": "{{ .Values.seed_file.datasources.arangodb.url }}",
+          "Storage": true,
+          "Username": "{{ .Values.seed_file.datasources.arangodb.username }}",
+          "Password": "{{ .Values.seed_file.datasources.arangodb.password }}",
+          "Details": null,
+          "Schema": "_system",
+          "Query": ""
+        },
+        {
+          "ID": 3,
+          "ParentID": null,
+          "ExternalID": null,
+          "Title": "arango_topo",
+          "Type": "Arango_Topo",
+          "Url": "{{ .Values.seed_file.datasources.arangodb.url }}",
+          "Storage": false,
+          "Username": "{{ .Values.seed_file.datasources.arangodb.username }}",
+          "Password": "{{ .Values.seed_file.datasources.arangodb.password }}",
+          "Details": null,
+          "Schema": "{{ .Values.seed_file.datasources.arangodb.topo_schema }}",
+          "Query": ""
+        },
+        {
+          "ID": 4,
+          "ParentID": null,
+          "ExternalID": null,
+          "Title": "internal_grafana",
+          "Type": "Grafana",
+          "Url": "{{ .Values.seed_file.datasources.grafana.url }}",
+          "Storage": false,
+          "Username": "{{ .Values.seed_file.datasources.grafana.username }}",
+          "Password": "{{ .Values.seed_file.datasources.grafana.password }}",
+          "Details": null,
+          "Schema": "",
+          "Query": ""
+        }
+      ]
+    }
+
+kind: ConfigMap
+metadata:
+  name: seed-datasource-config
+  namespace: {{ .Values.namespace }}

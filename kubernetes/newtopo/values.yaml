@@ -17,13 +17,23 @@ go_backend:
       UPLOAD_DIR: /data
       PERMISSIONS_ENABLED: "true"
       TRAEFIK_TEMPLATE: /data/sample-traefik-config-template.yaml # this template file will be used to generate traefik config, user can provide their own template file based on their requirement
-  # seed_file:
-  #   datasources:
-  #     arangodb: 
-  #       url: http://arangodb:8529
-  #       username: root
-  #       password: juniper@123
 
+seed_file:
+  datasources:
+    redis:
+      url: redis://redis:6379
+      username: ""
+      password: ""
+    arangodb: 
+      url: http://arangodb:8529
+      username: ""
+      password: ""
+      topo_schema: unitel
+    grafana:
+      url: https://grafana/grafana
+      username: ""
+      password: ""
+      
 namespace: nms
 topology_frontend:
   deployment:
@@ -50,6 +60,11 @@ traefik:
     port: "443"
     type: LoadBalancer
     loadBalancerIP: "10.98.0.186"
+  config_template:
+    http:
+      middlewares:
+        dashboard_auth: ""
+        grafana_auth: ""
 
 redis:
   deployment:

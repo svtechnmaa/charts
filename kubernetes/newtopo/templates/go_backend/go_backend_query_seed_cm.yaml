@@ -1,0 +1,100 @@
+apiVersion: v1
+data:
+  seed-query.yaml: |-
+    {
+      "Query": [
+        {
+          "ID": 1,
+          "Name": "default_host_state",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name, t1.address, t2.output, t2.hard_state as state FROM host t1 INNER JOIN host_state t2 ON t1.id = t2.id;",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var output = result.results.A.frames[0].data.values[2][index]; var host_state = result.results.A.frames[0].data.values[3][index]; emit([hostname, address].join('|'), { output: output, host_state: host_state }) }) }",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 2,
+          "Name": "default_in_ult",
+          "DatasourceID": 15,
+          "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'in_ult' GROUP BY hostname, metric, service;",
+          "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 3,
+          "Name": "default_out_ult",
+          "DatasourceID": 15,
+          "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'out_ult' GROUP BY hostname, metric, service;",
+          "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 4,
+          "Name": "default_rx",
+          "DatasourceID": 15,
+          "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'OpticRX' GROUP BY hostname, metric, service;",
+          "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 5,
+          "Name": "default_tx",
+          "DatasourceID": 15,
+          "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'OpticTX' GROUP BY hostname, metric, service;",
+          "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 6,
+          "Name": "default_link_state",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name AS hostname, t2.name AS servicename, t3.hard_state as state FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name REGEXP 'IfCheck'",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var state = result.results.A.frames[0].data.values[2][index]; var id_string = 'link_state'; var servicename = result.results.A.frames[0].data.values[1][index]; emit([hostname, servicename, id_string].join('|'), { link_state: state }) }) }",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 7,
+          "Name": "default_critical_service_count",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name AS hostname, t1.address, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service_state t3 ON t1.id = t3.host_id WHERE t3.hard_state = 2 GROUP BY t1.id, t1.name;",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; var id_string = 'number_service_critical'; emit([hostname, address, id_string].join('|'), { number_service_critical: hard_state_count }) }) }",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 8,
+          "Name": "default_warning_service_count",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name AS hostname, t1.address, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service_state t3 ON t1.id = t3.host_id WHERE t3.hard_state = 1 GROUP BY t1.id, t1.name;",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; var id_string = 'number_service_warning'; emit([hostname, address, id_string].join('|'), { number_service_warning: hard_state_count }) }) }",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 9,
+          "Name": "default_red_alarm_count",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, t3.hard_state AS red_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_RedAlarm';",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var red_alarm_count = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), { number_red_alarm: red_alarm_count }) }) }",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 10,
+          "Name": "default_yellow_alarm_count",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS service_name, t3.hard_state AS yellow_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_YellowAlarm';",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var yellow_alarm_count = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), { number_yellow_alarm: yellow_alarm_count }) }) }",
+          "Schedule": "@every 5m"
+        },
+        {
+          "ID": 11,
+          "Name": "default_link_output",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name AS hostname, t2.name AS servicename, t3.output FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name REGEXP 'IfCheck'",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var output = result.results.A.frames[0].data.values[2][index]; var id_string = 'link_output'; var servicename = result.results.A.frames[0].data.values[1][index]; emit([hostname, servicename, id_string].join('|'), { link_output: output }) }) }",
+          "Schedule": "@every 5m"
+        }
+      ]
+    }
+
+kind: ConfigMap
+metadata:
+  name: seed-query-config
+  namespace: {{ .Values.namespace }}

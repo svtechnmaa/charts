@@ -23,7 +23,7 @@ spec:
       - command:
         - sh
         - -c
-        - ../server -seed /opt/seed.yaml
+        - ../server -migrate -seed /opt/seed.yaml -seed /opt/seed-dashboard.yaml -seed /opt/seed-datasource.yaml -seed /opt/seed-query.yaml -seed /opt/seed-state.yaml -seed /opt/seed-template.yaml -seed /opt/seed-icon.yaml
         envFrom:
         - configMapRef:
             name: go-backend-conf
@@ -35,9 +35,27 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /opt/seed.yaml
-          name: seed-config
+        - name: seed-config
+          mountPath: /opt/seed.yaml
           subPath: seed.yaml
+        - name: seed-dashboard-config
+          mountPath: /opt/seed-dashboard.yaml
+          subPath: seed-dashboard.yaml
+        - name: seed-datasource-config
+          mountPath: /opt/seed-datasource.yaml
+          subPath: seed-datasource.yaml
+        - name: seed-query-config
+          mountPath: /opt/seed-query.yaml
+          subPath: seed-query.yaml
+        - name: seed-state-config
+          mountPath: /opt/seed-state.yaml
+          subPath: seed-state.yaml
+        - name: seed-template-config
+          mountPath: /opt/seed-template.yaml
+          subPath: seed-template.yaml
+        - name: seed-icon-config
+          mountPath: /opt/seed-icon.yaml
+          subPath: seed-icon.yaml
         - name: traefik-config
           mountPath: "{{ .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
           subPath: "{{ base .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
@@ -89,14 +107,38 @@ spec:
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
-      - configMap:
+      - name: seed-config
+        configMap:
           defaultMode: 420
           name: seed-config
-        name: seed-config
-      - hostPath:
+      - name: seed-dashboard-config
+        configMap:
+          defaultMode: 420
+          name: seed-dashboard-config
+      - name: seed-datasource-config
+        configMap:
+          defaultMode: 420
+          name: seed-datasource-config
+      - name: seed-query-config
+        configMap:
+          defaultMode: 420
+          name: seed-query-config
+      - name: seed-state-config
+        configMap:
+          defaultMode: 420
+          name: seed-state-config
+      - name: seed-template-config
+        configMap:
+          defaultMode: 420
+          name: seed-template-config
+      - name: seed-icon-config
+        configMap:
+          defaultMode: 420
+          name: seed-icon-config
+      - name: go-backend-persistent-storage
+        hostPath:
           path: /opt/upload_data
           type: DirectoryOrCreate
-        name: go-backend-persistent-storage
       - name: traefik-config
         configMap:
           name: traefik-template-conf

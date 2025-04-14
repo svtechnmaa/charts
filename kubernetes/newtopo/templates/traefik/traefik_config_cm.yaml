@@ -7,16 +7,12 @@ data:
   traefik_config_template.yml: |
     http:
       middlewares:
-        -auth:
-          headers:
-            customRequestHeaders:
-              Authorization: "<dummy-fill up when applying>"
         cors:
           headers:
             frameDeny: false
             browserXssFilter: false
             stsSeconds: 15768000
-            contentSecurityPolicy: "style-src 'self' 'unsafe-inline';" 
+            contentSecurityPolicy: "style-src 'self' 'unsafe-inline';"
             customResponseHeaders:
               Access-Control-Allow-Credentials: "true"
               Access-Control-Allow-Headers: "Origin, X-Requested-With, Content-Type, Accept, Authorization"
@@ -25,21 +21,21 @@ data:
         dashboard-auth:
           basicAuth:
             users:
-              - "<dummy-fill up when applying>"
+              - "{{ .Values.traefik.config_template.http.middlewares.dashboard_auth }}"
         grafana-auth:
           headers:
             customRequestHeaders:
-              Authorization: "<dummy-fill up when applying>"
+              Authorization: "{{ .Values.traefik.config_template.http.middlewares.grafana_auth }}"
 
       routers:
         default:
           middlewares: []
           rule: "PathPrefix(`/`)"
-          service: ""
+          service: "frontend"
         default-tls:
           middlewares: []
           rule: "PathPrefix(`/`)"
-          service: ""
+          service: "frontend"
           tls: {}
         backend:
           middlewares:
@@ -55,38 +51,39 @@ data:
           service: "backend"
           tls: {}
         dashboard:
-          middlewares:
-            - "dashboard-auth"
           rule: "(PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
-          service: "api@internal"
+          service: api@internal
+          middlewares:
+            - dashboard-auth
         dashboard-tls:
-          middlewares: []
-          rule: "PathPrefix(`/dashboard`)"
-          service: "dashboard"
+          rule: "(PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+          service: api@internal
+          middlewares:
+            - dashboard-auth
           tls: {}
         frontend:
           middlewares:
             - "cors"
           rule: >-
-            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) || 
-            PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) || 
-            PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) || 
-            PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) || 
+            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) ||
+            PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) ||
+            PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) ||
+            PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) ||
             PathPrefix(`/api/templates`)
           service: "frontend"
         frontend-tls:
           middlewares:
             - "cors"
           rule: >-
-            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) || 
-            PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) || 
-            PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) || 
-            PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) || 
+            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) ||
+            PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) ||
+            PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) ||
+            PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) ||
             PathPrefix(`/api/templates`)
           service: "frontend"
           tls: {}
         # gitlist:
-        #   middlewares: 
+        #   middlewares:
         #   - "cors"
         #   rule: "PathPrefix(`/gitlist`)"
         #   service: "gitlist"
@@ -138,10 +135,10 @@ data:
           loadBalancer:
             servers:
               - url: "http://go-backend"
-        # dashboard:
-        #   loadBalancer:
-        #     servers:
-        #       - url: "http://192.168.100.134"
+        dashboard:
+          loadBalancer:
+            servers:
+              - url: "http://topology-frontend"
         frontend:
           loadBalancer:
             servers:
@@ -171,5 +168,3 @@ data:
       certificates:
         - certFile: /tls/test.crt
           keyFile: /tls/test.key
-
-

@@ -1,0 +1,47 @@
+apiVersion: v1
+data:
+  seed-state.yaml: |-
+    {
+      "State": [
+        {
+          "ID": 1,
+          "Name": "Ok",
+          "Order": 0,
+          "Payload": "{\"edge\":{\"labelCfg\":{\"autoRotate\":true,\"position\":\"center\",\"style\":{\"background\":{\"padding\":[3,6,3,6],\"radius\":0},\"fontSize\":14,\"fontStyle\":\"bold\",\"opacity\":1}},\"style\":{\"endArrow\":{\"fill\":\"#00ff29\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#00ff29\"},\"lineDash\":[],\"lineWidth\":5,\"startArrow\":false,\"stroke\":\"#00ff29\",\"strokeOpacity\":1}},\"node\":{\"clipCfg\":{\"r\":30,\"show\":true,\"type\":\"circle\",\"x\":0,\"y\":-3},\"img\":\"/public/router-big_ok.svg\",\"labelCfg\":{\"offset\":12,\"position\":\"bottom\",\"style\":{\"background\":{\"padding\":[3,6,3,6],\"radius\":0},\"fillOpacity\":0.8,\"fontSize\":14,\"fontStyle\":\"bold\",\"opacity\":1}},\"size\":[45,30],\"style\":{\"lineDash\":[]},\"type\":\"image\"}}",
+          "IsAbnormal": false
+        },
+        {
+          "ID": 2,
+          "Name": "Warning",
+          "Order": 0,
+          "Payload": "{\"edge\":{\"haloColor\":\"#ff0000\",\"labelCfg\":{\"autoRotate\":true,\"position\":\"center\",\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fillOpacity\":1,\"fontSize\":14,\"fontStyle\":\"bold\",\"opacity\":1}},\"style\":{\"endArrow\":{\"fill\":\"#fff500\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#fff500\"},\"lineDash\":[],\"lineWidth\":5,\"startArrow\":{\"fill\":\"#fff500\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#fff500\"},\"stroke\":\"#fff500\",\"strokeOpacity\":1}},\"node\":{\"clipCfg\":{\"r\":30,\"show\":true,\"type\":\"circle\",\"x\":0,\"y\":-3},\"haloColor\":\"#fae106\",\"img\":\"/public/router-big_warning.svg\",\"labelCfg\":{\"offset\":12,\"position\":\"bottom\",\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fillOpacity\":1,\"fontSize\":14,\"fontStyle\":\"bold\",\"opacity\":1}},\"size\":[45,30],\"style\":{\"fillOpacity\":1,\"lineDash\":[],\"opacity\":1,\"strokeOpacity\":0.1},\"type\":\"image\"}}",
+          "IsAbnormal": false
+        },
+        {
+          "ID": 3,
+          "Name": "Critical",
+          "Order": 0,
+          "Payload": "{\"edge\":{\"haloColor\":\"#ff0000\",\"labelCfg\":{\"autoRotate\":true,\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fontSize\":14,\"fontStyle\":\"bold\"}},\"style\":{\"endArrow\":{\"fill\":\"#ff0000\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#ff0000\"},\"lineDash\":[],\"lineWidth\":5,\"startArrow\":{\"fill\":\"#ff0000\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#ff0000\"},\"stroke\":\"#ff0000\"}},\"node\":{\"clipCfg\":{\"r\":30,\"show\":true,\"type\":\"circle\",\"x\":0,\"y\":-3},\"haloColor\":\"#ff0000\",\"img\":\"/public/router-big_critical.svg\",\"labelCfg\":{\"offset\":12,\"position\":\"bottom\",\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fillOpacity\":1,\"fontSize\":14,\"fontStyle\":\"bold\",\"opacity\":1}},\"size\":[45,30],\"style\":{\"fillOpacity\":1,\"lineDash\":[],\"opacity\":1,\"strokeOpacity\":0.1},\"type\":\"image\"}}",
+          "IsAbnormal": false
+        },
+        {
+          "ID": 4,
+          "Name": "Down",
+          "Order": 0,
+          "Payload": "{\"edge\":{\"haloColor\":\"#ff0000\",\"labelCfg\":{\"autoRotate\":true,\"position\":\"center\",\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fill\":\"#000000\",\"fontSize\":14,\"fontStyle\":\"bold\"}},\"style\":{\"endArrow\":{\"fill\":\"#ffffff\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#ffffff\"},\"lineDash\":[],\"lineWidth\":5,\"startArrow\":false,\"stroke\":\"#ffffff\"}},\"node\":{\"clipCfg\":{\"r\":30,\"show\":true,\"type\":\"circle\",\"x\":0,\"y\":-3},\"haloColor\":\"#000000\",\"img\":\"/public/router-big_down.svg\",\"labelCfg\":{\"offset\":12,\"position\":\"bottom\",\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fillOpacity\":1,\"fontSize\":14,\"fontStyle\":\"bold\",\"opacity\":1}},\"size\":[45,30],\"style\":{\"lineDash\":[],\"lineWidth\":1,\"strokeOpacity\":0.1},\"type\":\"image\"}}",
+          "IsAbnormal": false
+        },
+        {
+          "ID": 5,
+          "Name": "Unknown",
+          "Order": 0,
+          "Payload": "{\"edge\":{\"haloColor\":\"#ffffff\",\"labelCfg\":{\"autoRotate\":true,\"position\":\"center\",\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fontSize\":14,\"fontStyle\":\"bold\"}},\"style\":{\"endArrow\":{\"fill\":\"#fa00ff\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#fa00ff\"},\"lineDash\":[],\"lineWidth\":5,\"startArrow\":{\"fill\":\"#fa00ff\",\"path\":\"M 0,0 L 12,-4 L 12,4 Z\",\"stroke\":\"#fa00ff\"},\"stroke\":\"#fa00ff\",\"strokeOpacity\":1}},\"node\":{\"clipCfg\":{\"r\":30,\"show\":true,\"type\":\"circle\",\"x\":0,\"y\":-3},\"haloColor\":\"#ba00fb\",\"img\":\"/public/router-big_unknown.svg\",\"labelCfg\":{\"offset\":12,\"position\":\"bottom\",\"style\":{\"background\":{\"padding\":[3,6,3,6]},\"fillOpacity\":1,\"fontSize\":14,\"fontStyle\":\"bold\"}},\"size\":[45,30],\"style\":{\"fillOpacity\":1,\"lineDash\":[],\"lineWidth\":1,\"opacity\":1,\"strokeOpacity\":0.1},\"type\":\"image\"}}",
+          "IsAbnormal": false
+        }
+      ]
+    }
+
+kind: ConfigMap
+metadata:
+  name: seed-state-config
+  namespace: {{ .Values.namespace }}
