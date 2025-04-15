@@ -5,7 +5,11 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   ports:
-  - port: {{ .Values.traefik.service.port }}
+  {{- range .Values.traefik.service.ports }}
+  - name: {{ .name }}
+    port: {{ .port }}
+    targetPort: {{ .targetPort }}
+  {{- end }}
   selector:
     app: traefik
   type: {{ .Values.traefik.service.type }}

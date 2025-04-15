@@ -25,6 +25,9 @@ spec:
         - --entryPoints.websecure.address=:443
         - --entryPoints.websecure.asDefault=true
         - --entryPoints.traefik.address=:8080
+        - --entrypoints.web.http.redirections.entryPoint.to=websecure
+        - --entrypoints.web.http.redirections.entryPoint.scheme=https
+        - --entrypoints.web.http.redirections.entrypoint.permanent=true
         image: {{ template "traefik_image" . }}
         imagePullPolicy: {{ .Values.traefik.deployment.image.pullPolicy }}
         name: traefik

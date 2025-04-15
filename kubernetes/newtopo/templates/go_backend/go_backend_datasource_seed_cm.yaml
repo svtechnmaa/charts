@@ -36,7 +36,7 @@ data:
           "ParentID": null,
           "ExternalID": null,
           "Title": "arango_topo",
-          "Type": "Arango_Topo",
+          "Type": "Arango",
           "Url": "{{ .Values.seed_file.datasources.arangodb.url }}",
           "Storage": false,
           "Username": "{{ .Values.seed_file.datasources.arangodb.username }}",
