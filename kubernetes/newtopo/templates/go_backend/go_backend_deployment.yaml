@@ -137,7 +137,7 @@ spec:
           name: seed-icon-config
       - name: go-backend-persistent-storage
         hostPath:
-          path: /opt/upload_data
+          path: {{ .Values.global.basePath}}/{{ .Release.Namespace }}/upload_data_newtopo
           type: DirectoryOrCreate
       - name: traefik-config
         configMap:

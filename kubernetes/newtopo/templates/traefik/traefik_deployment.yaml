@@ -48,7 +48,7 @@ spec:
           readOnly: true
       volumes:
       - hostPath:
-          path: /opt/shared/nms/upload_data
+          path: {{ .Values.global.basePath}}/{{ .Release.Namespace }}/upload_data_newtopo
           type: DirectoryOrCreate
         name: selfsignedcert
 

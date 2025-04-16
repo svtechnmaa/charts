@@ -1,3 +1,19 @@
+global:
+  github:
+    user: ""
+    token: ""
+    fg_token: ""  
+  basePath: /opt/shared
+image:
+  pullSecret: ghcrio
+  pullToken: ""
+
+initData:
+  image:
+    repository: svtechnmaa/svtech_debuger
+    tag: v1.0.3
+    pullPolicy: IfNotPresent
+
 go_backend:
   deployment:
     image:
@@ -108,7 +124,3 @@ asynqmon:
       tag: latest
   service:
     port: "4000"
-
-image:
-  pullSecret: ghcrio
-  pullToken: ""

@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: download-image-job
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": hook-succeeded,hook-failed,before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      containers:
+        - name: download-image
+          image: {{ .Values.initData.image.repository }}:{{ .Values.initData.image.tag }}
+          imagePullPolicy: {{ .Values.initData.image.pullPolicy }}
+          volumeMounts:
+            - name: upload-volume
+              mountPath: /opt/upload_data
+          env:
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ghcrio
+                  key: .dockerconfigjson
+          command:
+            - sh
+            - -c
+            - |
+              echo "Downloading image from GitHub..."
+              mkdir -p /opt/upload_data
+              git clone https://github.com/svtechnmaa/charts.git /tmp/repo
+              cd /tmp/repo/
+              git checkout feature/newtopo
+              cp /tmp/repo/kubernetes/newtopo/images/* /opt/upload_data/
+              echo "Image downloaded successfully!"
+              cd /opt/upload_data
+              openssl req -x509 -newkey rsa:2048 -nodes -keyout test.key -out test.crt -days 365 -subj "/CN=svtech"
+      restartPolicy: Never
+      volumes:
+        - name: upload-volume
+          hostPath:
+            path: {{ .Values.global.basePath}}/{{ .Release.Namespace }}/upload_data_newtopo
+  backoffLimit: 4
