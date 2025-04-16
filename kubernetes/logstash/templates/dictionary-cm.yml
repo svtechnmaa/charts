@@ -1,0 +1,61 @@
+################### dictionary config #############################
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-dictionary
+data:
+  client_mode.yml: |
+    ---
+    - "cli": "ssh"
+    - "tty*": "telnet"
+    - "netconf": "netconf"
+    - "junoscript*": "junoscript"
+    - "pts*": "telnet"
+
+  facilitycode.yml: |
+    ---
+    - "0": "KERNEL"
+    - "1": "USER"
+    - "2": "MAIL"
+    - "3": "DAEMON"
+    - "4": "AUTHORIZATION"
+    - "5": "SYSLOG"
+    - "6": "PRINTER"
+    - "7": "NEWS"
+    - "8": "UUCP"
+    - "9": "CLOCK"
+    - "10": "AUTHORIZATION-PRIVATE"
+    - "11": "FTP"
+    - "12": "NTP"
+    - "13": "SECURITY"
+    - "14": "CONSOLE"
+    - "16": "LOCAL0"
+    - "17": "DFC"
+    - "18": "LOCAL2"
+    - "19": "FIREWALL"
+    - "20": "PFE"
+    - "21": "CONFLICT-LOG"
+    - "22": "CHANGE-LOG"
+    - "23": "INTERACTIVE-COMMANDS"
+
+  severitycode.yml: |
+    ---
+    - "0": "EMERGENCY"
+    - "1": "ALERT"
+    - "2": "CRITICAL"
+    - "3": "ERROR"
+    - "4": "WARNING"
+    - "5": "NOTICE"
+    - "6": "INFO"
+    - "7": "ANY"
+
+  timezone.yml: |
+    ---
+    - "movitel": "Africa/Tripoli"
+    - "unitel": "Asia/Vientiane"
+    - "metfone": "Asia/Phnom_Penh"
+    - "vnpt": "Asia/Ho_Chi_Minh"
+    - "mobifone": "Asia/Ho_Chi_Minh"
+    - "natcom": "America/Aruba"
+
