@@ -67,6 +67,7 @@ sharedVolume:
   accessModes: ReadWriteOnce
   storageClass: blaster-repo-hostpath
 
+persistentData:  ["configs", "authen", "blaster.db", "templates", "templates_interfaces", "templates_part", "templates_streams", "auth.log", "all_conf.yaml"]
 
 securityContext: {}
 
