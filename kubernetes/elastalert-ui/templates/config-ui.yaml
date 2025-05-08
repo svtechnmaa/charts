@@ -25,12 +25,14 @@ data:
 {{- if .Values.elastalertUIConfig.esConnection }}
     ES_CONNECTION:
 {{- range $connectionName, $connectionConfig := .Values.elastalertUIConfig.esConnection }}
+{{- with $ }}
       {{ $connectionName }}:
-        ES_HOST: {{ $connectionConfig.esHost }}
+        ES_HOST: {{ tpl $connectionConfig.esHost . }}
         ES_PORT: {{ $connectionConfig.esPort }}
-        ES_USERNAME: {{ $connectionConfig.esUsername }}
-        ES_PASSWORD: {{ $connectionConfig.esPassword }}
+        ES_USERNAME: {{ tpl $connectionConfig.esUsername . }}
+        ES_PASSWORD: {{ tpl $connectionConfig.esPassword . }}
         USE_SSL: {{ $connectionConfig.useSsl }}
+{{- end }}
 {{- end }}
 {{- if .Values.extraConfigOptions }}
 {{ toYaml .Values.extraConfigOptions | indent 4 }}
