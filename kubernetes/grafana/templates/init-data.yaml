@@ -62,7 +62,7 @@ spec:
                       return 0;
                   fi
                   echo "Waiting grafana Up..."
-                  grafana_stats=`curl -X GET --silent --show-error --output /dev/null -u ${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD} http://$GRAFANA_HOST:3000/api/admin/stats`
+                  grafana_stats=`curl -X GET --silent --show-error -u ${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD} http://$GRAFANA_HOST:3000/api/admin/stats`
                   if [ $? == 0 ]; then
                       result="up"
                       echo "Grafana is Up"
