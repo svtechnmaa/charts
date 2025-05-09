@@ -58,7 +58,7 @@ spec:
             - /bin/sh
             - -c
             - |
-                until [ `ls -l /BNGBlaster_web_client | grep -v "total" | wc -l` == 8 ];
+                until [ `ls -l /BNGBlaster_web_client | grep -v "total" | wc -l` == {{ .Values.persistentData | len }} ];
                 do
                   echo "Waiting for Init Repo...";
                   sleep 2;
@@ -79,30 +79,13 @@ spec:
           - name: bngblaster
             containerPort: 8505
         volumeMounts:
+          {{- range $subpath := .Values.persistentData }}
+          {{- with $}}
           - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/configs
-            subPath: configs
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/authen
-            subPath: authen
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/blaster.db
-            subPath: blaster.db
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates
-            subPath: templates
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates_interfaces
-            subPath: templates_interfaces
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates_part
-            subPath: templates_part
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates_streams
-            subPath: templates_streams
-          - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/auth.log
-            subPath: auth.log
+            mountPath: {{ .Values.sharedVolume.path }}/{{ $subpath }}
+            subPath: {{ $subpath }}
+          {{- end }}
+          {{- end }}
                      
       volumes:
       - name: {{ .Values.sharedVolume.volumeName }}

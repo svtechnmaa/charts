@@ -28,7 +28,7 @@ spec:
                     echo "/$name is Empty. Clone repo"
                     git clone -n --depth=1 --filter=tree:0 --no-checkout https://github.com/svtechnmaa/BNGBlaster_web_client.git /$name
                     cd /$name && \
-                    git sparse-checkout set --no-cone configs authen templates templates_streams templates_part templates_interfaces blaster.db && git checkout 
+                    git sparse-checkout set --no-cone {{ .Values.persistentData | join " "}} && git checkout 
                   else
                     echo "/$name is not Empty. Ignore"
                   fi
