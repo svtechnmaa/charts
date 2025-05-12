@@ -2,6 +2,12 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: "init-grafana-data"
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
@@ -35,7 +41,7 @@ spec:
             {{- end }}
 
             {{- end }}
-          {{- end  }}      
+          {{- end  }}
       containers:
       - name: init-data
         image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
@@ -49,14 +55,14 @@ spec:
               result=false
               grafana_stats=""
               function grafana_is_up {
-                  sleep 1
+                  sleep 5
                   if [ "${TIMEOUT}" == 0 ]; then
                       echo "Timeout Waiting grafana Up !"
                       result="timeout"
                       return 0;
                   fi
-                  echo "Waiting grafana Up ..."
-                  grafana_stats=`curl -X GET -u thrukadmin:thrukadmin http://$GRAFANA_HOST:3000/api/admin/stats`
+                  echo "Waiting grafana Up..."
+                  grafana_stats=`curl -X GET --silent --show-error -u ${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD} http://$GRAFANA_HOST:3000/api/admin/stats`
                   if [ $? == 0 ]; then
                       result="up"
                       echo "Grafana is Up"
@@ -70,28 +76,17 @@ spec:
               }
               function import_grafana_entities {
                   while ! grafana_is_up ; do true; done
-                  grafana_dashboard_number=`echo $grafana_stats | python2 -c "import sys, json; print json.load(sys.stdin)['dashboards']"`
-                  grafana_datasource_number=`echo $grafana_stats | python2 -c "import sys, json; print json.load(sys.stdin)['datasources']"`
+                  grafana_dashboard_number=`echo $grafana_stats | jq -r '.dashboards'`
+                  grafana_datasource_number=`echo $grafana_stats | jq -r '.datasources'`
                   if [ "${result}" == "up" ]; then
                       if [[ ${grafana_dashboard_number} == 0 && ${grafana_datasource_number} == 0 ]]; then
-
-                          echo "Init wizzy configuration"
-                          cd /opt/grafana-entities && \
-                            wizzy set grafana url http://$GRAFANA_HOST:3000 && \
-                            wizzy set grafana username thrukadmin && \
-                            wizzy set grafana password thrukadmin
-
                           echo "No Dashboard and Datasource. Import Dashboards:"
-                          cd /opt/grafana-entities && wizzy export dashboards
+                          cd /etc/gdg
+                          gdg backup folder upload
+                          gdg backup connection upload
+                          gdg backup library upload
+                          gdg backup dashboards upload --skip-confirmation
 
-                          echo "No Dashboard and Datasource. Import Datasource:"
-                          mkdir -p /tmp/grafana-entities/datasources
-                          # cp -rf /opt/grafana-entities/datasources/..data/* /tmp/grafana-entities/datasources
-                          cp -rf /opt/grafana-entities/datasources/* /tmp/grafana-entities/datasources
-
-                          cp -rf /opt/grafana-entities/conf /tmp/grafana-entities
-                          # sed -i 's,%ReleaseName,{{ .Release.Name }},g' /tmp/grafana-entities/datasources/*
-                          cd /tmp/grafana-entities && wizzy export datasources
                       else
                           echo "There are ${grafana_dashboard_number} dasboards and ${grafana_datasource_number} datasources exists. Take no action !"
                       fi
@@ -99,11 +94,14 @@ spec:
               }
 
               rm -rf /opt/grafana-entities/dashboards
-              cp -rf /opt/SVTECH-Junos-Automation/grafana-entities/datasources /opt/grafana-entities
-              cp -rf /opt/SVTECH-Junos-Automation/grafana-entities/dashboards /opt/grafana-entities
-
-              for file in `grep -lr /opt/grafana-entities/* -e "\"refresh\": 1"`;do sed -i 's/"refresh": 1,/"refresh": 2,/g' $file ;done
+              cp -rf /opt/SVTECH-Junos-Automation/grafana-entities/org_main-org /opt/grafana-entities
+              for file in `grep -lr /opt/grafana-entities/org_main-org/* -e "\"refresh\": 1"`;do sed -i 's/"refresh": 1,/"refresh": 2,/g' $file ;done
               import_grafana_entities
+        env:
+          - name: GF_SECURITY_ADMIN_USER
+            value: {{ include "admin.user" . }}
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            value: {{ include "admin.password" . }}
 
       {{- if .Files.Glob "files/datasources/*" }}
         volumeMounts:
@@ -118,7 +116,24 @@ spec:
             {{- end }}
 
             {{- end }}
-          {{- end  }}  
+          {{- end }}
+            - name: {{ include "common.names.fullname" . }}-gdg-importer
+              readOnly: true
+              mountPath: /etc/gdg/importer.yml
+              subPath: importer.yml
+
+            {{- if .Values.gdgConfig.secureFiles }}
+            {{- range $name, $config := .Values.gdgConfig.secureFiles }}
+            {{- with $ }}
+            - name: {{ include "common.names.fullname" . }}-gdg-secure-{{ $name }}
+              readOnly: true
+              mountPath: /opt/grafana-entities/secure/{{ $name }}.json
+              subPath: {{ $name }}.json
+            {{- end }}
+            {{- end }}
+            {{- end }}
+
+      {{- end }}
 
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
@@ -127,22 +142,39 @@ spec:
         podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
-      {{- end }}    
+      {{- end }}
 
       imagePullSecrets:
-      - name: ghcr-pull-secret        
+      - name: ghcr-pull-secret
 
       volumes:
         # - name: grafana-datasources
         #   configMap:
         #     name: {{ include "common.names.fullname" . }}-datasources
         {{- range .Values.global.sharedPersistenceVolume }}
-
         {{- if has "init-data-grafana" .shareFor }}
         - name: {{ .volumeName }}
           persistentVolumeClaim:
             claimName: {{ .pvcName }}
         {{- end }}
+        {{- end }}
 
-        {{- end }}            
-      {{- end }}
+        - name: {{ include "common.names.fullname" . }}-gdg-importer
+          secret:
+            secretName: {{ include "common.names.fullname" . }}-gdg-config
+            items:
+              - key: importer.yml
+                path: importer.yml
+
+        {{- if .Values.gdgConfig.secureFiles }}
+        {{- range $name, $config := .Values.gdgConfig.secureFiles }}
+        {{- with $ }}
+        - name: {{ include "common.names.fullname" . }}-gdg-secure-{{ $name }}
+          secret:
+            secretName: {{ include "common.names.fullname" . }}-gdg-config
+            items:
+              - key: {{ $name }}.json
+                path: {{ $name }}.json
+        {{- end }}
+        {{- end }}
+        {{- end }}

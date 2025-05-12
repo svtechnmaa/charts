@@ -1,8 +1,11 @@
 global:
+  adminUser:
+  adminPassword:
+
   sharedVolume:
     enabled: false
   externalIP: "" # externalIP for CICD
-  frontendVip: "" 
+  frontendVip: ""
   mariadb-galera:
     enabled: true
 
@@ -141,5 +144,86 @@ grafanaConfig:
   mysqlDB: grafana
   mysqlUser: grafana
   mysqlPassword: juniper@123
-  adminUser: thrukadmin
-  adminPassword: thrukadmin
+  adminUser: admin
+  adminPassword: admin
+
+gdgConfig:
+  contextName: main
+  storageEngine: {}
+
+  # Main context configuration
+  mainContext:
+    # URL for Grafana
+    url: http://grafana:3000/grafana
+    organizationName: "Main Org."
+    outputPath: /opt/grafana-entities
+    dashboardSettings:
+      nestedFolders: false
+      ignoreFilters: true
+      ignoreBadFolders: false
+    watched:
+      - Library-Panels
+    watchedFoldersOverride: []
+
+    # Credentials - these should be provided in a separate secrets file
+    credentials:
+      username: "" # Will be populated from secrets
+      password: "" # Will be populated from secrets
+      token: ""    # Will be populated from secrets
+
+    # Connection credential rules
+    connectionRules:
+      - rules:
+          - field: name
+            regex: IcingaDB
+        secureData: icingadb.json
+      - rules:
+          - field: name
+            regex: influxdb_nms
+        secureData: influxdb.json
+      - rules:
+          - field: name
+            regex: junos_tableview
+        secureData: junos-tableview.json
+      - rules:
+          - field: name
+            regex: Audit_Config
+        secureData: audit-config.json
+      - rules:
+          - field: type
+            regex: elasticsearch
+        secureData: elasticsearch.json
+      - rules:
+          - field: name
+            regex: thruk
+        secureData: thruk.json
+
+  # Global settings
+  global:
+    debug: true
+    apiDebug: false
+    ignoreSSLErrors: true
+    retryCount: 3
+    retryDelay: 5s
+    clearOutput: false
+
+  # gdg secure credential for connections(grafana datasource)
+  secureFiles:
+    icingadb:
+      user: icingadb_user
+      password: icingadb_password
+    influxdb:
+        user: influxdb_user
+        password: influxdb_password
+    junos-tableview:
+      user: junos_user
+      password: junos_password
+    audit-config:
+      user: audit_user
+      password: audit_password
+    elasticsearch:
+      user: elastic_user
+      basicAuthPassword: elastic_password
+    thruk:
+      user: thruk_user
+      basicAuthPassword: thruk_password
