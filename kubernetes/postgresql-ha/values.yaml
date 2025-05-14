@@ -834,7 +834,7 @@ pgpool:
   ## @param pgpool.livenessProbe.successThreshold Success threshold for livenessProbe
   ##
   livenessProbe:
-    enabled: false
+    enabled: true
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
