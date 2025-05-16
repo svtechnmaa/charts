@@ -65,9 +65,8 @@ spec:
         - name: tacgui
           image: {{ include "tacgui.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-          args:
-          env:
-          envFrom:
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}
           {{- if .Values.lifecycleHooks }}
           lifecycle: {{- include "common.tplvalues.render" (dict "value" .Values.lifecycleHooks "context" $) | nindent 12 }}
           {{- end }}
@@ -91,9 +90,20 @@ spec:
           - mountPath: /opt/tgui_data/default_vars.sh
             subPath: default_vars.sh
             name: default-vars
-            {{- if .Values.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
-            {{- end }}
+          {{- if .Values.persistentVolumeClaim.enabled }}  
+          - mountPath: /opt/tacacsgui/tac_plus.cfg
+            subPath: tac_plus.cfg
+            name: tacgui-data
+          - mountPath: /opt/tacacsgui/tac_plus.cfg_test
+            subPath: tac_plus.cfg_test
+            name: tacgui-data
+          - mountPath: /opt/tgui_data/backups
+            subPath: backups          
+            name: tacgui-data
+          {{- end }}
+          {{- if .Values.extraVolumeMounts }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
+          {{- end }}
         {{- if .Values.sidecars }}
           {{- include "common.tplvalues.render" ( dict "value" .Values.sidecars "context" $) | nindent 8 }}
         {{- end }}
@@ -116,6 +126,11 @@ spec:
             items:
             - key: default-vars
               path: default_vars.sh
+        {{- if .Values.persistentVolumeClaim.enabled }}
+        - name: tacgui-data
+          persistentVolumeClaim:
+            claimName: {{ include "common.names.fullname" . }}-data
+        {{- end }}
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}

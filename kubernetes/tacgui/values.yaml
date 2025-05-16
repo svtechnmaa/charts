@@ -6,6 +6,7 @@
 ## @param global.imageRegistry Global Docker image registry
 ## @param global.imagePullSecrets Global Docker registry secret names as an array
 ## @param global.storageClass Global StorageClass for Persistent Volume(s)
+## @param global.basePath Global base path for the application
 ##
 global:
   imageRegistry: ""
@@ -15,6 +16,7 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
+  basePath: ""
   
 
 ## @section Common parameters
@@ -60,7 +62,7 @@ extraDeploy: []
 image:
   registry: ghcr.io
   repository: svtechnmaa/svtech_tacacsgui
-  tag: "v1.0.0"
+  tag: "v1.0.1"
   ## Specify a imagePullPolicy
   ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
   ## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -105,19 +107,9 @@ existingConfigmap: ""
 ## @param extraStartupArgs Extra default startup args
 ##
 extraStartupArgs: ""
-## initdb scripts
-## @param initdbScripts Specify dictionary of scripts to be run at first boot
-## Alternatively, you can put your scripts under the files/docker-entrypoint-initdb.d directory
-## e.g:
-## initdbScripts:
-##   my_init_script.sh: |
-##      #!/bin/sh
-##      echo "Do something."
+## @param initConfigs to initialize the configuration files
 ##
-initdbScripts: {}
-## @param initdbScriptsConfigMap ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)
-##
-initdbScriptsConfigMap: ""
+initConfigs: true
 ## @param command Override default container command on Tacgui container(s) (useful when using custom images)
 ##
 command: []
@@ -286,49 +278,85 @@ initContainers: []
 ##
 sidecars: []
 
-## @section Persistence Parameters
+## @section persistentVolumeClaim Parameters
 
-## Persistence Parameters
+## persistentVolumeClaim Parameters
 ## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
 ##
-persistence:
-  ## @param persistence.enabled Enable persistence on Tacgui replicas using a `PersistentVolumeClaim`
+persistentVolumeClaim:
+  ## @param persistentVolumeClaim.enabled Enable persistentVolumeClaim on Tacgui replicas using a `PersistentVolumeClaim`
   ##
   enabled: false
-    ## @param persistence.existingClaim Name of an existing `PersistentVolumeClaim` for Tacgui primary replicas
-    ## NOTE: When it's set the rest of persistence parameters are ignored
+    ## @param persistentVolumeClaim.existingClaim Name of an existing `PersistentVolumeClaim` for Tacgui primary replicas
+    ## NOTE: When it's set the rest of persistentVolumeClaim parameters are ignored
     ##
   existingClaim: ""
-  ## @param persistence.subPath Subdirectory of the volume to mount at
+  ## @param persistentVolumeClaim.subPath Subdirectory of the volume to mount at
   ##
   subPath: ""
-  ## @param persistence.mountPath Path to mount the volume at
+  ## @param persistentVolumeClaim.mountPath Path to mount the volume at
   ##
-  mountPath: /data/tacgui
-  ## @param persistence.storageClass Tacgui persistent volume storage Class
+  mountPath: ""
+  ## @param persistentVolumeClaim.storageClassName Tacgui persistent volume storage Class
   ## If defined, storageClassName: <storageClass>
   ## If set to "-", storageClassName: "", which disables dynamic provisioning
   ## If undefined (the default) or set to null, no storageClassName spec is
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: ""
-  ## @param persistence.annotations Tacgui persistent volume claim annotations
+  storageClassName: ""
+  ## @param persistentVolumeClaim.volumeMode Tacgui persistent volume mode
+  ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode
+  volumeMode: Filesystem
+  ## @param persistentVolumeClaim.volumeName Tacgui persistent volume name
+  ##
+  volumeName: ""
+  ## @param persistentVolumeClaim.annotations Tacgui persistent volume claim annotations
   ##
   annotations: {}
-  ## @param persistence.accessModes Tacgui persistent volume access Modes
+  ## @param persistentVolumeClaim.accessModes Tacgui persistent volume access Modes
   ##
   accessModes:
-    - ReadWriteOnce
-  ## @param persistence.size Tacgui persistent volume size
+    - ReadWriteMany
+  ## @param persistentVolumeClaim.size Tacgui persistent volume claim size to request
   ##
-  size: 8Gi
-  ## @param persistence.selector Selector to match an existing Persistent Volume
+  size: 2Gi
+  ## @param persistentVolumeClaim.selector Selector to match an existing Persistent Volume
   ## selector:
   ##   matchLabels:
   ##     app: my-app
   ##
   selector: {}
+
+
+## @section persistentVolume Parameters
+
+## persistentVolume Parameters
+## ref: https://kubernetes.io/docs/user-guide/persistent-volumes/
+##
+persistentVolume:
+  ## @param persistentVolume.enabled Enable creation of a Persistent Volume
+  ## NOTE: When it's set the rest of persistentVolumeClaim parameters are ignored
+  ##
+  ## @param persistentVolume.capacity Persistent Volume size
+  ## @param persistentVolume.accessModes Persistent Volume access Modes
+  ## @param persistentVolume.hostPath Persistent Volume host path, If you use global.basePath, the path will be exclusive Path
+  ## @param persistentVolume.nfs.server NFS server
+  ## @param persistentVolume.nfs.path NFS path
+  ## @param persistentVolume.annotations Persistent Volume annotations
+  ## @param persistentVolume.storageClassName Persistent Volume storage Class
+  ## @param persistentVolume.reclaimPolicy Persistent Volume reclaim policy
+  enabled: false
+  capacity: 3Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath: "/var/tmp/tacgui"
+  nfs:
+    server: ""
+    path: ""
+  annotations: {}
+  storageClassName: ""
+  reclaimPolicy: Retain
 
 ## @section External Database Parameters
 
@@ -344,12 +372,12 @@ persistence:
 ## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
 ##
 externalDatabase:
-  host: ""
+  host: "mariadb"
   port: 3306
   user: tgui_user
-  database: tgui
+  database: tacgui
   logDatabase: tgui_log
-  password: ""
+  password: "juniper@123"
   existingSecret: ""
   existingSecretPasswordKey: ""
 
@@ -387,7 +415,7 @@ service:
   ## @param service.externalTrafficPolicy Enable client source IP preservation
   ## ref https://kubernetes.io/docs/tasks/access-application-cluster/create-external-load-balancer/#preserving-the-client-source-ip
   ##
-  externalTrafficPolicy: Cluster
+  externalTrafficPolicy: Local
   ## @param service.allocateLoadBalancerNodePorts Allow users to disable node ports for Service Type=LoadBalancer. This is useful for 
   ## bare metal / on-prem environments that rely on VIP based LB implementations.
   allocateLoadBalancerNodePorts: false
