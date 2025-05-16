@@ -1,0 +1,59 @@
+{{- if .Values.persistentVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+metadata:
+  name: {{ include "common.names.fullname" . }}-pv
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if or .Values.persistentVolume.annotations .Values.commonAnnotations }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-30"
+    {{- if .Values.commonAnnotations }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+    {{- end }}
+    {{- if .Values.persistentVolume.annotations }}
+      {{- include "common.tplvalues.render" ( dict "value" .Values.persistentVolume.annotations "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  capacity:
+    storage: {{ .Values.persistentVolume.capacity }}
+  accessModes:
+  {{- if .Values.persistentVolume.accessModes }}
+  {{- range .Values.persistentVolume.accessModes }}
+    - {{ . | quote }}
+  {{- end }}
+  {{- else }}
+    - {{ .Values.persistentVolume.accessMode | quote }}
+  {{- end }}
+  {{- if .Values.persistentVolume.reclaimPolicy }}
+  persistentVolumeReclaimPolicy: {{ .Values.persistentVolume.reclaimPolicy | quote }}
+  {{- end }}
+  {{- if .Values.persistentVolume.storageClassName }}
+  storageClassName: {{ .Values.persistentVolume.storageClassName | quote }}
+  {{- else if .Values.global.storageClassName }}
+  storageClassName: {{ .Values.global.storageClassName | quote }}
+  {{- end }}
+  {{- if .Values.persistentVolume.annotations }}
+  annotations:
+    {{- include "common.tplvalues.render" ( dict "value" .Values.persistentVolume.annotations "context" $ ) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.persistentVolume.hostPath }}
+  hostPath:
+    {{- if .Values.global.basePath }}
+    path: {{ (printf "%s/%s/%s" .Values.global.basePath (include "common.names.namespace" .) .Values.persistentVolume.hostPath) | quote }}
+    {{- else }}
+    path: {{ .Values.persistentVolume.hostPath }}
+    {{- end }}
+  {{- else if .Values.persistentVolume.nfs.server }}
+  nfs:
+    server: {{ .Values.persistentVolume.nfs.server }}
+    path: {{ .Values.persistentVolume.nfs.path }}
+  {{- end}}
+
+{{- end }}
+
