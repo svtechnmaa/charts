@@ -25,7 +25,7 @@ go_backend:
   configmap:
     data:
       BACKEND_URL: http://go-backend
-      DATABASE_URL: backend:backend@tcp(10.98.0.186:3307)/svtech?parseTime=true
+      DATABASE_URL: backend:backend@tcp(mariadb:3306)/svtech?parseTime=true
       FRONTEND_URL: http://topology-frontend
       PORT: "4000"
       REDIS_ADDR: redis:6379
@@ -46,7 +46,11 @@ seed_file:
       password: ""
       topo_schema: unitel
     grafana:
-      url: https://grafana/grafana
+      url: http://grafana:3000/grafana/  
+      username: "thrukadmin"
+      password: "thrukadmin"
+    icinga_redis:
+      url: redis://icinga2:6379
       username: ""
       password: ""
       
@@ -111,10 +115,10 @@ mysql:
     data:
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_DATABASE: svtech
-      MYSQL_PASSWORD: juniper123
+      MYSQL_PASSWORD: backend
       MYSQL_ROOT_HOST: '%'
-      MYSQL_ROOT_PASSWORD: juniper123
-      MYSQL_USER: juniper
+      MYSQL_ROOT_PASSWORD: backend
+      MYSQL_USER: backend
 
 asynqmon:
   deployment:

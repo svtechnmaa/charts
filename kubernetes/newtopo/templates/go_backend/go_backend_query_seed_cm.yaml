@@ -90,6 +90,38 @@ data:
           "Content": "SELECT t1.name AS hostname, t2.name AS servicename, t3.output FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name REGEXP 'IfCheck'",
           "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var output = result.results.A.frames[0].data.values[2][index]; var id_string = 'link_output'; var servicename = result.results.A.frames[0].data.values[1][index]; emit([hostname, servicename, id_string].join('|'), { link_output: output }) }) }",
           "Schedule": "@every 5m"
+        },
+        {
+          "ID": 12,
+          "Name": "icingadb_host_id",
+          "DatasourceID": 14,
+          "Content": "SELECT name, address, LOWER(HEX(id)) FROM host;",
+          "ResultMapper": "//function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var host_id = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { host_id: host_id}) }) }\nfunction(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var host_id = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), host_id) })}",
+          "Schedule": "@every 150m"
+        },
+        {
+          "ID": 13,
+          "Name": "icingadb_service_id",
+          "DatasourceID": 14,
+          "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS sericename, LOWER(HEX((t2.id))) as service_id FROM host t1 JOIN service t2 ON t1.id = t2.host_id",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var service_id = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), service_id) }) }",
+          "Schedule": "@every 120m"
+        },
+        {
+          "ID": 14,
+          "Name": "default_host_state_from_redis",
+          "DatasourceID": 4,
+          "Content": "local ks = redis.call('HKEYS', 'icinga:host:state')\nlocal ts = redis.call('HVALS', 'icinga:host:state')\nreturn {ks, ts}",
+          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    emit(k, obj['state'])\n  })\n}                                                                                  ",
+          "Schedule": "@every 50m"
+        },
+        {
+          "ID": 15,
+          "Name": "default_service_state_from_redis",
+          "DatasourceID": 4,
+          "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
+          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    emit(k, obj['state'])\n  })\n}                                                                            ",
+          "Schedule": "@every 120m"
         }
       ]
     }

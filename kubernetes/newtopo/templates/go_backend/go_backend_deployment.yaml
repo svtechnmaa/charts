@@ -23,7 +23,7 @@ spec:
       - command:
         - sh
         - -c
-        - ../server -migrate -seed /opt/seed.yaml -seed /opt/seed-dashboard.yaml -seed /opt/seed-datasource.yaml -seed /opt/seed-query.yaml -seed /opt/seed-state.yaml -seed /opt/seed-template.yaml -seed /opt/seed-icon.yaml
+        - ../server -migrate -seed /opt/seed-group.yaml -seed /opt/seed.yaml -seed /opt/seed-dashboard.yaml -seed /opt/seed-datasource.yaml -seed /opt/seed-query.yaml -seed /opt/seed-state.yaml -seed /opt/seed-template.yaml -seed /opt/seed-icon.yaml
         envFrom:
         - configMapRef:
             name: go-backend-conf
@@ -38,6 +38,9 @@ spec:
         - name: seed-config
           mountPath: /opt/seed.yaml
           subPath: seed.yaml
+        - name: seed-group-config
+          mountPath: /opt/seed-group.yaml
+          subPath: seed-group.yaml
         - name: seed-dashboard-config
           mountPath: /opt/seed-dashboard.yaml
           subPath: seed-dashboard.yaml
@@ -111,6 +114,10 @@ spec:
         configMap:
           defaultMode: 420
           name: seed-config
+      - name: seed-group-config
+        configMap:
+          defaultMode: 420
+          name: seed-group-config
       - name: seed-dashboard-config
         configMap:
           defaultMode: 420
