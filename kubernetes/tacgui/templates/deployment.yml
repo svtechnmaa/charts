@@ -61,6 +61,22 @@ spec:
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
+      initContainers:
+      {{- if and .Values.initConfigs (.Values.persistentVolumeClaim.enabled) }}
+        - name: check-configuration
+          image: busybox
+          command: 
+          - "/bin/sh"
+          - "-c"
+          - |
+            while [ -f /tmp/tacacgui-data/tac_plus.cfg ] && [ -f /tmp/tacacgui-data/tac_plus.cfg_test ]; do echo 'Waiting for configuration files...'; sleep 30; done; echo 'Configuration files are ready.'
+          volumeMounts:
+            - name: tacgui-data
+              mountPath: /tmp/tacgui-data
+      {{- end }}
+      {{- if .Values.initContainers }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+      {{- end }}
       containers:
         - name: tacgui
           image: {{ include "tacgui.image" . }}
