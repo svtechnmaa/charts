@@ -2,7 +2,8 @@ global:
   imageRegistry: ""
   github:
     user: ""
-    token: ""  
+    token: ""
+    fg_token: ""
   basePath: /opt/shared/
 
 replicaCount: 2
@@ -11,7 +12,7 @@ revisionHistoryLimit: 0
 initRepo:
   image:
     repository: svtechnmaa/svtech_debuger
-    tag: "v1.0.3"
+    tag: v1.0.3
     pullPolicy: IfNotPresent
 
   repo: "BNGBlaster_web_client:latest"
@@ -20,13 +21,13 @@ init:
   image:
     registry: docker.io
     repository: busybox
-    tag: "1.33"
+    tag: 1.33
     pullPolicy: IfNotPresent
 
 
 image:
   repository: svtechnmaa/bngblaster_web_client
-  tag: v1.8
+  tag: v2.0.0
   pullPolicy: IfNotPresent
 
 commonAnnotations:
@@ -66,6 +67,7 @@ sharedVolume:
   accessModes: ReadWriteOnce
   storageClass: blaster-repo-hostpath
 
+persistentData:  ["configs", "authen", "blaster.db", "templates", "templates_interfaces", "templates_part", "templates_streams", "auth.log", "all_conf.yaml"]
 
 securityContext: {}
 

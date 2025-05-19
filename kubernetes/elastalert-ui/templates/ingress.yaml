@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/session-cookie-name: "{{ .Chart.Name }}"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: '86400'
+    nginx.ingress.kubernetes.io/session-cookie-expires: '86400'
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+  - http:
+      paths:
+      - path: /{{ default "elastalert-ui" .Values.elastalertUIConfig.basePath }}
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Chart.Name }}
+            port:
+              number: {{ .Values.service.port }}

@@ -58,7 +58,7 @@ spec:
             - /bin/sh
             - -c
             - |
-                until [ `ls -l /opt/Tender_Document_Generator | grep -v "total" | wc -l` == 3 ];
+                until [ `ls -l /opt/Tender_Document_Generator | grep -v "total" | wc -l` == 4 ];
                 do
                   echo "Waiting for Init Repo...";
                   sleep 2;
@@ -86,8 +86,11 @@ spec:
             mountPath: {{ .Values.sharedVolume.path }}/output
             subPath: output
           - name: {{ .Values.sharedVolume.volumeName }}
-            mountPath: {{ .Values.sharedVolume.path }}/templates
-            subPath: templates
+            mountPath: {{ .Values.sharedVolume.path }}/templates_set
+            subPath: templates_set
+          - name: {{ .Values.sharedVolume.volumeName }}
+            mountPath: {{ .Values.sharedVolume.path }}/templates_inventory
+            subPath: templates_inventory
       volumes:
       - name: {{ .Values.sharedVolume.volumeName }}
         persistentVolumeClaim:

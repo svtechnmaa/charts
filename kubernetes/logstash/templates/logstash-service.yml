@@ -26,5 +26,9 @@ spec:
   {{- end }}
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
   externalTrafficPolicy: Local
+  {{- if .Values.global.externalIP }}
+  externalIPs: 
+    - {{ .Values.global.externalIP }}
+  {{- end }}
   loadBalancerIP: {{ .Values.global.logstash.loadBalancerIP }}
   {{- end }}

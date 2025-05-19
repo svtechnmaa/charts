@@ -1,0 +1,16 @@
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elastalert-ui-alerts-pvc
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  storageClassName: {{ $namespace }}-elastalert-ui-alerts-hostpath
+  accessModes:
+    - {{ .Values.elastalertUIConfig.volumes.alerts.accessModes }}
+  resources:
+    requests:
+      storage: {{ .Values.elastalertUIConfig.volumes.alerts.storageSize }}

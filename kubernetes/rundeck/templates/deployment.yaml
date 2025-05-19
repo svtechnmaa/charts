@@ -32,7 +32,16 @@ spec:
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
       affinity:
+        {{- if .Values.global.icinga2.enabled }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: icinga2
+              topologyKey: "kubernetes.io/hostname"
+        {{- else }}
         podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        {{- end }}
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
@@ -120,6 +129,7 @@ spec:
                     fi
                 }
                 check_empty_dir /home/rundeck/server/config /tmp/config
+                check_empty_dir /home/rundeck/etc /tmp/etc
                 git config --global --add safe.directory "*"
                 chown rundeck:rundeck /etc/icinga2/zones.d -R
                 chmod 777 /etc/icinga2/zones.d -R

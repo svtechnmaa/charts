@@ -1,0 +1,342 @@
+################### offline log uploaded from rundeck pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: offline-log
+data:
+  offline-log.conf: |
+    input {
+      beats {
+        port => 5555
+        tags => junos_offlog
+        id => junos_offlog
+        include_codec_tag => false
+      }
+    }
+
+    filter {
+      if "junos_offlog" in [fields][type] {
+      # if "junos_offlog" in [type] {
+        mutate {
+          remove_field => ["host"]
+          add_field => [ "[indexed_at]", "%{@timestamp}" ]
+        }
+
+        grok {
+          pattern_definitions => {
+            "LOG_DATA_NAME" => "[a-zA-Z0-9\_\-\.\:]{1,}"
+            # "INDEX_NAME" => "[a-zA-Z]{1,}"
+          }
+          match => {
+            "[log][file][path]" => "/var/tmp/index_syslog/%{LOG_DATA_NAME:[@metadata][offlog_suffix]}/%{LOG_DATA_NAME:[@metadata][offlog_junos_hostname]}/%{LOG_DATA_NAME:[log][file][name]}"
+            # "[log][file][path]" => "/var/tmp/index_syslog/%{INDEX_NAME:[@metadata][index_name]}"
+          }
+        }
+
+        grok {
+          pattern_definitions => {
+            "INDEX_NAME" => "[a-zA-Z0-9\_\-\.]{1,}"
+          }
+          match => {
+            "[@metadata][offlog_suffix]" => "%{INDEX_NAME:[@metadata][index_name]}_"
+            # "[log][file][path]" => "/var/tmp/index_syslog/%{INDEX_NAME:[@metadata][index_name]}"
+          }
+        }
+
+        grok {
+          pattern_definitions => {
+            "ZONE" => "[a-z]{1,}"
+          }
+          match => {
+            "[@metadata][offlog_suffix]" => "upload_%{ZONE:[@metadata][zone]}_"
+          }
+        }
+
+        translate {
+          field => "[@metadata][zone]"
+          destination => "[@metadata][zone]"
+          dictionary_path => "/etc/logstash/dictionary/timezone.yml"
+        }
+
+        mutate {
+          add_tag => "%{[@metadata][index_name]}"
+          # add_tag => "%{[@metadata][zone]}"
+        }
+
+        if [message] =~ /last message repeated \d+ time/ {
+            drop {}
+        }
+
+        if [message] =~ /logfile turned over due to size/ {
+            drop {}
+        }
+
+        # PARSE SRTUCTURE OFFLOG FILE
+        if [message] =~ /\<([0-9]+)\>1/ {
+          mutate {
+            add_tag => "structured_log"
+          }
+          grok {
+            match => {
+              "message" => "<%{PRIORITYCODE:junos_priocode}>1 %{TIMESTAMP_ISO8601:junos_time} %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}|\-) (%{PROCESSID:junos_procsid}|\-) (%{EVENTNAME:junos_eventname}|\-) %{MESSAGE:junos_msg}"
+            }
+            patterns_dir => ["/etc/logstash/patterns"]
+            patterns_files_glob => "structured_log"
+          }
+          mutate {
+            convert => { "junos_priocode" => "integer" }
+          }
+          ruby {
+            code => 'event.set("junos_facilitycode", event.get("junos_priocode")/8)'
+          }
+          ruby {
+            code => 'event.set("junos_severitycode", event.get("junos_priocode")%8)'
+          }
+          translate {
+            field => "[junos_severitycode]"
+            destination => "[junos_severityname]"
+            dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+          }
+          translate {
+            field => "[junos_facilitycode]"
+            destination => "[junos_facilityname]"
+            dictionary_path => "/etc/logstash/dictionary/facilitycode.yml"
+          }
+        }
+
+        # PARSE EXPLICIT PRIORITY OFFLOG FILE
+        else if [message] =~ /\%([A-Z]+)\-([0-9]+)/ {
+          mutate {
+            add_tag => "junos_offlog_explicit_priority"
+          }
+          grok {
+            match => {
+              "message" => "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  %{JUNHOSTNAME:junos_hostname} ((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(\:)) ((\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-%{EVENTNAME:junos_eventname}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-\:)) %{MESSAGE:junos_msg}"
+            }
+            patterns_dir => ["/etc/logstash/patterns"]
+            patterns_files_glob => "junos_offlog_explicit_priority"
+            remove_tag => [ "_grokparsefailure" ]
+          }
+        }
+
+        # PARSE UNSTRUCTURE OFFLOG FILE
+        else {
+          mutate {
+            remove_tag => ["junos_offlog_explicit_priority"]
+            add_tag => "junos_offlog_unstructured_log"
+          }
+          # PARSE CHASSISD OFFLOG FILE - UNSTRUCTURE LOG
+          if [log][file][name] =~ /\_chassisd/{
+            grok {
+              match => {
+                "message" => "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time}) %{GREEDYDATA:junos_msg}"
+              }
+              patterns_dir => ["/etc/logstash/patterns"]
+              patterns_files_glob => "junos_offlog_unstructured_log"
+              remove_tag => [ "_grokparsefailure" ]
+            }
+            mutate {
+              add_field => { "junos_facilityname" => "CHASSISD" }
+              add_field => { "junos_hostname" => "[@metadata][offlog_junos_hostname]" }
+            }
+          }
+          # PARSE ANOTHER OFFLOG FILES - UNSTRUCTURE LOG
+          else if [log][file][name] !~ /\_chassisd/ {
+            grok {
+              match => {
+                "message" => [
+                  "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  (%{JUNHOSTNAME:junos_hostname} | )((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(%{PROCESSNAME:junos_procsname})) ((%{EVENTNAME:junos_eventname}\: %{MESSAGE:junos_msg})|%{MESSAGE:junos_msg})",
+                  "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  %{JUNHOSTNAME:junos_hostname} ((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(\:)) ((\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-%{EVENTNAME:junos_eventname}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-\:)) %{MESSAGE:junos_msg}"
+                ]
+              }
+              patterns_dir => ["/etc/logstash/patterns"]
+              patterns_files_glob => "junos_offlog_unstructured_log"
+              remove_tag => [ "_grokparsefailure" ]
+            }
+            if "_grokparsefailure" in [tags] {
+              ### BEGIN: Pattern fpc\d+ OR PFE\d+ exist AND pfed\: or pfe\: exists
+              grok {
+                match => { "message" => [ "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}\: )?%{FPCNAME:junos_fpcname} %{GREEDYDATA:junos_msg}" ] }
+                patterns_dir => ["/etc/logstash/patterns"]
+                patterns_files_glob => "junos_offlog_unstructured_log"
+                add_field => {
+                  "junos_facilityname" => "PFE"
+                  "junos_procsname" => "pfed"
+                }
+                remove_tag => [ "_grokparsefailure" ]
+              }
+              ### END: Pattern fpc\d+ OR PFE\d+ exist AND pfed\: or pfe\: exists
+            }
+          }
+        }
+
+        date {
+          match => [ "junos_time", "MMM dd HH:mm:ss.SSS yyyy", "MMM  d HH:mm:ss.SSS yyyy","MMM dd HH:mm:ss yyyy", "MMM  d HH:mm:ss yyyy", "ISO8601", "MMM dd HH:mm:ss", "MMM  d HH:mm:ss", "MMM  d HH:mm:ss.SSS yyyy", "MMM dd HH:mm:ss.SSS"]
+          target => "junos_time"
+          timezone => "%{[@metadata][zone]}"
+        }
+        # date { match => [ "indexed_at", "MMM dd HH:mm:ss.SSS yyy", "MMM  d HH:mm:ss.SSS yyy","MMM dd HH:mm:ss yyy", "MMM  d HH:mm:ss yyy", "ISO8601", "MMM dd HH:mm:ss", "MMM  d HH:mm:ss" ] }
+
+        mutate {
+          # we use a "temporal" field with a predefined arbitrary known value that
+          add_field => { "[@metadata][junos_eventname_check]" => "unknown arbitrary value" }
+          add_field => { "[@metadata][junos_severitycode_check]" => "unknown arbitrary value" }
+          # If the field doesn't exist, copy is not executed.
+          copy => { "junos_eventname" => "[@metadata][junos_eventname_check]" }
+          copy => { "junos_severitycode" => "[@metadata][junos_severitycode_check]" }
+        }
+        if [@metadata][junos_eventname_check] != "unknown arbitrary value" {
+          translate {
+            field => "[junos_eventname]"
+            destination => "[junos_severityname]"
+            dictionary_path => "/etc/logstash/dictionary/flat_severity.yml"
+            refresh_interval => 1
+          }
+          translate {
+            field => "[junos_eventname]"
+            destination => "[junos_facilityname]"
+            dictionary_path => "/etc/logstash/dictionary/flat_facility.yml"
+            refresh_interval => 1
+          }
+          translate {
+            field => "[junos_eventname]"
+            destination => "[junos_typename]"
+            dictionary_path => "/etc/logstash/dictionary/flat_type.yml"
+            refresh_interval => 1
+          }
+          # translate {
+          #   field => "[junos_eventname]"
+          #   destination => "[junos_severityname]"
+          #   dictionary_path => "/etc/logstash/dictionary/flat_severity.yml"
+          #   refresh_interval => 1
+          # }
+        }
+        else if [@metadata][junos_severitycode_check] != "unknown arbitrary value" {
+          translate {
+            field => "[junos_severitycode]"
+            destination => "[junos_severityname]"
+            dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+            refresh_interval => 1
+          }
+        }
+
+        if "AUTHORIZATION" in [junos_facilityname] or "sshd|login" in [junos_procsname] {
+          mutate {
+            add_tag => "access_log"
+          }
+        }
+
+        if "UI_LOGOUT_EVENT|UI_LOGIN_EVENT|UI_AUTH_EVENT|UI_CMDLINE_READ_LINE" in [junos_eventname] or "INTERACTIVE-COMMANDS" in [junos_facilityname] or "mgd" in [junos_procsname] {
+          mutate {
+            add_tag => "access_log"
+          }
+        }
+
+        if "UI_JUNOSCRIPT_CMD" in [junos_eventname] {
+          mutate { add_field => { "login_session" => "junos_script"} }
+        }
+
+        if "access_log" in [tags] {
+          mutate { add_field => { "login_session" => "pending"} }
+          grok {
+            # TELNET/SSH FAILED
+            match => {
+              "junos_msg" => [
+                "\[%{GREEDYDATA:} username=\"%{GREEDYDATA:login_user}\" source-address=\"%{IP:login_source}\"\] %{GREEDYDATA:}",
+                "Login failed for user %{GREEDYDATA:login_user} from host %{IP:login_source}"
+              ]
+            }
+            add_field => { "login_protocol" => "login failed" }
+            add_tag => "login_trigger"
+            tag_on_failure => []
+          }
+
+          grok {
+            # TELNET, SSh, Junoscript OK
+            match => {
+              "junos_msg" => [
+                # User '%{GREEDYDATA:login_user}' login, class '%{GREEDYDATA:class}' \[%{PROCESSID:junos_procsid}\]%{GREEDYDATA}, ssh-connection ((?:(\'%{IP:login_source} %{GREEDYDATA} %{IP:junos_host} %{INT:port}\'))?|(?:(\'%{GREEDYDATA:login_source}\'))?), client-mode \'%{GREEDYDATA:client_mode}\'
+                "User '%{GREEDYDATA:login_user}' login, class '%{GREEDYDATA:class}' \[%{PROCESSID:junos_procsid}\]%{GREEDYDATA}, ssh-connection ((?:(\'%{IP:login_source} %{GREEDYDATA} %{IP:junos_host} %{INT:login_port}\'))?), client-mode \'%{GREEDYDATA:client_mode}\'",
+                "User %{GREEDYDATA:login_user} logged in from host %{GREEDYDATA:login_source} on device %{GREEDYDATA:client_mode}"
+              ]
+            }
+            patterns_dir => ["/etc/logstash/patterns"]
+            patterns_files_glob => "junos_offlog_unstructured_log"
+            add_tag => "login_trigger"
+            tag_on_failure => []
+          }
+
+          if "login_trigger" in [tags] {
+            if ![login_source] {
+              mutate {
+                gsub => ["client_mode", "cli", "tty"]
+              }
+            }
+          }
+
+          grok {
+            # TELNET/SSH COMMAND - Interacetive User
+            match => { "junos_msg" => "User '%{GREEDYDATA:login_user}', command '%{GREEDYDATA:junos_command}'" }
+            add_tag => "interactive_user"
+            tag_on_failure => []
+          }
+
+          grok {
+            # NETCONF COMMAND - NETCONF User
+            match => { "junos_msg" => "User '%{GREEDYDATA:login_user}' used NETCONF client to run command '%{GREEDYDATA:junos_command}'" }
+            match => { "junos_msg" => "User '%{GREEDYDATA:login_user}', command 'xml-mode netconf need-trailer '" }
+            match => { "junos_msg" => "User '%{GREEDYDATA:login_user}', command 'command rpc rpc command start shell command %{GREEDYDATA:}" }
+            add_tag => "netconf_user"
+            add_field => { "client_mode" => "netconf" }
+            tag_on_failure => []
+          }
+
+          translate {
+            exact => true
+            regex => true
+            field => "[client_mode]"
+            destination => "[login_protocol]"
+            dictionary_path => "/etc/logstash/dictionary/client_mode.yml"
+          }
+        }
+
+        mutate {
+          # CONVERT OFFLINE FILENAME TO JUNOS_HOSTNAME
+          gsub => [ "[@metadata][offlog_junos_hostname]", "_RE\d*", "" ]
+          copy => { "[@metadata][offlog_junos_hostname]" => "[junos_hostname]" }
+        }
+
+
+    #    mutate { add_field => { "[@metadata][dest]" => "junos_offlog-%{suffix}" } }
+    #    }
+      }
+    }
+
+    output {
+      if "junos_offlog" in [fields][type] or "access_log" in [tags] or "interactive_user" in [tags] or "netconf_user" in [tags] or "login_trigger" in [tags] {
+      # if "junos_offlog" in [fields][type] {
+        elasticsearch {
+          hosts => ["{{ join "\", \"https://" $newArray }}"]
+          index => "offline-log"
+          # index => "%{[@metadata][index_name]}"
+          # cacert => "/etc/logstash/certs/NMS01.pem"
+          user => '{{.Values.global.elasticsearch.adminUser.name}}' #{{.Values.global.user}}
+          password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+          ssl_certificate_verification => false
+        }
+      }
+
+      # stdout {codec => rubydebug}
+      if "_grokparsefailure" in [tags] {
+        file { path => "/tmp/jun-offline-logstash_failed_parse_events-%{+YYYY-MM}" }
+      }
+    }
+################### End of offline log uploaded from rundeck pipeline config ###################

@@ -358,7 +358,7 @@ data:
     pass: juniper@123
     protocol: postgresql
     # host: ~
-    host: nms-airflow-postgresql-ha-pgpool
+    host: "{{ .Release.Name }}-airflow-postgresql-ha-pgpool"
     port: 5432
     db: airflow_nmaa
     sslmode: disable

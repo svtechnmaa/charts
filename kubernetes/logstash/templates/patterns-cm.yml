@@ -1,0 +1,131 @@
+################### pattern config #############################
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-patterns
+data:
+  junos_fpc: |
+    PRIORITYCODE (?<=\<)[0-9]{1,}(?=\>)
+    TIMESTAMP_ISO8601 %{YEAR}-%{MONTHNUM}-%{MONTHDAY}[T ]%{HOUR}:?%{MINUTE}(?::?%{SECOND})?%{ISO8601_TIMEZONE}?
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    FPCNAME [a-z0-9]{1,}
+    MESSAGE (?<=\s).*
+
+  junos_off_chassisd: |
+    DATESTAMP_FULL %{MONTH} %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_FULL2 %{MONTH}  %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH} %{MONTHDAY} %{TIME}
+    CHASSISPROC [a-zA-Z0-9\_\-\[]{1,}
+    CHASSISEVENT [a-zA-Z0-9\_\-\[]{1,}
+    MESSAGE .*
+
+  junos_off_chassisd_snmp: |
+    DATESTAMP_FULL %{MONTH} %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_FULL2 %{MONTH}  %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH} %{MONTHDAY} %{TIME}
+    CHASSISPROC [a-zA-Z0-9\_\-\[]{1,}
+    MESSAGE .*
+
+  junos_off_config-changes: |
+    DATESTAMP_FULL %{MONTH} %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_FULL2 %{MONTH}  %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH} %{MONTHDAY} %{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID [0-9_]{1,}
+    EVENTNAME [A-Z0-9\_]{1,}
+    USER [a-z]{1,}
+    COMMAND [a-z]{1,}
+    MESSAGE .*
+
+  junos_off_interactive-commands: |
+    DATESTAMP_FULL %{MONTH} %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_FULL2 %{MONTH}  %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH} %{MONTHDAY} %{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID [0-9_]{1,}
+    EVENTNAME [A-Z0-9\_]{1,}
+    MESSAGE .*
+
+  junos_off_message: |
+    DATESTAMP_FULL %{MONTH} %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_FULL2 %{MONTH}  %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH} %{MONTHDAY} %{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID (?<=\[)[0-9_]{1,}
+    FACILITYNAME [a-zA-Z]{1,}
+    SEVERITYCODE [0-9_]{1,}
+    EVENTNAME [a-zA-Z0-9\_]{1,}
+    MESSAGE (?<=\:\s).*
+
+  junos_off_security: |
+    DATESTAMP_FULL %{MONTH} %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_FULL2 %{MONTH}  %{MONTHDAY} %{TIME} %{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH} %{MONTHDAY} %{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID [0-9_]{1,}
+    EVENTNAME [a-zA-Z0-9\_]{1,}
+    MESSAGE1 (?<=\s).*
+    MESSAGE2 (?<=\:\s).*
+
+  junos_offlog_explicit_priority: |
+    DATESTAMP_FULL %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}%{SPACE}%{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID (?<=\[)[0-9_]{1,}
+    FACILITYNAME [a-zA-Z]{1,}
+    SEVERITYCODE [0-9_]{1,}
+    EVENTNAME [a-zA-Z0-9\_\(\)]{1,}
+    MESSAGE (?<=\:\s).*
+
+  junos_offlog_unstructured_log: |
+    DATESTAMP_FULL %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}%{SPACE}%{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID (?<=\[)[0-9_]{1,}
+    FACILITYNAME [a-zA-Z]{1,}
+    SEVERITYCODE [0-9_]{1,}
+    EVENTNAME [a-zA-Z0-9\_\(\)]{1,}
+    MESSAGE (?<=\:\s).*
+    FPCNAME [Ff][Pp][Cc][0-9]{1,2}
+
+  offlog_explicit_priority: |
+    DATESTAMP_FULL %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}%{SPACE}%{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID (?<=\[)[0-9_]{1,}
+    FACILITYNAME [a-zA-Z]{1,}
+    SEVERITYCODE [0-9_]{1,}
+    EVENTNAME [a-zA-Z0-9\_\(\)]{1,}
+    MESSAGE (?<=\:\s).*
+  offlog_unstructured_log: |
+    DATESTAMP_FULL %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}%{SPACE}%{YEAR}
+    DATESTAMP_NOTYEAR %{MONTH}%{SPACE}%{MONTHDAY}%{SPACE}%{TIME}
+    JUNHOSTNAME [a-zA-Z0-9\_\-\[\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\-\.]{1,}
+    PROCESSID (?<=\[)[0-9_]{1,}
+    FACILITYNAME [a-zA-Z]{1,}
+    SEVERITYCODE [0-9_]{1,}
+    EVENTNAME [a-zA-Z0-9\_\(\)]{1,}
+    MESSAGE (?<=\:\s).*
+
+  radius_log: |
+    RAS_DATE %{MONTHNUM}/%{MONTHDAY}/%{YEAR}
+    RAS_HOUR %{HOUR}:?%{MINUTE}(?::?%{SECOND})?
+
+  structured_log: |
+    PRIORITYCODE (?<=\<)[0-9]{1,}(?=\>)
+    TIMESTAMP_ISO8601 %{YEAR}-%{MONTHNUM}-%{MONTHDAY}[T ]%{HOUR}:?%{MINUTE}(?::?%{SECOND})?%{ISO8601_TIMEZONE}?
+    JUNHOSTNAME [a-zA-Z0-9\_\-\.]{1,}
+    PROCESSNAME [a-zA-Z0-9\/\:\_\.\-]{1,}
+    PROCESSID [0-9_]{1,}
+    EVENTNAME [a-zA-Z0-9\_\-\"]{1,}
+    SNMPINFO ((?<=\[).*(?=\]))
+    MESSAGE .*

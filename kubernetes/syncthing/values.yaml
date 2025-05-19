@@ -6,7 +6,7 @@ timezone: Asia/Ho_Chi_Minh
 
 image:
   repository: svtechnmaa/svtech_syncthing
-  tag: "v1.0.4"
+  tag: v1.0.4
 
   pullPolicy: IfNotPresent
   debug: false
@@ -14,7 +14,7 @@ image:
 uiPassword: juniper@123
 
 env:
-  LIST_FOLDER: "syncthing_config, repo_automation, csv_output, gitlist, icinga2_plugins, icinga2_conf, icinga2_zones, nagvis_maps, rundeck_backup, rundeck_jsnapy, rundeck_projects, rundeck_var, thruk, icingaweb_conf, snmp-manager-conf, rundeck-server-config, nagvis_auth_db, icinga2_scripts"
+  LIST_FOLDER: "syncthing_config, repo_automation, csv_output, gitlist, icinga2_plugins, icinga2_conf, icinga2_zones, nagvis_maps, rundeck_backup, rundeck_jsnapy, rundeck_projects, rundeck_var, thruk, icingaweb_conf, snmp-manager-conf, rundeck-server-config, nagvis_auth_db, icinga2_scripts, rundeck-etc-config"
 
 clusterDomain: cluster.local
 commonAnnotations: {}

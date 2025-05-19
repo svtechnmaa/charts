@@ -119,15 +119,15 @@ global:
         - rundeck
       storageClass: nagvis-auth-db-hostpath
 
-    - volumeName: rundeck-project-volume
-      pvcName: rundeck-project-pvc
+    - volumeName: rundeck-etc-config-volume
+      pvcName: rundeck-etc-config-pvc
       storageSize: 1Gi
-      path: /home/rundeck/projects
+      path: /home/rundeck/etc
       accessModes: ReadWriteOnce #ReadWriteMany
       shareFor:
         - rundeck
         - debuger
-      storageClass: rundeck-project-hostpath
+      storageClass: rundeck-etc-config-hostpath
 
     - volumeName: rundeck-jsnapy-volume
       pvcName: rundeck-jsnapy-pvc
@@ -196,13 +196,13 @@ init:
   image:
     registry: docker.io
     repository: busybox
-    tag: "1.33"
+    tag: 1.33
 
     pullPolicy: IfNotPresent
 
 image:
   repository: svtechnmaa/svtech_rundeck
-  tag: "v1.2.3"
+  tag: v1.2.9
 
   pullPolicy: IfNotPresent
 

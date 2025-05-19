@@ -12,7 +12,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ .Values.replicas }}
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
@@ -81,7 +81,7 @@ spec:
           - name: general-config
             mountPath: /usr/share/logstash/config/startup.options
             subPath: startup.options
-          - name: general-config
+          - name: pipelines
             mountPath: /usr/share/logstash/config/pipelines.yml
             subPath: pipelines.yml
 
@@ -96,7 +96,9 @@ spec:
 
           # svtech-lab device management flow
           - name: svtech-lab-online
-            mountPath: /etc/logstash/conf.d/svtech-lab-online/
+            mountPath: /etc/logstash/conf.d/svtech-lab-online/jun-svtechlab-onlinelog.conf
+            subPath: jun-svtechlab-onlinelog.conf
+
 
           # uploaded log from rundeck flow
           - name: offline-log
@@ -122,8 +124,9 @@ spec:
               path: jvm.options
             - key: startup.options
               path: startup.options
-            - key: pipelines.yml
-              path: pipelines.yml
+      - name: pipelines
+        configMap:
+          name: logstash-pipelines
 
       # patterns and dictionary for junos device log
       - name: logstash-patterns
