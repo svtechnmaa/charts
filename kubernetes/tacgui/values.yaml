@@ -286,7 +286,7 @@ sidecars: []
 persistentVolumeClaim:
   ## @param persistentVolumeClaim.enabled Enable persistentVolumeClaim on Tacgui replicas using a `PersistentVolumeClaim`
   ##
-  enabled: false
+  enabled: true
     ## @param persistentVolumeClaim.existingClaim Name of an existing `PersistentVolumeClaim` for Tacgui primary replicas
     ## NOTE: When it's set the rest of persistentVolumeClaim parameters are ignored
     ##
@@ -304,7 +304,7 @@ persistentVolumeClaim:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClassName: ""
+  storageClassName: tacgui-data-hostpath
   ## @param persistentVolumeClaim.volumeMode Tacgui persistent volume mode
   ## ref: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode
   volumeMode: Filesystem
@@ -346,16 +346,16 @@ persistentVolume:
   ## @param persistentVolume.annotations Persistent Volume annotations
   ## @param persistentVolume.storageClassName Persistent Volume storage Class
   ## @param persistentVolume.reclaimPolicy Persistent Volume reclaim policy
-  enabled: false
+  enabled: true
   capacity: 3Gi
   accessModes:
     - ReadWriteMany
-  hostPath: "/var/tmp/tacgui"
+  hostPath: "tacgui-data"
   nfs:
     server: ""
     path: ""
   annotations: {}
-  storageClassName: ""
+  storageClassName: tacgui-data-hostpath
   reclaimPolicy: Retain
 
 ## @section External Database Parameters
@@ -372,12 +372,12 @@ persistentVolume:
 ## @param externalDatabase.existingSecretPasswordKey Name of an existing secret key containing the database credentials
 ##
 externalDatabase:
-  host: "mariadb"
-  port: 3306
-  user: tgui_user
+  host: ""
+  port: ""
+  user: ""
   database: tacgui
   logDatabase: tgui_log
-  password: "juniper@123"
+  password: ""
   existingSecret: ""
   existingSecretPasswordKey: ""
 

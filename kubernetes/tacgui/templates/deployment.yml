@@ -69,7 +69,7 @@ spec:
           - "/bin/sh"
           - "-c"
           - |
-            while [ -f /tmp/tacacgui-data/tac_plus.cfg ] && [ -f /tmp/tacacgui-data/tac_plus.cfg_test ]; do echo 'Waiting for configuration files...'; sleep 30; done; echo 'Configuration files are ready.'
+            while [ ! -f /tmp/tacgui-data/tac_plus.cfg ] || [ ! -f /tmp/tacgui-data/tac_plus.cfg_test ]; do echo 'Waiting for configuration files...'; sleep 30; done; echo 'Configuration files are ready.'
           volumeMounts:
             - name: tacgui-data
               mountPath: /tmp/tacgui-data
