@@ -95,7 +95,13 @@ data:
             convert => { "junos_priocode" => "integer" }
           }
           ruby {
-            code => 'event.set("junos_facilitycode", event.get("junos_priocode")/8)'
+            code => '
+              priocode = event.get("junos_priocode")
+              if priocode
+                event.set("junos_facilitycode", priocode / 8)
+                event.set("junos_severitycode", priocode % 8)
+              end
+            '
           }
           ruby {
             code => 'event.set("junos_severitycode", event.get("junos_priocode")%8)'
