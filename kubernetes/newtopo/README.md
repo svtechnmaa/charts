@@ -58,6 +58,13 @@ image:
   pullToken: "<your-ghcr-token>"
 ```
 
+### NMAA stack namespace
+
+Configure namespace where your NMAA stack is deployed (default: nms)
+```yaml
+nmaa_namespace: "<your-nmaa-stack-namespace>"
+```
+
 ### Seed File Datasources
 Configure datasource connections used by the backend:
 
