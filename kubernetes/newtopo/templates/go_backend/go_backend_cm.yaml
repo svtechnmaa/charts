@@ -10,6 +10,10 @@ data:
   PERMISSIONS_ENABLED:  "{{ .Values.go_backend.configmap.data.PERMISSIONS_ENABLED }}"
   TRAEFIK_TEMPLATE: "{{ .Values.go_backend.configmap.data.TRAEFIK_TEMPLATE }}"
 
+  INTERNAL_GRAFANA_URL: "{{ .Values.seed_file.datasources.grafana.url }}"
+  INTERNAL_GRAFANA_USER: "{{ .Values.seed_file.datasources.grafana.username }}"
+  INTERNAL_GRAFANA_PASSWORD: "{{ .Values.seed_file.datasources.grafana.password }}"
+
 kind: ConfigMap
 metadata:
   name: go-backend-conf

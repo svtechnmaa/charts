@@ -23,7 +23,10 @@ spec:
       - command:
         - sh
         - -c
-        - ../server -migrate -seed /opt/seed-group.yaml -seed /opt/seed.yaml -seed /opt/seed-dashboard.yaml -seed /opt/seed-datasource.yaml -seed /opt/seed-query.yaml -seed /opt/seed-state.yaml -seed /opt/seed-template.yaml -seed /opt/seed-icon.yaml
+        - |
+          ../server -migrate -seed /opt/seed-group.yaml -seed /opt/seed.yaml -seed /opt/seed-dashboard.yaml -seed /opt/seed-menuitem.yaml -seed /opt/seed-datasource.yaml -seed /opt/seed-state.yaml -seed /opt/seed-template.yaml -seed /opt/seed-icon.yaml
+          /opt/seed-queries-script.sh -seed /opt/seed-query.yaml
+          # sleep 10000
         envFrom:
         - configMapRef:
             name: go-backend-conf
@@ -35,6 +38,9 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
+        - name: seed-queries-script-config
+          mountPath: /opt/seed-queries-script.sh
+          subPath: seed-queries-script.sh
         - name: seed-config
           mountPath: /opt/seed.yaml
           subPath: seed.yaml
@@ -44,6 +50,9 @@ spec:
         - name: seed-dashboard-config
           mountPath: /opt/seed-dashboard.yaml
           subPath: seed-dashboard.yaml
+        - name: seed-menuitem-config
+          mountPath: /opt/seed-menuitem.yaml
+          subPath: seed-menuitem.yaml
         - name: seed-datasource-config
           mountPath: /opt/seed-datasource.yaml
           subPath: seed-datasource.yaml
@@ -110,6 +119,10 @@ spec:
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
+      - name: seed-queries-script-config
+        configMap:
+          defaultMode: 493
+          name: seed-queries-script-config
       - name: seed-config
         configMap:
           defaultMode: 420
@@ -122,6 +135,10 @@ spec:
         configMap:
           defaultMode: 420
           name: seed-dashboard-config
+      - name: seed-menuitem-config
+        configMap:
+          defaultMode: 420
+          name: seed-menuitem-config
       - name: seed-datasource-config
         configMap:
           defaultMode: 420

@@ -1,0 +1,83 @@
+apiVersion: v1
+data:
+  seed-menuitem.yaml: |-
+    {
+      "MenuItem": [
+        {
+          "ID": 1,
+          "Title": "Dashboard",
+          "Permalink": "",
+          "Href": "/app",
+          "Order": 0,
+          "Username": null,
+          "Password": null,
+          "ExternalTab": false,
+          "Hidden": false,
+          "Override": null
+        },
+        {
+          "ID": 2,
+          "Title": "Visualizer",
+          "Permalink": "",
+          "Href": "/app/visualizer",
+          "Order": 1,
+          "Username": null,
+          "Password": null,
+          "ExternalTab": false,
+          "Hidden": false,
+          "Override": null
+        },
+        {
+          "ID": 3,
+          "Title": "Icingaweb",
+          "Permalink": "icingaweb",
+          "Href": "http://icingaweb.nms.svc.cluster.local:8080/icingaweb/",
+          "Order": 2,
+          "Username": "icingaweb",
+          "Password": "juniper@123",
+          "ExternalTab": false,
+          "Hidden": false,
+          "Override": null
+        },
+        {
+          "ID": 4,
+          "Title": "Grafana",
+          "Permalink": "grafana",
+          "Href": "http://grafana.nms.svc.cluster.local:3000/grafana/",
+          "Order": 3,
+          "Username": "thrukadmin",
+          "Password": "thrukadmin",
+          "ExternalTab": false,
+          "Hidden": false,
+          "Override": null
+        },
+        {
+          "ID": 5,
+          "Title": "Rundeck",
+          "Permalink": "rundeck",
+          "Href": "http://rundeck.nms.svc.cluster.local:4440/rundeck",
+          "Order": 4,
+          "Username": "",
+          "Password": "",
+          "ExternalTab": false,
+          "Hidden": false,
+          "Override": null
+        },
+        {
+          "ID": 6,
+          "Title": "Gitlist",
+          "Permalink": "gitlist",
+          "Href": "http://gitlist.nms.svc.cluster.local:80/gitlist/",
+          "Order": 5,
+          "Username": "",
+          "Password": "",
+          "ExternalTab": false,
+          "Hidden": false,
+          "Override": null
+        }
+      ]
+    }
+kind: ConfigMap
+metadata:
+  name: seed-menuitem-config
+  namespace: {{ .Values.namespace }}
