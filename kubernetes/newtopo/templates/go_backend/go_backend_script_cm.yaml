@@ -1,6 +1,6 @@
 apiVersion: v1
 data:
-  seed-queries-script.sh: |-
+  seed-queries-script.sh: |
     #!/bin/sh
     # This script is used to get the datasourceID from MariaDB and Grafana and modify the queries seed file
     # to use the datasourceID from mariadb or Grafana
@@ -82,7 +82,6 @@ data:
       MARIADB_HOST="${MARIADB_HOST:-mariadb}"
       MARIADB_PORT="${MARIADB_PORT:-3306}"
       DB="${DB:-svtech}"
-     
       row_count=$(mariadb -u "$USER" -p"$PASS" -h "$MARIADB_HOST" -D "$DB" --skip-ssl -Nse "SHOW DATABASES;")
       if [ $? -ne 0 ]; then
         echo "❌ Failed to connect database '$DB' from host 'MARIADB_HOST'. Exiting..."
