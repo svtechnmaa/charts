@@ -82,7 +82,7 @@ data:
       MARIADB_HOST="${MARIADB_HOST:-mariadb}"
       MARIADB_PORT="${MARIADB_PORT:-3306}"
       DB="${DB:-svtech}"
-      
+     
       row_count=$(mariadb -u "$USER" -p"$PASS" -h "$MARIADB_HOST" -D "$DB" --skip-ssl -Nse "SHOW DATABASES;")
       if [ $? -ne 0 ]; then
         echo "❌ Failed to connect database '$DB' from host 'MARIADB_HOST'. Exiting..."
@@ -130,7 +130,7 @@ data:
             fi
             id=$(echo "$response_from_grafana" | jq -r --arg name "$name" '.[] | select(.name == $name) | .id')
             if [[ -n "$id" && "$id" != "null" ]]; then
-              ds_id=$((id + 5)) #the datasourceID of Grafana Internal should be set to 5 
+              ds_id=$((id + 5)) #the datasourceID of Grafana Internal should be set to 5
             else
               ds_id=9999
             fi
