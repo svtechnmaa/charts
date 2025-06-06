@@ -58,8 +58,8 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 ## ????
-# streamlitConfig:
-#   db_dir: "/Python-Development/convert_data_apps/database"
+ConvertConfig:
+  branch: "phase2_structure_data_to_config_data"
 
 sharedVolume:
   enabled: true

@@ -73,8 +73,13 @@ spec:
         {{- end }}
         name: convert-data
         env:
-        - name: GIT_TOKEN
-          value: {{ .Values.global.github.fg_token }}
+        - name: BRANCH_GIT
+          value: {{ .Values.ConvertConfig.branch }}
+        - name: TOKEN_GIT
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Chart.Name }}-secret
+              key: fg_token
         - name: USER_NAME
           value: {{ .Values.global.github.user }}
         {{- if .Values.sharedVolume.enabled }}
