@@ -1,6 +1,7 @@
 global:
-  imageRegistry: "ghcr.io"
+  imageRegistry: ""
   github:
+    email: ""
     user: ""
     token: ""
     fg_token: ""
@@ -27,6 +28,7 @@ init:
     pullPolicy: IfNotPresent
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech-junos-automation/svtech_convert_data
   tag: "v1.0.51"
   pullPolicy: IfNotPresent
