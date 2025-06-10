@@ -1,7 +1,6 @@
 global:
   imageRegistry: ""
   github:
-    email: ""
     user: ""
     token: ""
     fg_token: ""
@@ -18,7 +17,7 @@ initRepo:
     tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
-  repo: "SVTECH-Junos-Automation:latest"
+  repo: "Convert-data:latest"
 
 init:
   image:
@@ -29,8 +28,8 @@ init:
 
 image:
   registry: ghcr.io
-  repository: svtechnmaa/svtech-junos-automation/svtech_convert_data
-  tag: "v1.0.51"
+  repository: svtechnmaa/convert-data
+  tag: "v11"
   pullPolicy: IfNotPresent
 
 commonAnnotations:
@@ -63,12 +62,12 @@ nameOverride: ""
 fullnameOverride: ""
 ## ????
 ConvertConfig:
-  branch: "test_phase2_convert_data"
+  branch: "phase2_structure_data_to_config_data"
 
 sharedVolume:
   enabled: true
   volumeName: "convert-data"
-  path: "/data/SVTECH-Junos-Automation"
+  path: "/data/Convert-data"
   pvcName: "convert-data-pvc"
   storageSize: 2Gi
   accessModes: ReadWriteOnce
