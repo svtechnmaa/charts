@@ -1,0 +1,58 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($arg_user) {
+        set $user $arg_user;
+      }
+      if ($arg_hostgroup) {
+        set $hostgroup $arg_hostgroup;
+      }
+      if ($arg_orgId) {
+        set $orgId $arg_orgId;
+      }
+      if ($user = "") {
+        return 401;
+      }
+      if ($hostgroup = "") {
+        return 401;
+      }
+      if ($orgId = "") {
+        return 401;
+      }
+      if ($http_referer ~ "^https://(.*)/grafana/d/(.*)orgId=([0-9]+)(.*)") {
+        set $referer_orgId $3;
+        set $cookie_valid 1;
+      }
+      if ($referer_orgId != $orgId) {
+        set $cookie_valid 0;
+        return 401;
+      }
+      if ($cookie_valid = 1) {
+        add_header Set-Cookie "ref_grafana_path=$http_referer; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
+        add_header Set-Cookie "ref_grafana_user=$user; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
+        add_header Set-Cookie "ref_grafana_hostgroup=$hostgroup; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
+        add_header Set-Cookie "ref_grafana_orgId=$orgId; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
+        #ref_grafana_session already set from grafana ingress
+        set $redirect_url "$scheme://$host/report/grafana/sla/";
+
+        return 302 $redirect_url;
+      }
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  generation: 1
+  name: grafana-redirect-report-ingress
+  namespace: nmaa
+spec:
+  ingressClassName: nmaa
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: reflex
+            port:
+              number: 3000
+        path: /grafana-redirect-report(/|$)(.*)
+        pathType: Prefix

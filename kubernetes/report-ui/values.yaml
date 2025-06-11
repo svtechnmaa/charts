@@ -1,0 +1,93 @@
+global:
+  http_proxy: ""
+  frontendVip: "" # VIP for frontend service
+  mariadb-galera:
+    enabled: false
+  seaweedfs:
+    enabled: false
+  externalIP: "" # externalIP for CICD
+
+timezone: Asia/Ho_Chi_Minh
+
+frontend:
+  replicaCount: 1
+  init:
+    image:
+      registry: docker.io
+      repository: busybox
+      tag: 1.33
+      pullPolicy: IfNotPresent
+  image:
+    repository: svtechnmaa/svtech_report
+    tag: test-v1.16
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # - 10.10.10.0/24
+    # clusterIP: None
+
+backend:
+  replicaCount: 2
+  image:
+    repository: svtechnmaa/svtech_report
+    tag: test-v1.16
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # - 10.10.10.0/24
+    # clusterIP: None
+
+scheduler:
+  replicaCount: 1
+  image:
+    repository: svtechnmaa/svtech_report
+    tag: test-v1.17
+    pullPolicy: IfNotPresent
+
+worker:
+  replicaCount: 1
+  image:
+    repository: svtechnmaa/svtech_report
+    tag: test-v1.17
+    pullPolicy: IfNotPresent
+
+redis:
+  replicaCount: 1
+  image:
+    registry: docker.io
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 6379
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # - 10.10.10.0/24
+    # clusterIP: None
+
+dashboard:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cjlapao/rq-dashboard
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 9181
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # -10.10.10.0/24
+    # clusterIP: None
+
+nameOverride: ""
+fullnameOverride: ""
+
+commonLabels: {}

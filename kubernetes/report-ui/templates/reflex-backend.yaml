@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-backend
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  name: {{ include "common.names.fullname" . }}-backend
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.backend.replicaCount "global" .Values.global ) }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}-backend
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}-backend
+    spec:
+      containers:
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.backend.image "global" .Values.global) }}
+        {{- if .Values.backend.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        {{- end }}
+        name: reflex-backend
+        command:
+          - bash
+          - -ec
+          - |
+            if [ -d alembic ]; then
+              reflex db migrate
+              reflex run --env prod --backend-only --backend-port 8000
+            fi
+        env:
+          - name: TZ
+            value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+          # {{- if not (empty .Values.global.http_proxy) }}
+          # - name: http_proxy
+          #   value: {{ .Values.global.http_proxy | quote }}
+          # - name: https_proxy
+          #   value: {{ .Values.global.http_proxy | quote }}
+          # {{- end }}
+          # - name: NO_PROXY
+          #   value: "lb-apiserver.kubernetes.local, 10.121.30.177,10.121.30.173,pe-nms01,pe-nms01.cluster.local,10.121.30.174,pe-nms02,pe-nms02.cluster.local,10.121.30.175,pe-nms03,pe-nms03.cluster.local,10.121.30.176,pe-nms04,pe-nms04.cluster.local,127.0.0.1,localhost,192.168.99.0/24,192.168.100.0/24,svc,svc.cluster.local,grafana"
+        ports:
+        - containerPort: 8000
+          name: backend
+        volumeMounts:
+        - name: report-ui-env
+          mountPath: /app/.env
+          subPath: .env
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ping
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+      volumes:
+      - name: report-ui-env
+        configMap:
+          name: {{ include "common.names.fullname" . }}-env
+      imagePullSecrets:
+      - name: ghcr-pull-secret

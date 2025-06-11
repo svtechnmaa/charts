@@ -1,0 +1,31 @@
+apiVersion: v1
+data:
+  .env: |
+    API_URL=https://{{ .Values.global.frontendVip }}
+    REFLEX_CHECK_LATEST_VERSION="False"
+    DB_URL=mysql+pymysql://reflex:reflex@mariadb/svtech_report
+    GRAFANA_URL=https://{{ .Values.global.frontendVip }}/grafana
+    ICINGA_REDIS_DB="0"
+    ICINGA_REDIS_HOST=icinga2
+    ICINGA_REDIS_PORT="6379"
+    ICINGADB_DATABASE=icingadb
+    ICINGADB_HOST=mariadb
+    ICINGADB_PASSWORD=juniper@123
+    ICINGADB_PORT="3306"
+    ICINGADB_USER=icingadb
+    INFLUXDB_DATABASE=influxdb_nms
+    INFLUXDB_HOST=influxdb
+    INFLUXDB_PASSWORD=juniper@123
+    INFLUXDB_PORT="8086"
+    INFLUXDB_USER=juniper
+    REDIS_HOST={{ .Chart.Name }}-redis
+    REDIS_PORT="6379"
+    {{- if .Values.global.seaweedfs.enabled }}
+    SEAWEEDFS_URL=http://seaweedfs-filer.seaweedfs.svc.cluster.local:8888
+    {{- end }}
+    TASK_FAILURE_TTL="3600"
+    TASK_RESULT_TTL="3600"
+    TASK_TIMEOUT="3600"
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}-env
