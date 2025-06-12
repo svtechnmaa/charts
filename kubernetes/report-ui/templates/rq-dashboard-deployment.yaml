@@ -4,7 +4,7 @@ kind: Deployment
 metadata:
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: {{ .Chart.Name }}-rq-dashboard\
+    app.kubernetes.io/component: {{ .Chart.Name }}-rq-dashboard
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}

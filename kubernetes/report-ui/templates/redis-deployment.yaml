@@ -13,12 +13,12 @@ spec:
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/componen: report-ui-redis
+      app.kubernetes.io/component: report-ui-redis
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/componen: report-ui-redis
+        app.kubernetes.io/component: report-ui-redis
     spec:
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image ) }}

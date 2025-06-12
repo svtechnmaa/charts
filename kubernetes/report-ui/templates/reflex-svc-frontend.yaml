@@ -28,6 +28,6 @@ spec:
       nodePort: null
       {{- end }}
   selector:
-    app.kubernetes.io/componen: report-ui-frontend
+    app.kubernetes.io/component: report-ui-frontend
     {{- include "common.labels.matchLabels" . | nindent 4 }}
   

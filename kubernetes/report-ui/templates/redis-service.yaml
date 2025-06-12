@@ -28,6 +28,6 @@ spec:
       nodePort: null
       {{- end }}
   selector:
-    app.kubernetes.io/componen: report-ui-redis
+    app.kubernetes.io/component: report-ui-redis
     {{- include "common.labels.matchLabels" . | nindent 4 }}
   

@@ -13,12 +13,12 @@ spec:
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/componen: report-ui-frontend
+      app.kubernetes.io/component: report-ui-frontend
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/componen: report-ui-frontend
+        app.kubernetes.io/component: report-ui-frontend
     spec:
       initContainers:
         - name: wait-for-backend
@@ -35,40 +35,28 @@ spec:
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         {{- end }}
         name: reflex-frontend
-        # command:
-        #   - bash
-        #   - -ec
-        #   - |
-        #     reflex run --env prod --frontend-only --frontend-port 3000
+        command:
+          - bash
+          - -ec
+          - |
+            cd /usr/share/nginx/html/
+            find . -type f -print0 | xargs -0 sed -i 's/localhost:8000/$API_URL/g'
+            /opt/bitnami/scripts/nginx/run.sh
         env:
           - name: TZ
             value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-          # - name: HTTP_PROXY
-          #   value: http://10.121.6.43:3128 
-          # - name: HTTPS_PROXY
-          #   value: http://10.121.6.43:3128
-          # - name: NO_PROXY
-          #   value: "lb-apiserver.kubernetes.local, 10.121.30.177,10.121.30.173,pe-nms01,pe-nms01.cluster.local,10.121.30.174,pe-nms02,pe-nms02.cluster.local,10.121.30.175,pe-nms03,pe-nms03.cluster.local,10.121.30.176,pe-nms04,pe-nms04.cluster.local,127.0.0.1,localhost,192.168.99.0/24,192.168.100.0/24,svc,svc.cluster.local,grafana"
+          - name: API_URL
+            value: {{ .Values.global.frontendVip | quote }}
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /opt/bitnami/nginx/conf/server_blocks/proxy.conf
+          subPath: nginx.conf
         ports:
         - containerPort: 80
           name: frontend
-        # volumeMounts:
-        # - name: report-ui-env
-        #   mountPath: /app/.env
-        #   subPath: .env
-      #   readinessProbe:
-      #     failureThreshold: 3
-      #     httpGet:
-      #       path: /report
-      #       port: 3000
-      #       scheme: HTTP
-      #     initialDelaySeconds: 60
-      #     periodSeconds: 10
-      #     successThreshold: 1
-      #     timeoutSeconds: 5
-      # volumes:
-      # - name: report-ui-env
-      #   configMap:
-      #     name: report-ui-env
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ .Chart.Name }}-fe-config
       imagePullSecrets:
       - name: ghcr-pull-secret

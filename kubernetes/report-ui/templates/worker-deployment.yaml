@@ -9,7 +9,7 @@ metadata:
     {{- end }}
   name: {{ include "common.names.fullname" . }}-worker
 spec:
-  replicas: {{ include "common.replicas" ( dict "replicas" .Values.worker.replicas "global" .Values.global) }}
+  replicas: {{ include "common.replicas" ( dict "replicas" .Values.worker.replicaCount "global" .Values.global) }}
   selector:
     matchLabels:
       app.kubernetes.io/component: {{ .Chart.Name }}-worker
