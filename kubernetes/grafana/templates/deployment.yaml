@@ -73,28 +73,32 @@ spec:
           {{- end }}
 
           env:
-            - name: MYSQL_HOST
+            - name: GF_DATABASE_TYPE
+              value: mysql
+            - name: GF_DATABASE_HOST
               value: {{ .Values.grafanaConfig.mysqlHost | quote }}
-            - name: MYSQL_PORT
+            - name: GF_DATABASE_PORT
               value: {{ .Values.grafanaConfig.mysqlPort | quote }}
-            - name: MYSQL_DB
+            - name: GF_DATABASE_NAME
             {{- if index (index .Values.global "mariadb-galera") "enabled" }}
               value: {{ .Values.grafanaConfig.mysqlDB | quote }}
             {{- else }}
               value: "{{ .Release.Namespace }}_{{ .Values.grafanaConfig.mysqlDB }}"
             {{- end }}
-            - name: MYSQL_USER
+            - name: GF_DATABASE_USER
               value: {{ .Values.grafanaConfig.mysqlUser | quote }}
-            - name: MYSQL_PASSWORD
+            - name: GF_DATABASE_PASSWORD
               value: {{ .Values.grafanaConfig.mysqlPassword | quote }}
-            - name: ADMIN_USER
-              value: {{ .Values.grafanaConfig.adminUser | quote }}
-            - name: ADMIN_PASSWORD
-              value: {{ .Values.grafanaConfig.adminPassword | quote }}
+            - name: GF_SECURITY_ADMIN_USER
+              value: {{ include "admin.user" . }}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: {{ include "admin.password" . }}
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_INSTALL_PLUGINS
               value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource
+            - name: GF_PLUGIN_ALLOW_LOADING_UNSIGNED_PLUGINS
+              value: "true"
             - name: GF_SERVER_ROOT_URL
               value: "https://{{ .Values.global.frontendVip }}/grafana"
 
@@ -103,4 +107,3 @@ spec:
               containerPort: 3000
       imagePullSecrets:
       - name: ghcr-pull-secret
-

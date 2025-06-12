@@ -22,13 +22,13 @@ data:
 {{- end }}
     buffer_time:
       minutes: {{ .Values.bufferTimeMins }}
-    es_host: {{ .Values.elasticsearch.host }}
+    es_host: {{ tpl .Values.elasticsearch.host . }}
     es_port: {{ .Values.elasticsearch.port }}
 {{- if .Values.elasticsearch.username }}
-    es_username: {{ .Values.elasticsearch.username }}
+    es_username: {{ tpl .Values.elasticsearch.username . }}
 {{- end }}
 {{- if .Values.elasticsearch.password }}
-    es_password: {{ .Values.elasticsearch.password }}
+    es_password: {{ tpl .Values.elasticsearch.password . }}
 {{- end }}
     writeback_index: {{ .Values.writebackIndex }}
     use_ssl: {{ .Values.elasticsearch.useSsl }}

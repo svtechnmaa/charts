@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Namespace }}-ingress-nginx-controller
+  name: {{ .Release.Name }}-ingress-nginx-controller
   namespace: {{ .Release.Namespace }}
   labels:
     app.kubernetes.io/name: ingress-nginx
@@ -24,7 +24,7 @@ spec:
         app.kubernetes.io/name: ingress-nginx
         app.kubernetes.io/part-of: ingress-nginx
     spec:
-      serviceAccountName: {{ .Release.Namespace }}-ingress-nginx
+      serviceAccountName: {{ .Release.Name }}-ingress-nginx
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
       {{- else }}
@@ -61,12 +61,12 @@ spec:
                   - /wait-shutdown
         args:
           - /nginx-ingress-controller
-          - --configmap=$(POD_NAMESPACE)/ingress-nginx
+          - --configmap=$(POD_NAMESPACE)/{{ .Release.Name }}-ingress-nginx
           - --election-id=ingress-controller-leader-{{ .Release.Namespace }}
           - --tcp-services-configmap=$(POD_NAMESPACE)/tcp-services
           - --udp-services-configmap=$(POD_NAMESPACE)/udp-services
           - --annotations-prefix=nginx.ingress.kubernetes.io
-          - --ingress-class={{ .Release.Namespace }}
+          - --ingress-class={{ .Release.Name }}
           - --watch-namespace={{ .Release.Namespace }}
           - --default-ssl-certificate={{ .Release.Namespace }}/tls
           # - --watch-ingress-without-class=true

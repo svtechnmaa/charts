@@ -1,9 +1,12 @@
+# Default values
+# Global values. Define shared volumes and persistence volumes. For example:
 global:
-  externalIP: "" # externalIP for CICD
   sharedVolume:
     enabled: true
   redis:
     enabled: true
+    host:
+    port:
   icingadb:
     enabled: true
   sharedPersistenceVolume:
@@ -16,7 +19,6 @@ global:
         - icingaweb
         - rundeck
       storageClass: icingaweb-hostpath
-
   database:
     director:
       enabled: true
@@ -39,35 +41,148 @@ global:
       password:
       # host: mariadb
       # port: 3306
-    snmptt:
-      enabled: false
-      database: snmptt
-      username:
-      password:
-      # host: mariadb
-      # port: 3306
-      # unknownTable: snmptt_unknown
+
   api:
     port: 5665
     user: icingaAdmin
     password: icingaAdmin
 
+clusterDomain: cluster.local
 
-timezone: Asia/Ho_Chi_Minh
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
 
+# Change workloadType to Deployment, DaemonSet, or StatefulSet
+workloadType: Deployment
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 1
+
+# init image
 init:
   image:
     registry: docker.io
     repository: busybox
     tag: 1.33
     pullPolicy: IfNotPresent
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: svtechnmaa/svtech_icingaweb2
-  tag: v1.0.3
+  repository: svtechnmaa/svtech_icingaweb2 # CHANGE THIS TO YOUR IMAGE
+  # This sets the pull policy for images.
   pullPolicy: IfNotPresent
-  debug: false
-containerPort:
-  icingaweb: 8080
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: v1.0.3 # CHANGE THIS TO YOUR IMAGE TAG. "LATEST" IS NOT RECOMMENDED. 
+
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext:
+  runAsGroup: 33
+  runAsUser: 33
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  nodePortEnabled: false # set to true if using NodePort and you want to specify ports
+
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  ports:
+    - name: icingaweb
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+      # nodePort: 30080
+  loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
+  loadBalancerSourceRanges: [] # list of IP CIDRs allowed access to load balancer (if supported)
+
+
+  # externalIPs: ["10.98.0.143"]
+
+  ## Set the Cluster IP to use
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+  ##
+  # clusterIP: None
+
+  annotations: {}
+  
+  externalTrafficPolicy: Cluster
+
+  # Set the service SessionAffinity for session stickiness
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
+  sessionAffinity: ClientIP
+
+  # Customize the SessionAntiAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 7200
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# livenessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+# readinessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+
+#This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes:
+  - name: icingaweb-http
+    configMap:
+      name: icingaweb-http
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts:
+  - name: icingaweb-http
+    mountPath: /etc/apache2/conf-enabled/icingaweb2.conf
+    subPath: icingaweb2.conf
+
+nodeSelector: {}
+
+tolerations: []
+
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+
+affinity:
+  # podAntiAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #   - labelSelector:
+  #       matchLabels:
+  #         app.kubernetes.io/name: traefik
+  #     topologyKey: kubernetes.io/hostname
+
+env:
+  TZ: Asia/Ho_Chi_Minh
+
 # Icingaweb authentication variables
 auth:
   type: db
@@ -77,8 +192,7 @@ auth:
 # Icingaweb module variables
 modules:
   director:
-    enabled: true
-    kickstart: true
+    enabled: false
   icingadb:
     enabled: true
   incubator:
@@ -88,136 +202,3 @@ modules:
     default_dashboard: icinga2-default
     default_dashboard_uid: icinga2-default
     default_dashboard_panelid: "1"
-env:
-  TZ: Asia/Ho_Chi_Minh
-
-clusterDomain: cluster.local
-commonAnnotations: {}
-commonLabels: {}
-
-replicaCount: 2
-
-persistence:
-  enabled: true
-  storageClass: "icingaweb"
-  accessModes:
-    - ReadWriteOnce
-  size: 10Mi
-  # mountPath on Container
-  mountPath: /data
-  # hostPath: mount path on Host
-  hostPath: icingaweb_conf # full path: {{ $basePath }}/{{ $namespace }}/{{ $hostPath }}. Eg: /opt/shared/default/icingaweb_config
-
-updateStrategy: RollingUpdate
-podManagementPolicy: OrderedReady
-podAffinityPreset: ""
-podAntiAffinityPreset: soft
-nodeAffinityPreset:
-  ## Node affinity type
-  ## Allowed values: soft, hard
-  type: ""
-  ## Node label key to match
-  ## E.g.
-  ## key: "kubernetes.io/e2e-az-name"
-  ##
-  key: ""
-  ## Node label values to match
-  ## E.g.
-  ## values:
-  ##   - e2e-az1
-  ##   - e2e-az2
-  ##
-  values: []
-
-
-## Affinity for pod assignment
-## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
-##
-affinity:
-  podAntiAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-    - labelSelector:
-        matchLabels:
-          app.kubernetes.io/component: icingaweb
-          # app.kubernetes.io/instance: nms
-          app.kubernetes.io/name: icingaweb
-      topologyKey: app.kubernetes.io/hostname
-
-## Node labels for pod assignment
-nodeSelector: {}
-
-## Tolerations for pod assignment
-tolerations: []
-
-## Extra volumes to add to the deployment
-extraVolumes: []
-
-## Extra volume mounts to add to the container
-extraVolumeMounts: []
-
-securityContext:
-  enabled: true
-  runAsGroup: 33
-  runAsUser: 33
-
-resources:
-  limits: {}
-  #   cpu: 100m
-  #   memory: 128Mi
-  requests: {}
-  #   cpu: 100m
-  #   memory: 128Mi
-
-
-livenessProbe:
-  enabled: false
-  initialDelaySeconds: 180
-  periodSeconds: 45
-  timeoutSeconds: 30
-  successThreshold: 1
-  failureThreshold: 6
-readinessProbe:
-  enabled: false
-  initialDelaySeconds: 60
-  periodSeconds: 45
-  timeoutSeconds: 30
-  successThreshold: 1
-  failureThreshold: 6
-
-## Custom Liveness probe
-customLivenessProbe: {}
-
-## Custom Readiness probe
-customReadinessProbe: {}
-
-## Container ports
-containerPorts:
-  # icinga2Api: 5665
-  # livestatus: 6558
-
-
-service:
-  ## Service type
-  ##
-  type: ClusterIP
-  port: 8080
-
-  # loadBalancerIP:
-  # loadBalancerSourceRanges:
-  # - 10.10.10.0/24
-
-  ## Set the Cluster IP to use
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
-  ##
-  # clusterIP: None
-  ## Provide any additional annotations which may be required
-  ##
-  annotations: {}
-  ## Set the service SessionAffinity for session stickiness
-  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
-  sessionAffinity: ClientIP
-
-  # ## Customize the SessionAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
-  sessionAffinityConfig:
-    clientIP:
-      timeoutSeconds: 7200
