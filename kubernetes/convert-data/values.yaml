@@ -29,7 +29,7 @@ init:
 image:
   registry: ghcr.io
   repository: svtechnmaa/convert-data
-  tag: "v11"
+  tag: "v2"
   pullPolicy: IfNotPresent
 
 commonAnnotations:
@@ -62,7 +62,7 @@ nameOverride: ""
 fullnameOverride: ""
 ## ????
 ConvertConfig:
-  branch: "phase2_structure_data_to_config_data"
+  branch: "test_convert"
 
 sharedVolume:
   enabled: true
