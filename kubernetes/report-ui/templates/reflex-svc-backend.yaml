@@ -3,6 +3,7 @@ kind: Service
 metadata:
   labels:
     app.kubernetes.io/component: {{ .Chart.Name }}-backend
+    {{- include "common.labels.standard" . | nindent 4 }}
   name: {{ .Chart.Name }}-backend
 spec:
   type:  {{ .Values.backend.service.type }}

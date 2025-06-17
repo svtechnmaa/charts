@@ -68,7 +68,7 @@ scheduler:
     pullPolicy: IfNotPresent
 
 worker:
-  replicaCount: 1
+  replicaCount: 2
   image:
     repository: svtechnmaa/svtech_report
     tag: test-v17

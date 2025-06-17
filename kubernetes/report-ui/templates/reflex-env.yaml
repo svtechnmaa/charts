@@ -1,4 +1,8 @@
 apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: {{ include "common.names.fullname" . }}-env
 data:
   .env: |
     API_URL=https://{{ .Values.global.frontendVip }}
@@ -24,6 +28,3 @@ data:
     TASK_FAILURE_TTL={{ .Values.backend.config.task_failure_ttl | quote }}
     TASK_RESULT_TTL={{ .Values.backend.config.task_result_ttl | quote }}
     TASK_TIMEOUT={{ .Values.backend.config.task_timeout | quote }}
-kind: ConfigMap
-metadata:
-  name: {{ include "common.names.fullname" . }}-env

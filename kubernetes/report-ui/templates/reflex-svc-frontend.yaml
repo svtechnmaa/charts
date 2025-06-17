@@ -3,6 +3,7 @@ kind: Service
 metadata:
   labels:
     app.kubernetes.io/component: {{ .Chart.Name }}-frontend
+    {{- include "common.labels.standard" . | nindent 4 }}
   name: {{ .Chart.Name }}-frontend
 spec:
   type:  {{ .Values.frontend.service.type }}
@@ -24,6 +25,6 @@ spec:
       nodePort: null
       {{- end }}
   selector:
-    app.kubernetes.io/component: report-ui-frontend
+    app.kubernetes.io/component: {{ .Chart.Name }}-frontend
     {{- include "common.labels.matchLabels" . | nindent 4 }}
   

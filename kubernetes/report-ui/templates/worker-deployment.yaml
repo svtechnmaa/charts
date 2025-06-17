@@ -9,7 +9,7 @@ metadata:
     {{- end }}
   name: {{ include "common.names.fullname" . }}-worker
 spec:
-  replicas: {{ include "common.replicas" ( dict "replicas" .Values.worker.replicaCount "global" .Values.global) }}
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.worker.replicaCount "global" .Values.global) }}
   selector:
     matchLabels:
       app.kubernetes.io/component: {{ .Chart.Name }}-worker
@@ -30,7 +30,7 @@ spec:
         - bash
         - -ec
         - |
-          export $(grep -v '^#' .env | xargs)
+          export $(grep -v '^#' /app/.env | xargs)
           rq worker --with-scheduler --url redis://$REDIS_HOST:$REDIS_PORT
         env:
           - name: TZ

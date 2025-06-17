@@ -3,6 +3,7 @@ kind: Service
 metadata:
   labels:
     app.kubernetes.io/component: {{ .Chart.Name }}-redis
+    {{- include "common.labels.standard" . | nindent 4 }}
   name: {{ .Chart.Name }}-redis
 spec:
   type:  {{ .Values.redis.service.type }}
@@ -11,10 +12,6 @@ spec:
   {{- end }}
   {{- if and (eq .Values.redis.service.type "LoadBalancer") .Values.redis.service.loadBalancerSourceRanges }}
   loadBalancerSourceRanges: {{- toYaml .Values.redis.service.loadBalancerSourceRanges | nindent 4 }}
-  {{- end }}
-  {{- if .Values.global.externalIP }}
-  externalIPs:
-    - {{ .Values.global.externalIP }}
   {{- end }}
   {{- if and (eq .Values.redis.service.type "ClusterIP") .Values.redis.service.clusterIP }}
   clusterIP: {{ .Values.redis.service.clusterIP }}
@@ -28,6 +25,6 @@ spec:
       nodePort: null
       {{- end }}
   selector:
-    app.kubernetes.io/component: report-ui-redis
+    app.kubernetes.io/component: {{ .Chart.Name }}-redis
     {{- include "common.labels.matchLabels" . | nindent 4 }}
   

@@ -32,8 +32,8 @@ spec:
           - |
             if [ -d alembic ]; then
               reflex db migrate
-              reflex run --env prod --backend-only --backend-port 8000
             fi
+            reflex run --env prod --backend-only --backend-port 8000
         env:
           - name: TZ
             value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}

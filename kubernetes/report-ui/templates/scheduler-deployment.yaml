@@ -12,12 +12,12 @@ spec:
   replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.scheduler.replicaCount "global" .Values.global ) }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: report-ui-scheduler
+      app.kubernetes.io/component: {{ .Chart.Name }}-scheduler
       {{- include "common.labels.matchLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/component: report-ui-scheduler
+        app.kubernetes.io/component: {{ .Chart.Name }}-scheduler
         {{- include "common.labels.standard" . | nindent 8 }}
     spec:
       containers:
@@ -30,7 +30,7 @@ spec:
           - bash
           - -ec
           - |
-            export $(grep -v '^#' .env | xargs)
+            export $(grep -v '^#' /app/.env | xargs)
             python scheduler.py
         env:
           - name: TZ

@@ -13,12 +13,12 @@ spec:
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: report-ui-redis
+      app.kubernetes.io/component: {{ .Chart.Name }}-redis
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: report-ui-redis
+        app.kubernetes.io/component: {{ .Chart.Name }}-redis
     spec:
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image ) }}
@@ -28,7 +28,7 @@ spec:
         name: redis
         env:
           - name: TZ
-            value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}}
+            value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
         ports:
         - containerPort: 6379
           name: redis

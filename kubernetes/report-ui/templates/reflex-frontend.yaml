@@ -13,12 +13,12 @@ spec:
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: report-ui-frontend
+      app.kubernetes.io/component: {{ .Chart.Name }}-frontend
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: report-ui-frontend
+        app.kubernetes.io/component: {{ .Chart.Name }}-frontend
     spec:
       initContainers:
         - name: wait-for-backend

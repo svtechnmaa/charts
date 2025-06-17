@@ -6,7 +6,7 @@ metadata:
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    ingress.kubernetes.io/server-snippet: |
+    nginx.ingress.kubernetes.io/server-snippet: |
       location = /favicon.ico {
         set $app_favicon "";
         if ($http_referer ~* "/report") {
