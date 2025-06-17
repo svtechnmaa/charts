@@ -47,7 +47,8 @@ spec:
       securityContext:
         fsGroup: {{ .Values.securityContext.fsGroup }}
       {{- end }}
-      
+
+      {{- if .Values.sharedVolume.enabled }}      
       initContainers:
       - name: wait-for-init-repo
         image: {{ include "common.images.image" (dict "imageRoot" .Values.init.image) }}
@@ -64,6 +65,7 @@ spec:
         volumeMounts:
           - name: {{ .Values.sharedVolume.volumeName }}
             mountPath: {{ .Values.sharedVolume.path }}
+      {{- end }}
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
@@ -116,11 +118,11 @@ spec:
         {{- end }}
       imagePullSecrets:
       - name: ghcr-pull-secret
-      {{- if .Values.sharedVolume.enabled }}
       volumes:
       - name: gpgkey
         secret:
           secretName: {{ .Chart.Name }}-gpgkey
+      {{- if .Values.sharedVolume.enabled }}
       - name: {{ .Values.sharedVolume.volumeName }}
         persistentVolumeClaim:
           claimName: {{ .Values.sharedVolume.pvcName }}
