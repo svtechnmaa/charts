@@ -3,7 +3,7 @@ kind: Secret
 type: Opaque
 metadata:
   name: {{ include "common.names.fullname" . }}-env
-data:
+stringData:
   .env: |
     API_URL=https://{{ .Values.global.frontendVip }}
     REFLEX_CHECK_LATEST_VERSION="False"

@@ -28,7 +28,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              until nc -zvw5 {{ .Chart.Name }}-backend 8000; do echo "Waiting for Backend..."; sleep 2; done
+              until nc -zvw5 {{ .Chart.Name }}-backend {{ .Values.backend.service.port }}; do echo "Waiting for Backend..."; sleep 2; done
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global) }}
         {{- if .Values.frontend.image.pullPolicy }}
@@ -58,6 +58,6 @@ spec:
       volumes:
         - name: nginx-config
           configMap:
-            name: {{ .Chart.Name }}-fe-config
+            name: {{ include "common.names.fullname" . }}-fe-config
       imagePullSecrets:
       - name: ghcr-pull-secret

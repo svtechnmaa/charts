@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Chart.Name }}-fe-config
+  name: {{ include "common.names.fullname" . }}-fe-config
 data:
   nginx.conf: |+
     server {

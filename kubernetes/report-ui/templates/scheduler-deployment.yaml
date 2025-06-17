@@ -41,7 +41,7 @@ spec:
           subPath: .env
       volumes:
       - name: report-ui-env
-        configMap:
-          name: {{ .Chart.Name }}-env
+        secret:
+          secretName: {{ include "common.names.fullname" . }}-env
       imagePullSecrets:
       - name: ghcr-pull-secret
