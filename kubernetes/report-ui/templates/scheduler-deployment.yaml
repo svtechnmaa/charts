@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-scheduler
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  name: {{ include "common.names.fullname" . }}-scheduler
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.scheduler.replicaCount "global" .Values.global ) }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: report-ui-scheduler
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: report-ui-scheduler
+        {{- include "common.labels.standard" . | nindent 8 }}
+    spec:
+      containers:
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.scheduler.image "global" .Values.global) }}
+        {{- if .Values.scheduler.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.scheduler.image.pullPolicy }}
+        {{- end }}
+        name: scheduler
+        command:
+          - bash
+          - -ec
+          - |
+            export $(grep -v '^#' .env | xargs)
+            python scheduler.py
+        env:
+          - name: TZ
+            value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+        volumeMounts:
+        - name: report-ui-env
+          mountPath: /app/.env
+          subPath: .env
+      volumes:
+      - name: report-ui-env
+        configMap:
+          name: {{ .Chart.Name }}-env
+      imagePullSecrets:
+      - name: ghcr-pull-secret

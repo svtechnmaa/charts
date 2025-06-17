@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-fe-config
+data:
+  nginx.conf: |+
+    server {
+      listen 80;
+      listen [::]:80;
+      server_name frontend;
+
+      error_page 404 /404.html;
+
+      location / {
+        root /usr/share/nginx/html;
+      }
+
+      location /report/ {
+        proxy_pass http://localhost:80/;
+      }
+
+      location /report/(.*) {
+        proxy_pass http://localhost:80/$1;
+      }
+    }

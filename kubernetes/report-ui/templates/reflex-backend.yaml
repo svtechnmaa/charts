@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-backend
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  name: {{ include "common.names.fullname" . }}-backend
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.backend.replicaCount "global" .Values.global ) }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}-backend
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}-backend
+    spec:
+      containers:
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.backend.image "global" .Values.global) }}
+        {{- if .Values.backend.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+        {{- end }}
+        name: reflex-backend
+        command:
+          - bash
+          - -ec
+          - |
+            if [ -d alembic ]; then
+              reflex db migrate
+              reflex run --env prod --backend-only --backend-port 8000
+            fi
+        env:
+          - name: TZ
+            value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+        ports:
+        - containerPort: 8000
+          name: backend
+        volumeMounts:
+        - name: report-ui-env
+          mountPath: /app/.env
+          subPath: .env
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /ping
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+      volumes:
+      - name: report-ui-env
+        configMap:
+          name: {{ include "common.names.fullname" . }}-env
+      imagePullSecrets:
+      - name: ghcr-pull-secret

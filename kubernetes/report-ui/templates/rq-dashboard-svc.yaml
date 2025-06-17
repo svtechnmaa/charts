@@ -1,0 +1,34 @@
+{{- if .Values.dashboard.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: {{ .Chart.Name }}-dashboard
+  name: {{ .Chart.Name }}-dashboard
+spec:
+  type:  {{ .Values.dashboard.service.type }}
+  {{- if and (eq .Values.dashboard.service.type "LoadBalancer") (not (empty .Values.dashboard.service.loadBalancerIP)) }}
+  loadBalancerIP: {{ .Values.dashboard.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.dashboard.service.type "LoadBalancer") .Values.dashboard.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{- toYaml .Values.dashboard.service.loadBalancerSourceRanges | nindent 4 }}
+  {{- end }}
+  {{- if .Values.global.externalIP }}
+  externalIPs:
+    - {{ .Values.global.externalIP }}
+  {{- end }}
+  {{- if and (eq .Values.dashboard.service.type "ClusterIP") .Values.dashboard.service.clusterIP }}
+  clusterIP: {{ .Values.dashboard.service.clusterIP }}
+  {{- end }}
+  ports:
+    - name: dashboard
+      port: {{ .Values.dashboard.service.port }}
+      protocol: TCP
+      targetPort: dashboard
+      {{- if eq .Values.dashboard.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+  selector:
+    app.kubernetes.io/component: report-ui-dashboard
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+{{- end}}

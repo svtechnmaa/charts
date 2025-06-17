@@ -1,0 +1,21 @@
+{{- if .Values.dashboard.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rq-dashboard-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Chart.Name }}-dashboard
+            port:
+              number: {{ .Values.dashboard.service.port }}
+        path: /rq
+        pathType: Prefix
+{{- end }}
