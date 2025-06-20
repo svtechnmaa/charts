@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-{{ include "mageai.fullname" . }}-logs
+  name: pvc-mageai-logs
 spec:
   accessModes:
     - ReadWriteMany
