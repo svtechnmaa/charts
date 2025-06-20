@@ -18,7 +18,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: {{ .Values.persistence.storageClassName}}-logs
   hostPath:
-    path: {{ $basePath }}/{{ $namespace }}/{{ .Values.persistence.hostFolder }}-logs
+    path: {{ $basePath }}/{{ $namespace }}/{{ .Values.persistence.pathFolder }}-logs
   {{- with .Values.persistence.csi }}
   csi:
     {{- toYaml . | nindent 4 }}
