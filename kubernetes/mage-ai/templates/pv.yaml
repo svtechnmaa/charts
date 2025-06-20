@@ -1,3 +1,5 @@
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
 {{- if and .Values.persistence .Values.persistence.enabled -}}
 
 {{- if not .Values.persistence.dynamicProvisioning }}
@@ -16,7 +18,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: {{ .Values.persistence.storageClassName}}
   hostPath:
-    path: {{ .Values.persistence.basePath }}/{{ .Release.Namespace }}/{{ .Values.persistence.hostPathRuleDir }}
+    path: {{ $basePath }}/{{ $namespace }}/{{ .Values.persistence.pathFolder }}
   {{- with .Values.persistence.csi }}
   csi:
     {{- toYaml . | nindent 4 }}

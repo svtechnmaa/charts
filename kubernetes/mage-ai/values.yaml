@@ -115,15 +115,11 @@ redis:
   customRedisURL: ""
 
 image:
-  # repository: mageai/mageai
-  # repository: tuongvx/svtech_mageai
-  # repository: tuongvx/svtech_mageai_new
   repository: ghcr.io/svtechnmaa/svtech_netlogic_etl
+  tag: v1.6
   pullPolicy: Always
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "v1.5"
 
-imagePullSecrets: 
+imagePullSecrets:
   - name: "ghcr-pull-secret"
 nameOverride: "mageai"
 fullnameOverride: "mageai"
@@ -238,8 +234,8 @@ extraVolumeMounts:
 
 extraVolumes:
   - name: mage-log
-    hostPath:
-      path: /data/mageai/logs_dir
+    persistentVolumeClaim:
+      claimName: pvc-mageai-logs
 
 persistence:
   enabled: true
