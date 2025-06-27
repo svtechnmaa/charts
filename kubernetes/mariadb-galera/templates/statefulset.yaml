@@ -6,7 +6,7 @@ metadata:
   labels: {{- include "common.labels.standard" . | nindent 4 }}
 spec:
   podManagementPolicy: {{ .Values.podManagementPolicy }}
-  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
+  replicas: {{ include "common.replicas" ( dict "replicaCount" (index (index .Values.global "mariadb-galera") "replicaCount") "global" .Values.global ) }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   serviceName: {{ template "common.names.fullname" . }}-headless
@@ -87,7 +87,7 @@ spec:
                 fi
                 {{- end }}
 
-                {{- if eq (1 | quote) (.Values.replicaCount | quote) }}
+                {{- if eq (1 | quote) ((index (index .Values.global "mariadb-galera") "replicaCount") | quote) }}
                 export MARIADB_GALERA_CLUSTER_BOOTSTRAP=no
                 export MARIADB_GALERA_FORCE_SAFETOBOOTSTRAP=no
                 {{- end }}

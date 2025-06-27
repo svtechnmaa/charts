@@ -9,7 +9,7 @@
 
 {{- $namespace := .Release.Namespace }}
 
-{{- range $index, $topping := until (int .Values.replicaCount) }}
+{{- range $index, $topping := until (int (index (index .Values.global "mariadb-galera") "replicaCount")) }}
 ---
 apiVersion: v1
 kind: PersistentVolume

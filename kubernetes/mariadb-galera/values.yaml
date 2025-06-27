@@ -4,7 +4,9 @@
 ##
 global:
   maxscale:
-    enabled: true
+    enabled: false
+  mariadb-galera:
+    replicaCount: 3
 #   imageRegistry: myRegistryName
 #   imagePullSecrets:
 #     - myRegistryKeySecretName
