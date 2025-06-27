@@ -3,8 +3,6 @@
 ## Current available global Docker image parameters: imageRegistry and imagePullSecrets
 ##
 global:
-  mariadb-galera:
-    replicaCount: 3
   maxscale:
     enabled: true
 #   imageRegistry: myRegistryName
@@ -520,7 +518,7 @@ persistence:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: "mariadb"
+  storageClass: ""
   ## Persistent Volume Claim annotations
   ##
   annotations:

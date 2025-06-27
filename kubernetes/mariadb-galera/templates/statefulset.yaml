@@ -1,3 +1,4 @@
+{{- $namespace := .Release.Namespace }}
 apiVersion: {{ include "common.capabilities.statefulset.apiVersion" . }}
 kind: StatefulSet
 metadata:
@@ -5,7 +6,7 @@ metadata:
   labels: {{- include "common.labels.standard" . | nindent 4 }}
 spec:
   podManagementPolicy: {{ .Values.podManagementPolicy }}
-  replicas: {{ include "common.replicas" ( dict "replicaCount" ( index (index .Values.global "mariadb-galera") "replicaCount" ) "global" .Values.global ) }}
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
   selector:
     matchLabels: {{- include "common.labels.matchLabels" . | nindent 6 }}
   serviceName: {{ template "common.names.fullname" . }}-headless
@@ -273,8 +274,10 @@ spec:
               {{- if .Values.persistence.subPath }}
               subPath: {{ .Values.persistence.subPath }}
               {{- end }}
+            {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
             - name: custom-init-scripts
               mountPath: /docker-entrypoint-initdb.d
+            {{- end }}
             {{- if or (.Files.Glob "files/my.cnf") .Values.mariadbConfiguration .Values.configurationConfigMap }}
             - name: mariadb-galera-config
               mountPath: /opt/bitnami/mariadb/conf/my.cnf
@@ -347,9 +350,11 @@ spec:
           configMap:
             name: {{ template "mariadb-galera.configurationCM" . }}
         {{- end }}
+        {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,sql,sql.gz}") .Values.initdbScriptsConfigMap .Values.initdbScripts }}
         - name: custom-init-scripts
           configMap:
             name: {{ template "mariadb-galera.initdbScriptsCM" . }}
+        {{- end }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}
@@ -371,6 +376,7 @@ spec:
         {{- range .Values.persistence.accessModes }}
           - {{ . | quote }}
         {{- end }}
+        storageClassName: {{ default (printf "%s-mariadb" $namespace) $.Values.persistence.storageClass | quote }}
         resources:
           requests:
             storage: {{ .Values.persistence.size | quote }}
