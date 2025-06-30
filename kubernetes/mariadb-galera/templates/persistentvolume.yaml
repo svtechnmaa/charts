@@ -1,4 +1,4 @@
-{{- if and .Values.persistence.enabled ( eq .Values.persistence.storageClass "mariadb" ) }}
+{{- if .Values.persistence.enabled }}
 # apiVersion: storage.k8s.io/v1
 # kind: StorageClass
 # metadata:
@@ -9,7 +9,7 @@
 
 {{- $namespace := .Release.Namespace }}
 
-{{- range $index, $topping := until (int .Values.replicaCount) }}
+{{- range $index, $topping := until (int (index (index .Values.global "mariadb-galera") "replicaCount")) }}
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -19,8 +19,8 @@ metadata:
     app.kubernetes.io/name: mariadb-galera
     statefulset.kubernetes.io/pod-name: "{{ $.Release.Name }}-mariadb-galera-{{ $index }}"
 spec:
-  # storageClassName: {{ $namespace }}-mariadb
-  storageClassName: mariadb
+  storageClassName: {{ default (printf "%s-mariadb" $namespace) $.Values.persistence.storageClass | quote }}
+  # storageClassName: mariadb
   capacity:
     storage: {{ $.Values.persistence.size | quote }}
   accessModes:
