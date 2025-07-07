@@ -1,5 +1,3 @@
-{{- $basePath := .Values.global.basePath }}
-{{- $namespace := .Release.Namespace }}
 {{- if and .Values.persistence .Values.persistence.enabled -}}
 
 {{- if not .Values.persistence.dynamicProvisioning }}
@@ -12,16 +10,14 @@ metadata:
 spec:
   capacity:
     storage: {{ .Values.persistence.size}}
-  volumeMode: Filesystem
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: {{ .Values.persistence.storageClassName}}
-  hostPath:
-    path: {{ $basePath }}/{{ $namespace }}/{{ .Values.persistence.pathFolder }}
   {{- with .Values.persistence.csi }}
   csi:
     {{- toYaml . | nindent 4 }}
+    volumeHandle: pv-{{ include "mageai.fullname" . }}
   {{- end }}
 
 {{- end }}
