@@ -7,14 +7,12 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
-  storageClassName: {{ .Values.persistence.storageClassName}}-pipelines
+  storageClassName: {{ .Values.persistence.storageClassName}}
   resources:
     requests:
       storage: {{ .Values.persistence.size}}
   {{- if not .Values.persistence.dynamicProvisioning }}
-  selector:
-    matchLabels:
-      deployment: {{ include "mageai.fullname" . }}
+  volumeName: pv-{{ include "mageai.fullname" . }}-pipelines
   {{- end}}
   
 {{- end }}

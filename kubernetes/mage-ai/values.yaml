@@ -239,12 +239,12 @@ extraVolumes:
 
 persistence:
   enabled: true
-  storageClassName: storage-class-mageai
   size: 5Gi
   dynamicProvisioning: false
-  # csi:
-  #   driver: efs.csi.aws.com
-  #   volumeHandle: fs-0123456789
+  # storageClassName: storage-class-mageai
+  storageClassName: seaweedfs-storage
+  csi:
+    driver: seaweedfs-csi-driver
   pathFolder: mageai
 
 # config: Default configuration for mageai as environment variables. These get injected directly in the container.
