@@ -11,7 +11,7 @@ spec:
       ttlSecondsAfterFinished: 100
       template:
         spec:
-          serviceAccountName: icinga-sa  # Use the ServiceAccount for permissions
+          serviceAccountName: {{ .Release.Name }}-icinga-sa  # Use the ServiceAccount for permissions
           imagePullSecrets:
             - name: ghcr-pull-secret
           containers:
