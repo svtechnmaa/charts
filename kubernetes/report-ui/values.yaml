@@ -1,0 +1,110 @@
+global:
+  imageRegistry: ghcr.io
+  frontendVip: "10.98.100.193" # VIP for frontend service
+
+timezone: Asia/Ho_Chi_Minh
+
+frontend:
+  replicaCount: 1
+  init:
+    image:
+      registry: docker.io
+      repository: busybox
+      tag: 1.33
+      pullPolicy: IfNotPresent
+  image:
+    repository: svtechnmaa/svtech_report_frontend
+    tag: test-v17
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # - 10.10.10.0/24
+    # clusterIP: None
+
+backend:
+  replicaCount: 2
+  image:
+    repository: svtechnmaa/svtech_report
+    tag: test-v17
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # - 10.10.10.0/24
+    # clusterIP: None
+  config:
+    db_user: reflex
+    db_password: reflex
+    db_host: mariadb
+    db_database: svtech_report
+    icinga_redis_db: "0"
+    icinga_redis_host: icinga2
+    icinga_redis_port: "6379"
+    icingadb_database: icingadb
+    icingadb_host: mariadb
+    icingadb_password: juniper@123
+    icingadb_port: "3306"
+    icingadb_user: icingadb
+    influxdb_database: influxdb_nms
+    influxdb_host: influxdb
+    influxdb_password: juniper@123
+    influxdb_port: "8086"
+    influxdb_user: juniper
+    seaweedfs_url: http://seaweedfs-filer.seaweedfs.svc.cluster.local:8888
+    task_failure_ttl: "3600"
+    task_result_ttl: "3600"
+    task_timeout: "3600"
+
+scheduler:
+  replicaCount: 1
+  image:
+    repository: svtechnmaa/svtech_report
+    tag: test-v17
+    pullPolicy: IfNotPresent
+
+worker:
+  replicaCount: 2
+  image:
+    repository: svtechnmaa/svtech_report
+    tag: test-v17
+    pullPolicy: IfNotPresent
+
+redis:
+  replicaCount: 1
+  image:
+    registry: docker.io
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 6379
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # - 10.10.10.0/24
+    # clusterIP: None
+
+dashboard:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: cjlapao/rq-dashboard
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 9181
+    # loadBalancerIP:
+    # loadBalancerSourceRanges:
+    # -10.10.10.0/24
+    # clusterIP: None
+
+nameOverride: ""
+fullnameOverride: ""
+
+commonLabels: {}

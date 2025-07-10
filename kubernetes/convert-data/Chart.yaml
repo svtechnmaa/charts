@@ -1,0 +1,11 @@
+apiVersion: v2
+name: convert-data
+description: A Helm chart for Convert_data app
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: x.x.x
+
+version: 0.13.2
+appVersion: "v1.0.0"

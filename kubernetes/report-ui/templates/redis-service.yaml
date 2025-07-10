@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: {{ .Chart.Name }}-redis
+    {{- include "common.labels.standard" . | nindent 4 }}
+  name: {{ .Chart.Name }}-redis
+spec:
+  type:  {{ .Values.redis.service.type }}
+  {{- if and (eq .Values.redis.service.type "LoadBalancer") (not (empty .Values.redis.service.loadBalancerIP)) }}
+  loadBalancerIP: {{ .Values.redis.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.redis.service.type "LoadBalancer") .Values.redis.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{- toYaml .Values.redis.service.loadBalancerSourceRanges | nindent 4 }}
+  {{- end }}
+  {{- if and (eq .Values.redis.service.type "ClusterIP") .Values.redis.service.clusterIP }}
+  clusterIP: {{ .Values.redis.service.clusterIP }}
+  {{- end }}
+  ports:
+    - name: redis
+      port: {{ .Values.redis.service.port }}
+      protocol: TCP
+      targetPort: redis
+      {{- if eq .Values.redis.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+  selector:
+    app.kubernetes.io/component: {{ .Chart.Name }}-redis
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+  
