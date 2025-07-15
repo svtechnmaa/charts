@@ -8,7 +8,7 @@ global:
       pvcName: automation-repo-pvc
       storageSize: 2Gi
       path: /opt/SVTECH-Junos-Automation
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - preparation
         - rundeck
@@ -18,35 +18,38 @@ global:
         - init-data-grafana
         - icinga2
         - icinga2-satellite
-      storageClass: automation-repo-hostpath
+      # storageClass: automation-repo-hostpath
+      storageClass: seaweedfs-storage
 
     - volumeName: icinga2-zones-volume
       pvcName: icinga2-zones-pvc
       storageSize: 2Gi
       path: /etc/icinga2/zones.d
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icinga2
         - rundeck
         - rundeck-option-provider
         - debuger
-      storageClass: icinga2-zones-hostpath
+      # storageClass: icinga2-zones-hostpath
+      storageClass: seaweedfs-storage
 
     - volumeName: icinga2-conf-volume
       pvcName: icinga2-conf-pvc
       storageSize: 100Mi
       path: /etc/icinga2/conf.d
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icinga2
         - debuger
-      storageClass: icinga2-conf-hostpath
+      # storageClass: icinga2-conf-hostpath
+      storageClass: seaweedfs-storage
 
     # - volumeName: icinga2-scripts-volume
     #   pvcName: icinga2-scripts-pvc
     #   storageSize: 100Mi
     #   path: /etc/icinga2/scripts
-    #   accessModes: ReadWriteOnce #ReadWriteMany
+    #   accessModes: ReadWriteMany
     #   shareFor:
     #     - preparation
     #     - icinga2
@@ -56,12 +59,13 @@ global:
       pvcName: icinga2-plugins-pvc
       storageSize: 2Gi
       path: /usr/share/icinga2/plugins/libexec
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icinga2
         - debuger
         - icinga2-satellite
-      storageClass: icinga2-plugins-hostpath
+      # storageClass: icinga2-plugins-hostpath
+      storageClass: seaweedfs-storage
 
     # - volumeName: icinga2-output-volume
     #   pvcName: icinga2-output-pvc
