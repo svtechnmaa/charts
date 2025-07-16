@@ -1,8 +1,8 @@
----
 {{- $namespace := .Release.Namespace }}
 
 {{- range .Values.global.sharedPersistenceVolume }}
 {{- if eq .storageClass "seaweedfs-storage" }}
+---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -21,7 +21,7 @@ spec:
     driver: seaweedfs-csi-driver
     volumeHandle: "{{ $namespace }}-{{ .pvcName }}-pv"
     volumeAttributes:
-      path: "/{{ $namespace }}/csi""
+      path: "/{{ $namespace }}/csi"
 {{- end }}
 
 {{- end  }}
