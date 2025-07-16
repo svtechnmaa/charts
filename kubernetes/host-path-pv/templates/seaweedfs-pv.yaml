@@ -21,7 +21,7 @@ spec:
     driver: seaweedfs-csi-driver
     volumeHandle: "{{ $namespace }}-{{ .pvcName }}-pv"
     volumeAttributes:
-      path: "/{{ $namespace }}/csi"
+      path: "/{{ $namespace }}/csi/{{ $namespace }}-{{ .pvcName }}-pv"
 {{- end }}
 
 {{- end  }}
