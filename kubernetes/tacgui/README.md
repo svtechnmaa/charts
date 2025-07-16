@@ -47,6 +47,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `global.imageRegistry`    | Global Docker image registry                    | `""`  |
 | `global.imagePullSecrets` | Global Docker registry secret names as an array | `[]`  |
 | `global.storageClass`     | Global StorageClass for Persistent Volume(s)    | `""`  |
+| `global.basePath`         | Global base path for the application            | `""`  |
 
 ### Common parameters
 
@@ -67,19 +68,18 @@ The command removes all the Kubernetes components associated with the chart and 
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
 | `image.registry`         | Tacgui image registry                                                                                                         | `ghcr.io`                     |
 | `image.repository`       | Tacgui image repository                                                                                                       | `svtechnmaa/svtech_tacacsgui` |
-| `image.tag`              | Tacgui image tag (immutable tags are recommended)                                                                             | `v1.0.0`                      |
+| `image.tag`              | Tacgui image tag (immutable tags are recommended)                                                                             | `v1.0.1`                      |
 | `image.pullPolicy`       | Tacgui image pull policy                                                                                                      | `IfNotPresent`                |
-| `image.pullSecrets`      | Specify docker-registry secret names as an array                                                                              | `""`                          |
+| `image.pullSecrets`      | Specify docker-registry secret names as an array                                                                              | `ghcr-pull-secret`            |
 | `image.pullAccount`      | Specify docker-registry user login name                                                                                       | `""`                          |
 | `image.pullPassword`     | Specify docker-registry user login token                                                                                      | `""`                          |
 | `image.debug`            | Specify if debug logs should be enabled                                                                                       | `false`                       |
 | `architecture`           | Tacgui architecture (`standalone` or `replication`)                                                                           | `standalone`                  |
 | `configuration`          | Tacgui Configuration. Auto-generated based on other parameters when not specified                                             | `""`                          |
-| `configurationConfigMap` | ConfigMap with the Tacgui configuration files (Note: Overrides `radiusdConfiguration`). The value is evaluated as a template. | `""`                          |
+| `configurationConfigMap` | ConfigMap with the Tacgui configuration files. The value is evaluated as a template. | `""`                          |
 | `existingConfigmap`      | Name of existing ConfigMap with Tacgui configuration                                                                          | `""`                          |
 | `extraStartupArgs`       | Extra default startup args                                                                                                    | `""`                          |
-| `initdbScripts`          | Specify dictionary of scripts to be run at first boot                                                                         | `{}`                          |
-| `initdbScriptsConfigMap` | ConfigMap with the initdb scripts (Note: Overrides `initdbScripts`)                                                           | `""`                          |
+| `initConfigs`            | to initialize the configuration files                                                                                         | `true`                        |
 | `command`                | Override default container command on Tacgui container(s) (useful when using custom images)                                   | `[]`                          |
 | `args`                   | Override default container args on Tacgui container(s) (useful when using custom images)                                      | `[]`                          |
 | `lifecycleHooks`         | for the Tacgui container(s) to automate configuration before or after startup                                                 | `{}`                          |
@@ -123,32 +123,48 @@ The command removes all the Kubernetes components associated with the chart and 
 | `initContainers`                            | Add additional init containers for the Tacgui pod(s)                                      | `[]`             |
 | `sidecars`                                  | Add additional sidecar containers for the Tacgui pod(s)                                   | `[]`             |
 
-### Persistence Parameters
+### persistentVolumeClaim Parameters
 
-| Name                        | Description                                                             | Value               |
-| --------------------------- | ----------------------------------------------------------------------- | ------------------- |
-| `persistence.enabled`       | Enable persistence on Tacgui replicas using a `PersistentVolumeClaim`   | `false`             |
-| `persistence.existingClaim` | Name of an existing `PersistentVolumeClaim` for Tacgui primary replicas | `""`                |
-| `persistence.subPath`       | Subdirectory of the volume to mount at                                  | `""`                |
-| `persistence.mountPath`     | Path to mount the volume at                                             | `/data/tacgui`      |
-| `persistence.storageClass`  | Tacgui persistent volume storage Class                                  | `""`                |
-| `persistence.annotations`   | Tacgui persistent volume claim annotations                              | `{}`                |
-| `persistence.accessModes`   | Tacgui persistent volume access Modes                                   | `["ReadWriteOnce"]` |
-| `persistence.size`          | Tacgui persistent volume size                                           | `8Gi`               |
-| `persistence.selector`      | Selector to match an existing Persistent Volume                         | `{}`                |
+| Name                                     | Description                                                                     | Value               |
+| ---------------------------------------- | ------------------------------------------------------------------------------- | ------------------- |
+| `persistentVolumeClaim.enabled`          | Enable persistentVolumeClaim on Tacgui replicas using a `PersistentVolumeClaim` | `false`             |
+| `persistentVolumeClaim.existingClaim`    | Name of an existing `PersistentVolumeClaim` for Tacgui primary replicas         | `""`                |
+| `persistentVolumeClaim.subPath`          | Subdirectory of the volume to mount at                                          | `""`                |
+| `persistentVolumeClaim.mountPath`        | Path to mount the volume at                                                     | `""`                |
+| `persistentVolumeClaim.storageClassName` | Tacgui persistent volume storage Class                                          | `""`                |
+| `persistentVolumeClaim.volumeMode`       | Tacgui persistent volume mode                                                   | `Filesystem`        |
+| `persistentVolumeClaim.volumeName`       | Tacgui persistent volume name                                                   | `""`                |
+| `persistentVolumeClaim.annotations`      | Tacgui persistent volume claim annotations                                      | `{}`                |
+| `persistentVolumeClaim.accessModes`      | Tacgui persistent volume access Modes                                           | `["ReadWriteMany"]` |
+| `persistentVolumeClaim.size`             | Tacgui persistent volume claim size to request                                  | `2Gi`               |
+| `persistentVolumeClaim.selector`         | Selector to match an existing Persistent Volume                                 | `{}`                |
+
+### persistentVolume Parameters
+
+| Name                                | Description                                                                              | Value               |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- | ------------------- |
+| `persistentVolume.enabled`          | Enable creation of a Persistent Volume                                                   | `false`             |
+| `persistentVolume.capacity`         | Persistent Volume size                                                                   | `3Gi`               |
+| `persistentVolume.accessModes`      | Persistent Volume access Modes                                                           | `["ReadWriteMany"]` |
+| `persistentVolume.hostPath`         | Persistent Volume host path, If you use global.basePath, the path will be exclusive Path | `/var/tmp/tacgui`   |
+| `persistentVolume.nfs.server`       | NFS server                                                                               | `""`                |
+| `persistentVolume.nfs.path`         | NFS path                                                                                 | `""`                |
+| `persistentVolume.annotations`      | Persistent Volume annotations                                                            | `{}`                |
+| `persistentVolume.storageClassName` | Persistent Volume storage Class                                                          | `""`                |
+| `persistentVolume.reclaimPolicy`    | Persistent Volume reclaim policy                                                         | `Retain`            |
 
 ### External Database Parameters
 
-| Name                                         | Description                                                             | Value       |
-| -------------------------------------------- | ----------------------------------------------------------------------- | ----------- |
-| `externalDatabase.host`                      | Database host                                                           | `""`        |
-| `externalDatabase.port`                      | Database port number                                                    | `3306`      |
-| `externalDatabase.user`                      | Non-root username for Tacgui                                            | `tgui_user` |
-| `externalDatabase.password`                  | Password for the non-root username for Tacgui                           | `""`        |
-| `externalDatabase.database`                  | Tacgui database name                                                    | `tgui`      |
-| `externalDatabase.logDatabase`               | Tacgui log database name                                                | `tgui_log`  |
-| `externalDatabase.existingSecret`            | Name of an existing secret resource containing the database credentials | `""`        |
-| `externalDatabase.existingSecretPasswordKey` | Name of an existing secret key containing the database credentials      | `""`        |
+| Name                                         | Description                                                             | Value         |
+| -------------------------------------------- | ----------------------------------------------------------------------- | ------------- |
+| `externalDatabase.host`                      | Database host                                                           | `mariadb`     |
+| `externalDatabase.port`                      | Database port number                                                    | `3306`        |
+| `externalDatabase.user`                      | Non-root username for Tacgui                                            | `tgui_user`   |
+| `externalDatabase.password`                  | Password for the non-root username for Tacgui                           | `juniper@123` |
+| `externalDatabase.database`                  | Tacgui database name                                                    | `tacgui`      |
+| `externalDatabase.logDatabase`               | Tacgui log database name                                                | `tgui_log`    |
+| `externalDatabase.existingSecret`            | Name of an existing secret resource containing the database credentials | `""`          |
+| `externalDatabase.existingSecretPasswordKey` | Name of an existing secret key containing the database credentials      | `""`          |
 
 ### Traffic Exposure Parameters
 
@@ -162,7 +178,7 @@ The command removes all the Kubernetes components associated with the chart and 
 | `service.clusterIP`                     | Tacgui Kubernetes service clusterIP IP                                                                                           | `""`                     |
 | `service.loadBalancerIP`                | Tacgui loadBalancerIP if service type is `LoadBalancer`                                                                          | `""`                     |
 | `service.ipFamilyPolicy`                | Tacgui Kubernetes service ipFamilyPolicy policy                                                                                  | `SingleStack`            |
-| `service.externalTrafficPolicy`         | Enable client source IP preservation                                                                                             | `Cluster`                |
+| `service.externalTrafficPolicy`         | Enable client source IP preservation                                                                                             | `Local`                  |
 | `service.allocateLoadBalancerNodePorts` | Allow users to disable node ports for Service Type=LoadBalancer. This is useful for                                              | `false`                  |
 | `service.loadBalancerClass`             | Enables to use a load balancer implementation other than the cloud provider default.                                             | `""`                     |
 | `service.loadBalancerSourceRanges`      | Address that are allowed when Tacgui service is LoadBalancer                                                                     | `[]`                     |
@@ -184,63 +200,3 @@ The command removes all the Kubernetes components associated with the chart and 
 | `ingress.secrets`                       | Custom TLS certificates as secrets                                                                                               | `[]`                     |
 | `ingress.ingressClassName`              | IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)                                                    | `""`                     |
 | `ingress.extraRules`                    | Additional rules to be covered with this ingress record                                                                          | `[]`                     |
-
-Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`. For example,
-
-```bash
-$ helm install my-release \
-  --set imagePullPolicy=Always \
-    svtechnmaa/svtech_tacacsgui
-```
-
-The above command sets the `imagePullPolicy` to `Always`.
-
-Alternatively, a YAML file that specifies the values for the parameters can be provided while installing the chart. For example,
-
-```bash
-$ helm install my-release svtechnmaa/svtech_tacacsgui -f values.yaml
-```
-
-> **Tip**: You can use the default [values.yaml](values.yaml)
-
-## Configuration and installation details
-
-### Adding extra environment variables
-
-In case you want to add extra environment variables (useful for advanced operations like custom init scripts), you can use the `extraEnvVars` property.
-
-```yaml
-extraEnvVars:
-  - name: LOG_LEVEL
-    value: error
-```
-
-Alternatively, you can use a ConfigMap or a Secret with the environment variables. To do so, use the `extraEnvVarsCM` or the `extraEnvVarsSecret` values.
-
-### Setting Pod's affinity
-
-This chart allows you to set your custom affinity using the `affinity` parameter. Find more information about Pod's affinity in the [kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity).
-
-### Deploying extra resources
-
-There are cases where you may want to deploy extra objects, such a ConfigMap containing your app's configuration or some extra deployment with a micro service used by your app. For covering this case, the chart allows adding the full specification of other objects using the `extraDeploy` parameter.
-
-## Troubleshooting
-
-## Upgrading
-
-## License
-
-Copyright &copy; 2024 Freezing
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
