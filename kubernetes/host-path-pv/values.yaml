@@ -18,8 +18,7 @@ global:
         - icinga2
         - icinga2-satellite
         - airflow
-      storageClass: seaweedfs-storage
-      # storageClass: automation-repo-hostpath
+      storageClass: automation-repo-hostpath
 
     - volumeName: icinga2-zones-volume
       pvcName: icinga2-zones-pvc
@@ -31,8 +30,7 @@ global:
         - rundeck
         - rundeck-option-provider
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: icinga2-zones-hostpath
+      storageClass: icinga2-zones-hostpath
 
     - volumeName: icinga2-conf-volume
       pvcName: icinga2-conf-pvc
@@ -42,8 +40,7 @@ global:
       shareFor:
         - icinga2
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: icinga2-conf-hostpath
+      storageClass: icinga2-conf-hostpath
 
     - volumeName: icinga2-plugins-volume
       pvcName: icinga2-plugins-pvc
@@ -54,8 +51,7 @@ global:
         - icinga2
         - debuger
         - icinga2-satellite
-      storageClass: seaweedfs-storage
-      # storageClass: icinga2-plugins-hostpath
+      storageClass: icinga2-plugins-hostpath
 
 
     # icinga2 scripts pvc  
@@ -68,8 +64,7 @@ global:
         - icinga2
         - debuger
         - icinga2-satellite
-      storageClass: seaweedfs-storage
-      # storageClass: icinga2-scripts-hostpath
+      storageClass: icinga2-scripts-hostpath
 
     - volumeName: gitlist-data-volume
       pvcName: gitlist-data-pvc
@@ -80,8 +75,7 @@ global:
         - gitlist
         - rundeck
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: gitlist-data-hostpath
+      storageClass: gitlist-data-hostpath
 
     - volumeName: nagvis-maps-volume
       pvcName: nagvis-maps-pvc
@@ -92,8 +86,7 @@ global:
         - nagvis
         - rundeck
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: nagvis-maps-hostpath
+      storageClass: nagvis-maps-hostpath
 
     - volumeName: rundeck-var-volume
       pvcName: rundeck-var-pvc
@@ -102,9 +95,8 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - rundeck
-        - debuger
-      storageClass: seaweedfs-storage 
-      # storageClass: rundeck-var-hostpath
+        - debuger 
+      storageClass: rundeck-var-hostpath
 
     - volumeName: rundeck-server-config-volume
       pvcName: rundeck-server-config-pvc
@@ -113,8 +105,7 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - rundeck
-      storageClass: seaweedfs-storage
-      # storageClass: rundeck-server-config-hostpath
+      storageClass: rundeck-server-config-hostpath
 
     - volumeName: rundeck-option-provider-realm-volume
       pvcName: rundeck-option-provider-realm-pvc
@@ -123,8 +114,7 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - rundeck-option-provider
-      storageClass: seaweedfs-storage
-      # storageClass: rundeck-option-provider-realm-hostpath
+      storageClass: rundeck-option-provider-realm-hostpath
 
     - volumeName: nagvis-auth-db-volume
       pvcName: nagvis-auth-db-pvc
@@ -135,8 +125,7 @@ global:
       shareFor:
         - nagvis
         - rundeck
-      storageClass: seaweedfs-storage
-      # storageClass: nagvis-auth-db-hostpath
+      storageClass: nagvis-auth-db-hostpath
 
     - volumeName: rundeck-etc-config-volume
       pvcName: rundeck-etc-config-pvc
@@ -146,8 +135,7 @@ global:
       shareFor:
         - rundeck
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: rundeck-etc-config-hostpath
+      storageClass: rundeck-etc-config-hostpath
 
     - volumeName: rundeck-jsnapy-volume
       pvcName: rundeck-jsnapy-pvc
@@ -158,8 +146,7 @@ global:
         - rundeck
         - rundeck-option-provider
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: rundeck-jsnapy-hostpath
+      storageClass: rundeck-jsnapy-hostpath
 
     - volumeName: rundeck-backup-volume
       pvcName: rundeck-backup-pvc
@@ -169,8 +156,7 @@ global:
       shareFor:
         - rundeck
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: rundeck-backup-hostpath
+      storageClass: rundeck-backup-hostpath
 
     - volumeName: csv-output-volume
       pvcName: csv-output-pvc
@@ -181,8 +167,7 @@ global:
         - rundeck
         - csv-view
         - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: csv-output-hostpath
+      storageClass: csv-output-hostpath
 
     - volumeName: thruk-volume
       pvcName: thruk-pvc
@@ -192,8 +177,7 @@ global:
       shareFor:
         - thruk
         - rundeck
-      storageClass: seaweedfs-storage
-      # storageClass: thruk-hostpath
+      storageClass: thruk-hostpath
 
     - volumeName: icingaweb-volume
       pvcName: icingaweb-pvc
@@ -203,8 +187,7 @@ global:
       shareFor:
         - icingaweb
         - rundeck
-      storageClass: seaweedfs-storage
-      # storageClass: icingaweb-hostpath
+      storageClass: icingaweb-hostpath
     
     # snmp-manager volume
     - volumeName: snmp-manager-volume
@@ -214,5 +197,4 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - snmp-manager
-      storageClass: seaweedfs-storage
-      # storageClass: snmp-manager-hostpath
+      storageClass: snmp-manager-hostpath

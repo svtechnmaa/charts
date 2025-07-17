@@ -1,0 +1,25 @@
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+{{- $enableHostPath := .Values.global.hostPathPV.enabled }}
+
+{{- range .Values.global.sharedPersistenceVolume }}
+{{- if and (ne .storageClass "seaweedfs") .folderName $enableHostPath }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-{{ .pvcName }}-pv" 
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  storageClassName: "{{ $namespace }}-{{ .storageClass }}"
+  capacity:
+    storage: {{ .storageSize }}
+  accessModes:
+    - {{ .accessModes }}
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "{{ $basePath }}/{{ $namespace }}/{{ .folderName }}"
+{{- end }}
+
+{{- end  }}
