@@ -1,14 +1,15 @@
 global:
+  basePath: /opt/shared # This will be ignored if using seaweedfs storage class
   sharedVolume:
     enabled: true
   hostPathPV:
-    enabled: true
+    enabled: true # This will be ignored if using seaweedfs storage class
   sharedPersistenceVolume:
     - volumeName: automation-repo-volume
       pvcName: automation-repo-pvc
       storageSize: 2Gi
       path: /opt/SVTECH-Junos-Automation
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - preparation
         - rundeck
@@ -18,56 +19,67 @@ global:
         - init-data-grafana
         - icinga2
         - icinga2-satellite
-      storageClass: automation-repo-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: automation-repo-hostpath # for hostPath PV
+      # folderName: repo_automation # for hostPath PV
 
     - volumeName: icinga2-zones-volume
       pvcName: icinga2-zones-pvc
       storageSize: 2Gi
       path: /etc/icinga2/zones.d
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icinga2
         - rundeck
         - rundeck-option-provider
         - debuger
-      storageClass: icinga2-zones-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: icinga2-zones-hostpath # for hostPath PV
+      # folderName: icinga2_zones # for hostPath PV
 
     - volumeName: icinga2-conf-volume
       pvcName: icinga2-conf-pvc
       storageSize: 100Mi
       path: /etc/icinga2/conf.d
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icinga2
         - debuger
-      storageClass: icinga2-conf-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: icinga2-conf-hostpath # for hostPath PV
+      # folderName: icinga2_conf # for hostPath PV
 
-    # - volumeName: icinga2-scripts-volume
-    #   pvcName: icinga2-scripts-pvc
-    #   storageSize: 100Mi
-    #   path: /etc/icinga2/scripts
-    #   accessModes: ReadWriteOnce #ReadWriteMany
-    #   shareFor:
-    #     - preparation
-    #     - icinga2
-    #     - debuger
+    - volumeName: icinga2-scripts-volume
+      pvcName: icinga2-scripts-pvc
+      storageSize: 100Mi
+      path: /etc/icinga2/scripts
+      accessModes: ReadWriteMany 
+      shareFor:
+        - icinga2
+        - debuger
+        - icinga2-satellite
+      storageClass: seaweedfs-storage
+      # storageClass: icinga2-scripts-hostpath # for hostPath PV
+      # folderName: icinga2_scripts # for hostPath PV
 
     - volumeName: icinga2-plugins-volume
       pvcName: icinga2-plugins-pvc
       storageSize: 2Gi
       path: /usr/share/icinga2/plugins/libexec
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icinga2
         - debuger
         - icinga2-satellite
-      storageClass: icinga2-plugins-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: icinga2-plugins-hostpath # for hostPath PV
+      # folderName: icinga2_plugins # for hostPath PV
 
     # - volumeName: icinga2-output-volume
     #   pvcName: icinga2-output-pvc
     #   storageSize: 3Gi
     #   path: /var/tmp/output/
-    #   accessModes: ReadWriteOnce #ReadWriteMany
+    #   accessModes: ReadWriteMany
     #   shareFor:
     #     - icinga2
     #     - debuger
@@ -76,113 +88,146 @@ global:
       pvcName: gitlist-data-pvc
       storageSize: 2Gi
       path: /opt/gitlist
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - gitlist
         - rundeck
         - debuger
-      storageClass: gitlist-data-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: gitlist-data-hostpath # for hostPath PV
+      # folderName: gitlist # for hostPath PV
 
     - volumeName: nagvis-maps-volume
       pvcName: nagvis-maps-pvc
       storageSize: 2Gi
       path: /usr/share/nagvis/etc/maps
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - nagvis
         - rundeck
         - debuger
-      storageClass: nagvis-maps-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: nagvis-maps-hostpath # for hostPath PV
+      # folderName: nagvis_maps # for hostPath PV
 
     - volumeName: rundeck-var-volume
       pvcName: rundeck-var-pvc
       storageSize: 10Gi
       path: /home/rundeck/var
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - debuger
-      storageClass: rundeck-var-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: rundeck-var-hostpath # for hostPath PV
+      # folderName: rundeck_var # for hostPath PV
+    
+    - volumeName: rundeck-server-config-volume
+      pvcName: rundeck-server-config-pvc
+      storageSize: 1Gi
+      path: /home/rundeck/server/config
+      accessModes: ReadWriteMany
+      shareFor:
+        - rundeck
+      storageClass: seaweedfs-storage
+      # storageClass: rundeck-server-config-hostpath # for hostPath PV
+      # folderName: rundeck_server_config # for hostPath PV
 
     - volumeName: nagvis-auth-db-volume
       pvcName: nagvis-auth-db-pvc
       storageSize: 1Gi
       path: /usr/share/nagvis/etc
       subPath: auth.db
-      accessModes: ReadWriteOnce
+      accessModes: ReadWriteMany
       shareFor:
         - nagvis
         - rundeck
-      storageClass: nagvis-auth-db-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: nagvis-auth-db-hostpath # for hostPath PV
+      # folderName: nagvis_auth_db # for hostPath PV
 
     - volumeName: rundeck-etc-config-volume
       pvcName: rundeck-etc-config-pvc
       storageSize: 1Gi
       path: /home/rundeck/etc
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - debuger
-      storageClass: rundeck-etc-config-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: rundeck-etc-config-hostpath # for hostPath PV
+      # folderName: rundeck-etc-config # for hostPath PV
 
     - volumeName: rundeck-jsnapy-volume
       pvcName: rundeck-jsnapy-pvc
       storageSize: 10Gi
       path: /var/lib/rundeck/jsnapy
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - rundeck-option-provider
         - debuger
-      storageClass: rundeck-jsnapy-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: rundeck-jsnapy-hostpath # for hostPath PV
+      # folderName: rundeck_jsnapy # for hostPath PV
 
     - volumeName: rundeck-backup-volume
       pvcName: rundeck-backup-pvc
       storageSize: 10Gi
       path: /opt/backup
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - debuger
-      storageClass: rundeck-backup-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: rundeck-backup-hostpath # for hostPath PV
+      # folderName: rundeck_backup # for hostPath PV
 
     - volumeName: csv-output-volume
       pvcName: csv-output-pvc
       storageSize: 10Gi
       path: /opt/csv-output
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - csv-view
         - debuger
-      storageClass: csv-output-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: csv-output-hostpath # for hostPath PV
+      # folderName: csv_output # for hostPath PV
 
     - volumeName: thruk-volume
       pvcName: thruk-pvc
       storageSize: 30Mi
       path: /etc/thruk
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - thruk
         - rundeck
-      storageClass: thruk-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: thruk-hostpath # for hostPath PV
+      # folderName: thruk # for hostPath PV   
 
     - volumeName: icingaweb-volume
       pvcName: icingaweb-pvc
       storageSize: 10Mi
       path: /data
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icingaweb
         - rundeck
-      storageClass: icingaweb-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: icingaweb-hostpath # for hostPath PV
+      # folderName: icingaweb_conf # for hostPath PV
 
     # snmp-manager volume
     - volumeName: snmp-manager-volume
       pvcName: snmp-manager-pvc
       storageSize: 10Mi
       path: /etc/snmptt/
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - snmp-manager
-      storageClass: snmp-manager-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: snmp-manager-hostpath # for hostPath PV
+      # folderName: snmp-manager-conf # for hostPath PV

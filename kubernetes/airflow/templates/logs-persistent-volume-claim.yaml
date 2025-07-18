@@ -15,7 +15,29 @@
 # specific language governing permissions and limitations
 # under the License.
 {{- $namespace := .Release.Namespace }}
+{{- $basePath := .Values.global.basePath }}
 {{- if and (not .Values.logs.persistence.existingClaim ) .Values.logs.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  # name: "rest-converter-logs"
+  name: "{{ $namespace }}-airflow-logs-pv" 
+  labels:
+    tier: airflow
+    component: logs-pvc
+    release: {{ .Release.Name }}
+    
+spec:
+  storageClassName: {{ $namespace }}-{{ .Values.logs.persistence.storageClassName }}
+  capacity:
+    storage: {{ .Values.logs.persistence.size | quote }}
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: {{ $basePath }}/{{ $namespace }}/airflow_logs
+---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:

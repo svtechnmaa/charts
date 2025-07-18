@@ -14,12 +14,16 @@ metadata:
     helm.sh/resource-policy: keep
 spec:
   # storageClassName: longhorn
-  {{ if $enableHostPath }}
-  storageClassName: {{ $namespace }}-{{ .storageClass }}
+  {{ if and $enableHostPath (ne .storageClass "seaweedfs-storage")  }}
+  storageClassName: "{{ $namespace }}-{{ .storageClass }}"
   {{ else }}
   storageClassName: {{ .storageClass }}
   {{ end }}
 
+  {{ if and .storageClass (eq .storageClass "seaweedfs-storage") }}
+  volumeName: "{{ $namespace }}-{{ .pvcName }}-pv"
+  {{ end }}
+  
   accessModes:
     - {{ .accessModes }}
   resources:

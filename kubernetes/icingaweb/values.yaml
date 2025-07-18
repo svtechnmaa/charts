@@ -14,11 +14,13 @@ global:
       pvcName: icingaweb-pvc
       storageSize: 10Mi
       path: /data
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icingaweb
         - rundeck
-      storageClass: icingaweb-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: icingaweb-hostpath # for hostPath PV
+      # folderName: icingaweb_conf # for hostPath PV
   database:
     director:
       enabled: true
