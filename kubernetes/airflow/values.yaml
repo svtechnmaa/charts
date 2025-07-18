@@ -40,7 +40,8 @@ global:
         - icinga2-satellite
         - airflow
       storageClass: seaweedfs-storage
-      # storageClass: automation-repo-hostpath
+      # storageClass: automation-repo-hostpath # for hostPath PV
+      # folderName: repo_automation # for hostPath PV
 # Provide a name to substitute for the full names of resources
 fullnameOverride: ""
 
