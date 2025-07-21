@@ -22,9 +22,9 @@ spec:
               - -c
               - |
                 # Curl the IcingaWeb health endpoint
-                RESPONSE=$(curl -k -H "Accept: application/json" -u icingaweb:juniper@123 https://ingress-frontend/icingaweb/health)
+                RESPONSE=$(curl -k -H "Accept: application/json" -u icingaweb:juniper@123 https://{{ .Release.Name }}-ingress-frontend/icingaweb/health)
                 if [[ -z "$RESPONSE" ]]; then
-                  echo "IcingaWeb health check failed, exiting. Please check the connection to https://ingress-frontend/icingaweb/health"
+                  echo "IcingaWeb health check failed, exiting. Please check the connection to https://{{ .Release.Name }}-ingress-frontend/icingaweb/health"
                   exit 1
                 fi
 
