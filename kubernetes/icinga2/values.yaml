@@ -48,13 +48,13 @@ init:
 
 image:
   repository: svtechnmaa/svtech_icinga2
-  tag: v1.1.7
+  tag: v1.1.8
   pullPolicy: IfNotPresent
 
 sidecar:
   image:
     repository: svtechnmaa/svtech_icinga2
-    tag: v1.1.7
+    tag: v1.1.8
     pullPolicy: IfNotPresent
 
 clusterDomain: cluster.local
@@ -189,7 +189,7 @@ master:
     image:
       registry: ghcr.io
       repository: svtechnmaa/svtech_icingadb
-      tag: v1.1.5
+      tag: v1.1.6
       pullPolicy: IfNotPresent
       debug: false
     env:

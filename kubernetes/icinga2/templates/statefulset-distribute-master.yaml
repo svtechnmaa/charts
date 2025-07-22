@@ -53,8 +53,6 @@ spec:
       containers:
         - name: icinga2-side-car-scanning-satellite
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.sidecar.image "global" .Values.global ) }}
-          securityContext:
-            runAsUser: 999
           command:
           - bash
           - -ec
@@ -340,10 +338,10 @@ spec:
             cat << 'EOF' > /etc/icinga2/zones.d/.git/hooks/post-commit
             echo 'Sleep 30s before restart, please wait'
             sleep 30
-            MASTER_LIST=($(dig srv +search +short icinga2-headless |awk '{print $4}' | uniq | sed 's/.$//g'))
-            for MASTER in "${MASTER_LIST[@]}"
+            MASTER_LIST=$(dig srv +search +short icinga2-headless |awk '{print $4}' | uniq | sed 's/.$//g')
+            for MASTER in $MASTER_LIST
             do
-            master_index=$(cut -d'.' -f1 <<< $(echo $MASTER 2>/dev/null) | awk -F'-' '{print $NF}')
+            master_index=$(echo "$MASTER" | cut -d'.' -f1  | awk -F'-' '{print $NF}')
             url="https://{{ .Release.Name }}-icinga2-master-${master_index}.icinga2-headless.{{ .Release.Namespace }}:5665/v1/actions/restart-process?pretty=1"
             curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST "$url"
             done
