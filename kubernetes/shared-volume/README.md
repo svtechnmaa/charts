@@ -18,11 +18,11 @@
 |   +--- api
 	|   +--- <data_uploaded_via_api>
 |   +--- csi
-	|   +--- <namespace>-<pv-name>
+	|   +--- <namespace_1>-<pv-name>
 +--- <namespace_2>
 |   +--- api
 	|   +--- <data_uploaded_via_api>
 |   +--- csi
-	|   +--- <namespace>-<pv-name>
+	|   +--- <namespace_2>-<pv-name>
 ```
 
