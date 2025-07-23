@@ -29,14 +29,17 @@ metadata:
     release: {{ .Release.Name }}
     
 spec:
-  storageClassName: {{ $namespace }}-{{ .Values.logs.persistence.storageClassName }}
+  storageClassName: seaweedfs-storage
   capacity:
     storage: {{ .Values.logs.persistence.size | quote }}
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  hostPath:
-    path: {{ $basePath }}/{{ $namespace }}/airflow_logs
+  csi:
+    driver: seaweedfs-csi-driver
+    volumeHandle: "{{ $namespace }}-airflow-logs-pv"
+    volumeAttributes:
+      path: "/{{ $namespace }}/csi/{{ $namespace }}-airflow-logs-pv"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
@@ -56,12 +59,6 @@ spec:
   resources:
     requests:
       storage: {{ .Values.logs.persistence.size | quote }}
-  {{- if .Values.logs.persistence.storageClassName }}
-  {{- if (eq "-" .Values.logs.persistence.storageClassName) }}
-  storageClassName: ""
-  {{- else }}
-  # storageClassName: "{{ .Values.logs.persistence.storageClassName }}"
-  storageClassName: {{ $namespace }}-{{ .Values.logs.persistence.storageClassName }}
-  {{- end }}
-  {{- end }}
+  storageClassName: seaweedfs-storage
+  volumeName: "{{ $namespace }}-airflow-logs-pv"
 {{- end }}
