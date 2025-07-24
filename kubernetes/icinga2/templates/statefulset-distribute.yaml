@@ -151,7 +151,7 @@ spec:
                 check_empty_dir "/etc/icinga2/features-available" "/opt/default_config/features-available"
                 check_empty_dir "/usr/share/icinga2/plugins/libexec" "/opt/default_plugin"
 
-                cp --update --symbolic-link /usr/share/icinga2/plugins/libexec/plugins-pl/* /usr/share/icinga2/plugins/libexec
+                cp --update --remove-destination --symbolic-link /usr/share/icinga2/plugins/libexec/plugins-pl/* /usr/share/icinga2/plugins/libexec
 
                 chmod -R 775 /etc/icinga2/conf.d $PLUGIN_DIR
                 chown -R icinga:icinga /etc/icinga2/conf.d $PLUGIN_DIR
