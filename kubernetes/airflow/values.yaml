@@ -28,7 +28,7 @@ global:
       pvcName: automation-repo-pvc
       storageSize: 2Gi
       path: /opt/SVTECH-Junos-Automation
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - preparation
         - rundeck
@@ -39,7 +39,9 @@ global:
         - icinga2
         - icinga2-satellite
         - airflow
-      storageClass: automation-repo-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: automation-repo-hostpath # for hostPath PV
+      # folderName: repo_automation # for hostPath PV
 # Provide a name to substitute for the full names of resources
 fullnameOverride: ""
 

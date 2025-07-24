@@ -7,7 +7,7 @@ global:
       pvcName: automation-repo-pvc
       storageSize: 2Gi
       path: /opt/SVTECH-Junos-Automation
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - preparation
         - rundeck
@@ -24,7 +24,7 @@ global:
       pvcName: icinga2-zones-pvc
       storageSize: 2Gi
       path: /etc/icinga2/zones.d
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany 
       shareFor:
         - icinga2
         - rundeck
@@ -36,7 +36,7 @@ global:
       pvcName: icinga2-conf-pvc
       storageSize: 100Mi
       path: /etc/icinga2/conf.d
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany 
       shareFor:
         - icinga2
         - debuger
@@ -46,19 +46,20 @@ global:
       pvcName: icinga2-plugins-pvc
       storageSize: 2Gi
       path: /usr/share/icinga2/plugins/libexec
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany 
       shareFor:
         - icinga2
         - debuger
         - icinga2-satellite
       storageClass: icinga2-plugins-hostpath
 
+
     # icinga2 scripts pvc  
     - volumeName: icinga2-scripts-volume
       pvcName: icinga2-scripts-pvc
       storageSize: 100Mi
       path: /etc/icinga2/scripts
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany 
       shareFor:
         - icinga2
         - debuger
@@ -69,7 +70,7 @@ global:
       pvcName: gitlist-data-pvc
       storageSize: 2Gi
       path: /opt/gitlist
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - gitlist
         - rundeck
@@ -80,7 +81,7 @@ global:
       pvcName: nagvis-maps-pvc
       storageSize: 2Gi
       path: /usr/share/nagvis/etc/maps
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - nagvis
         - rundeck
@@ -91,17 +92,17 @@ global:
       pvcName: rundeck-var-pvc
       storageSize: 10Gi
       path: /home/rundeck/var
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
-        - debuger
+        - debuger 
       storageClass: rundeck-var-hostpath
 
     - volumeName: rundeck-server-config-volume
       pvcName: rundeck-server-config-pvc
       storageSize: 1Gi
       path: /home/rundeck/server/config
-      accessModes: ReadWriteOnce
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
       storageClass: rundeck-server-config-hostpath
@@ -110,7 +111,7 @@ global:
       pvcName: rundeck-option-provider-realm-pvc
       storageSize: 1Gi
       path: /etc/rundeck
-      accessModes: ReadWriteOnce
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck-option-provider
       storageClass: rundeck-option-provider-realm-hostpath
@@ -120,7 +121,7 @@ global:
       storageSize: 1Gi
       path: /usr/share/nagvis/etc
       subPath: auth.db
-      accessModes: ReadWriteOnce
+      accessModes: ReadWriteMany
       shareFor:
         - nagvis
         - rundeck
@@ -130,7 +131,7 @@ global:
       pvcName: rundeck-etc-config-pvc
       storageSize: 1Gi
       path: /home/rundeck/etc
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - debuger
@@ -140,7 +141,7 @@ global:
       pvcName: rundeck-jsnapy-pvc
       storageSize: 10Gi
       path: /var/lib/rundeck/jsnapy
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - rundeck-option-provider
@@ -151,7 +152,7 @@ global:
       pvcName: rundeck-backup-pvc
       storageSize: 10Gi
       path: /opt/backup
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - debuger
@@ -161,7 +162,7 @@ global:
       pvcName: csv-output-pvc
       storageSize: 10Gi
       path: /opt/csv-output
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - rundeck
         - csv-view
@@ -172,7 +173,7 @@ global:
       pvcName: thruk-pvc
       storageSize: 30Mi
       path: /etc/thruk
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - thruk
         - rundeck
@@ -182,7 +183,7 @@ global:
       pvcName: icingaweb-pvc
       storageSize: 10Mi
       path: /data
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - icingaweb
         - rundeck
@@ -193,7 +194,7 @@ global:
       pvcName: snmp-manager-pvc
       storageSize: 10Mi
       path: /etc/snmptt/
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - snmp-manager
       storageClass: snmp-manager-hostpath
