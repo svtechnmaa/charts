@@ -54,7 +54,7 @@ image:
   # docker image ghcr.io/svtechnmaa/svtech_elastalert_ui:latest
   repository: svtechnmaa/svtech_elastalert_ui
   tag: v1.11
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   pullSecret: "ghcr-pull-secret"
 
 resources: {}
@@ -115,6 +115,7 @@ extraContainers: []
 extraInitContainers:
   - name: fix-permissions
     image: busybox
+    imagePullPolicy: IfNotPresent
     command: [ "sh", "-c", "chown -R 1000:1000 /opt/elastalert/rules /opt/elastalert/alerts" ]
     securityContext:
       runAsUser: 0
