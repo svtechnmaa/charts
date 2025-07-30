@@ -10,6 +10,44 @@ global:
     token: ""
     fg_token: ""  
   basePath: /opt/shared/
+  sharedVolume:
+    enabled: true
+  hostPathPV:
+    enabled: true # This will be ignored if using seaweedfs storage class
+  sharedPersistenceVolume:
+    # mageai-data volume
+    - volumeName: mageai-data-volume
+      pvcName: mageai-data-pvc
+      storageSize: 2G
+      path: /home/src/data
+      accessModes: ReadWriteMany
+      shareFor:
+        - mage-ai
+      # storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath # for hostPath PV
+      folderName: mageai-data # for hostPath
+
+    - volumeName: mageai-pipeline-volume
+      pvcName: mageai-pipeline-pvc
+      storageSize: 2G
+      path: /home/src
+      accessModes: ReadWriteMany
+      shareFor:
+        - mage-ai
+      # storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath # for hostPath PV
+      folderName: mageai-pipeline # for hostPath
+
+    - volumeName: mageai-log-volume
+      pvcName: mageai-log-pvc
+      storageSize: 2G
+      path: /home/src/logs_dir
+      accessModes: ReadWriteMany
+      shareFor:
+        - mage-ai
+      # storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath # for hostPath PV
+      folderName: mageai-log # for hostPath
 
 initRepo:
   image:
@@ -95,15 +133,15 @@ postgresql:
 
 postgresqlExternal:
   enabled: true
-  fullnameOverride: "postgresql-ha-pgpool"
+  postgresqlExternalHost: "postgresql-ha-pgpool" 
   auth:
     username: postgres
     password: "juniper@123"
     database: "etl_nmaa"
 
-logFolderExternal:
-  enabled: true
-  path: /home/src/logs_dir
+# logFolderExternal:
+#   enabled: true
+#   path: /home/src/logs_dir
 
 # Enable redis if you want more replica
 redis:
@@ -228,24 +266,24 @@ affinity: {}
 
 volumeEnabled: true
 
-extraVolumeMounts:
-  - name: mage-log
-    mountPath: /home/src/logs_dir
+extraVolumeMounts: {}
+  # - name: mage-log
+  #   mountPath: /home/src/logs_dir
 
-extraVolumes:
-  - name: mage-log
-    persistentVolumeClaim:
-      claimName: pvc-mageai-logs
+extraVolumes: {}
+  # - name: mage-log
+  #   persistentVolumeClaim:
+  #     claimName: pvc-mageai-logs
 
 persistence:
-  enabled: true
-  size: 5Gi
-  dynamicProvisioning: false
-  # storageClassName: storage-class-mageai
-  storageClassName: seaweedfs-storage
-  csi:
-    driver: seaweedfs-csi-driver
-  pathFolder: mageai
+  # enabled: true
+  # size: 5Gi
+  # dynamicProvisioning: false
+  # # storageClassName: storage-class-mageai
+  # storageClassName: seaweedfs-storage
+  # csi:
+  #   driver: seaweedfs-csi-driver
+  # pathFolder: mageai
 
 # config: Default configuration for mageai as environment variables. These get injected directly in the container.
 config: {}

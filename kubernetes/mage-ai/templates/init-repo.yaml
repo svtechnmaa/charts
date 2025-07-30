@@ -14,55 +14,72 @@ spec:
     spec:
       restartPolicy: Never
       imagePullSecrets:
-        - name: ghcr-pull-secret
+        - name: ghcr-pull-
+      nodeName: dev-node-4
       containers:
-      - name: init-repo
-        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}
-        imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
-        command:
-          - bash
-          - -ec
-          - |
-                  name=`echo $REPO | sed  "s/:.*//"`
-                  mkdir -p $REPO_PATH
-                  status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
-                  if [[ "$status" == "0" ]]; then
-                    echo "$REPO_PATH is Empty. Clone repo"
-                    git clone --branch $BRANCH https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git $REPO_PATH
-                    echo "true" > $REPO_PATH/completed
-                    echo "Finished clone!"
-                  else
-                    if [[ ! -f "$REPO_PATH/completed" ]]; then
-                      check_branch=`git branch | grep -e '*'`
-                      if [[ "$check_branch" != "* $BRANCH" ]]; then
-                        echo "Branch is not $BRANCH. Checkout"
-                        git checkout $BRANCH
-                      fi
-                      echo "true" > $REPO_PATH/completed
+        - name: init-repo
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
+          command:
+            - bash
+            - -ec
+            - |
+                name=`echo $REPO | sed  "s/:.*//"`
+                mkdir -p $REPO_PATH
+                status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
+                if [[ "$status" == "0" ]]; then
+                  echo "$REPO_PATH is Empty. Clone repo"
+                  git clone --branch $BRANCH https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git $REPO_PATH
+                  echo "true" > $REPO_PATH/completed
+                  echo "Finished clone!"
+                else
+                  if [[ ! -f "$REPO_PATH/completed" ]]; then
+                    cd $REPO_PATH
+                    git fetch
+                    current_branch=`git rev-parse --abbrev-ref HEAD`
+                    if [[ "$current_branch" != "$BRANCH" ]]; then
+                      echo "Branch is not $BRANCH. Checkout"
+                      git checkout $BRANCH
                     fi
-                    echo "$REPO_PATH is not Empty. Ignore"
+                    echo "true" > $REPO_PATH/completed
                   fi
-        env:
-          - name: GH_FG_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "mageai.secretName" . }}
-                key: fg_token
-          - name: GH_USER
-            valueFrom:
-              secretKeyRef:
-                name: {{ include "mageai.secretName" . }}
-                key: user_github_repo
-          - name: BRANCH
-            value: {{ .Values.initRepo.branch | quote }}
-          - name: REPO
-            value: {{ .Values.initRepo.repo | quote }}
-          - name: REPO_PATH
-            value: /home/src/NMAA-piplines-source
-
-        volumeMounts:
-          - name: {{ include "mageai.fullname" . }}-pipelines
-            mountPath: /home/src/NMAA-piplines-source
+                  echo "$REPO_PATH is not Empty. Ignore"
+                fi
+          env:
+            - name: GH_FG_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mageai.secretName" . }}
+                  key: fg_token
+            - name: GH_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "mageai.secretName" . }}
+                  key: user_github_repo
+            - name: BRANCH
+              value: {{ .Values.initRepo.branch | quote }}
+            - name: REPO
+              value: {{ .Values.initRepo.repo | quote }}
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+              {{- range .Values.global.sharedPersistenceVolume }}
+                {{- if eq .volumeName "mageai-pipeline-volume" }}
+            - name: REPO_PATH
+              value: {{ .path }}/NMAA-piplines-source
+                {{- end }}
+              {{- end }}
+            {{- end }}
+          volumeMounts:
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+              {{- range .Values.global.sharedPersistenceVolume }}
+                {{- if eq .volumeName "mageai-pipeline-volume" }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}/NMAA-piplines-source
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
 
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
@@ -71,11 +88,17 @@ spec:
         podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
-      {{- end }}  
+      {{- end }}
 
+      {{- if .Values.volumeEnabled }}
       volumes:
-        - name: {{ include "mageai.fullname" . }}-pipelines
+        {{- range .Values.global.sharedPersistenceVolume }}
+          {{- if eq .volumeName "mageai-pipeline-volume" }}
+        - name: {{ .volumeName }}
           persistentVolumeClaim:
-            claimName: pvc-{{ include "mageai.fullname" . }}-pipelines
+            claimName: {{ .pvcName }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
 
 {{- end }}
