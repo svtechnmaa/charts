@@ -3,7 +3,7 @@
 {{- $enableHostPath := .Values.global.hostPathPV.enabled }}
 
 {{- range .Values.global.sharedPersistenceVolume }}
-{{- if and (ne .storageClass "seaweedfs") (hasKey . "folderName") $enableHostPath }}
+{{- if and (ne .storageClass "seaweedfs-storage") (hasKey . "folderName") $enableHostPath }}
 ---
 apiVersion: v1
 kind: PersistentVolume

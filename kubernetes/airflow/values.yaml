@@ -553,6 +553,7 @@ workers:
   extraInitContainers:
     - name: fix-volume-logs-permissions
       image: busybox
+      imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
         runAsUser: 0
@@ -684,6 +685,7 @@ scheduler:
   extraInitContainers:
     - name: fix-volume-logs-permissions
       image: busybox
+      imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
         runAsUser: 0
@@ -1097,6 +1099,7 @@ triggerer:
   extraInitContainers:
     - name: fix-volume-logs-permissions
       image: busybox
+      imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
         runAsUser: 0
