@@ -29,35 +29,38 @@ spec:
             - -c
             - |
               until nc -zvw5 {{ .Chart.Name }}-backend {{ .Values.backend.service.port }}; do echo "Waiting for Backend..."; sleep 2; done
+              until [ `ls -A /app-dist/ | grep 'completed' | wc -l` != 0 ];
+              do
+                echo "Waiting for Init Repo...";
+                sleep 2;
+              done
+          volumeMounts:
+          - mountPath: /app-dist/
+            name: reflex-frontend-index
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global) }}
         {{- if .Values.frontend.image.pullPolicy }}
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         {{- end }}
         name: reflex-frontend
-        command:
-          - bash
-          - -ec
-          - |
-            cd /usr/share/nginx/html/
-            find . -type f -print0 | xargs -0 sed -i "s|ws://localhost:8000|wss://$API_URL|g"
-            find . -type f -print0 | xargs -0 sed -i "s|http://localhost:8000|https://$API_URL|g"
-            /opt/bitnami/scripts/nginx/entrypoint.sh /opt/bitnami/scripts/nginx/run.sh
         env:
           - name: TZ
             value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-          - name: API_URL
-            value: {{ .Values.global.frontendVip | quote }}
         volumeMounts:
         - name: nginx-config
           mountPath: /opt/bitnami/nginx/conf/server_blocks/proxy.conf
           subPath: nginx.conf
+        - mountPath: /app-dist/
+          name: reflex-frontend-index
         ports:
         - containerPort: 80
           name: frontend
       volumes:
         - name: nginx-config
           configMap:
-            name: {{ include "common.names.fullname" . }}-fe-config
+            name: reflex-fe-config
+        - name: reflex-frontend-index
+          persistentVolumeClaim:
+            claimName: reflex-frontend-pvc
       imagePullSecrets:
       - name: ghcr-pull-secret

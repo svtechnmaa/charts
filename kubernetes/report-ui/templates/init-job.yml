@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-report-fe
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      containers:
+      - command:
+        - bash
+        - -ec
+        - |
+          if [ ! -f /app-dist/completed ]; then
+            echo "Starting Reflex frontend initialization..."
+            sed -i '
+            s/frontend_path="[^"]*"/frontend_path=os.environ["FRONTEND_PATH"]/
+            s/frontend_packages=\[[^]]*\]/&,\n    api_url=os.environ["API_URL"]/
+            ' rxconfig.py
+            cat rxconfig.py
+            grep -rl "report/logo" | xargs sed -i "s|report/logo|{{ .Values.backend.config.basehref }}/report/logo|g"
+            reflex export --frontend-only --no-zip
+            cp -r .web/_static/* /app-dist/
+            if [ $? -eq 0 ]; then
+              echo "True" > /app-dist/completed
+            fi
+          else
+            echo "Reflex frontend already initialized."
+          fi
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.initJob.image "global" .Values.global) }}
+        {{- if .Values.frontend.initJob.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.frontend.initJob.image.pullPolicy }}
+        {{- end }}
+        env:
+          {{- if not (empty .Values.global.http_proxy) }}
+          - name: HTTP_PROXY
+            value: http://{{ .Values.global.http_proxy }}
+          - name: HTTPS_PROXY
+            value: http://{{ .Values.global.http_proxy }}
+          {{- end }}
+        name: init-report-fe
+        volumeMounts:
+        - mountPath: /app/.env
+          name: report-ui-env
+          subPath: .env
+        - mountPath: /app-dist
+          name: report-frontend-index
+      volumes:
+      - secret:
+          defaultMode: 420
+          secretName: {{ include "common.names.fullname" . }}-env
+        name: report-ui-env
+      - name: report-frontend-index
+        persistentVolumeClaim:
+          claimName: report-frontend-pvc
+      restartPolicy: Never
