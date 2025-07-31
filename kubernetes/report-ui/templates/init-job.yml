@@ -43,14 +43,29 @@ spec:
         - mountPath: /app/.env
           name: report-ui-env
           subPath: .env
-        - mountPath: /app-dist
-          name: report-frontend-index
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has "{{ .Chart.Name }}" .shareFor }}
+        - name: {{ .volumeName }}
+          mountPath: {{ .path }}
+          {{- if .subPath }}
+          subPath: {{ .subPath }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
       volumes:
       - secret:
           defaultMode: 420
           secretName: {{ include "common.names.fullname" . }}-env
         name: report-ui-env
-      - name: report-frontend-index
+      {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+      {{- range .Values.global.sharedPersistenceVolume }}
+      {{- if has "{{ .Chart.Name }}" .shareFor }}
+      - name: {{ .volumeName }}
         persistentVolumeClaim:
-          claimName: report-frontend-pvc
+          claimName: {{ .pvcName }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
       restartPolicy: Never

@@ -34,9 +34,20 @@ spec:
                 echo "Waiting for Init Repo...";
                 sleep 2;
               done
+          {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
           volumeMounts:
-          - mountPath: /app-dist/
-            name: reflex-frontend-index
+            {{- range .Values.global.sharedPersistenceVolume }}
+
+            {{- if has "{{ .Chart.Name }}" .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+            {{- end }}
+
+            {{- end }}
+          {{- end }}
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global) }}
         {{- if .Values.frontend.image.pullPolicy }}
@@ -50,8 +61,17 @@ spec:
         - name: nginx-config
           mountPath: /opt/bitnami/nginx/conf/server_blocks/proxy.conf
           subPath: nginx.conf
-        - mountPath: /app-dist/
-          name: reflex-frontend-index
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has "{{ .Chart.Name }}" .shareFor }}
+        - name: {{ .volumeName }}
+          mountPath: {{ .path }}
+          {{- if .subPath }}
+          subPath: {{ .subPath }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
         ports:
         - containerPort: 80
           name: frontend
@@ -59,8 +79,14 @@ spec:
         - name: nginx-config
           configMap:
             name: reflex-fe-config
-        - name: reflex-frontend-index
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has "{{ .Chart.Name }}" .shareFor }}
+        - name: {{ .volumeName }}
           persistentVolumeClaim:
-            claimName: reflex-frontend-pvc
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
       imagePullSecrets:
       - name: ghcr-pull-secret
