@@ -5,6 +5,16 @@ global:
   hostPathPV:
     enabled: true # This will be ignored if using seaweedfs storage class
   sharedPersistenceVolume:
+    - volumeName: reflex-frontend-index
+      pvcName: reflex-frontend-pvc
+      storageSize: 50Mi
+      path: /app-dist/
+      accessModes: ReadWriteMany
+      shareFor:
+        - report-ui
+      storageClass: seaweedfs-storage
+      # folderName: reflex_frontend_index # for hostPath PV
+
     - volumeName: automation-repo-volume
       pvcName: automation-repo-pvc
       storageSize: 2Gi
