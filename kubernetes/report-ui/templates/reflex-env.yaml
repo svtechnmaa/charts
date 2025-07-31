@@ -1,3 +1,5 @@
+{{- $basehref := .Values.backend.config.basehref | default "" -}}
+
 apiVersion: v1
 kind: Secret
 type: Opaque
@@ -5,7 +7,8 @@ metadata:
   name: {{ include "common.names.fullname" . }}-env
 stringData:
   .env: |
-    API_URL=https://{{ .Values.global.frontendVip }}
+    API_URL=https://{{ .Values.global.frontendVip }}{{ $basehref }}
+    FRONTEND_PATH="{{ $basehref }}/report"
     REFLEX_CHECK_LATEST_VERSION="False"
     DB_URL=mysql+pymysql://{{ .Values.backend.config.db_user }}:{{ .Values.backend.config.db_password }}@{{ .Values.backend.config.db_host }}/{{ .Values.backend.config.db_database }}
     GRAFANA_URL=https://{{ .Values.global.frontendVip }}/grafana

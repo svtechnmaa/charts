@@ -6,6 +6,11 @@ timezone: Asia/Ho_Chi_Minh
 
 frontend:
   replicaCount: 1
+  initJob:
+    image:
+      repository: svtechnmaa/svtech_report
+      tag: test-v17
+      pullPolicy: IfNotPresent
   init:
     image:
       registry: docker.io
@@ -13,8 +18,8 @@ frontend:
       tag: 1.33
       pullPolicy: IfNotPresent
   image:
-    repository: svtechnmaa/svtech_report_frontend
-    tag: test-v17
+    repository: bitnami/nginx
+    tag: 1.22.0
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -23,6 +28,16 @@ frontend:
     # loadBalancerSourceRanges:
     # - 10.10.10.0/24
     # clusterIP: None
+
+  sharedPersistenceVolume:
+    volumeName: "streamlit-data"
+    path: "/data/SVTECH-Junos-Automation"
+    pvcName: "streamlit-data-pvc"
+    pvcName: reflex-frontend-pvc
+    storageClass: seaweedfs-storage
+    accessModes:
+      - ReadWriteMany
+    storageSize: 50Mi
 
 backend:
   replicaCount: 2
@@ -38,6 +53,7 @@ backend:
     # - 10.10.10.0/24
     # clusterIP: None
   config:
+    basehref: ""
     db_user: reflex
     db_password: reflex
     db_host: mariadb
