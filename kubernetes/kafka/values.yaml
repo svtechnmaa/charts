@@ -1,0 +1,43 @@
+global:
+  kafka:
+    enabled: true
+  kafkaConfig:
+    topic: ""
+    partition: 1
+
+podAntiAffinityPreset: soft
+kafka:
+  version: 3.8.0
+  replicaCount: 3
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  config:
+    offsets_topic_replication_factor: 3
+    transaction_state_log_replication_factor: 2
+    transaction_state_log_min_isr: 2
+    socket.request.max.bytes: 419430400
+    default_replication_factor: 3
+    min_insync_replica: 2
+    log_retention_hours: 24
+zookeeper:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 50Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+persistence:
+  enabled: true
+  kafka:
+    hostPath: ""
+    size: 20Gi
+  zookeeper:
+    hostPath: ""
+    size: 5Gi

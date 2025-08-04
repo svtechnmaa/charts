@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-redis
+  name: {{ .Release.Name }}-redis
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.redis.replicaCount "global" .Values.global ) }}
+  revisionHistoryLimit: {{ .Values.redis.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}-redis
+  strategy:
+    type: {{ .Values.redis.updateStrategy }}
+    rollingUpdate: null
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}-redis
+    spec:
+      containers:
+        - env:
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "yes"
+          image: bitnami/valkey:7.2
+          livenessProbe:
+            exec:
+              command:
+                - timeout 3 redis-cli ping | grep -q PONG
+            failureThreshold: 3
+            periodSeconds: 20
+            timeoutSeconds: 10
+          name: redis
+      restartPolicy: Always

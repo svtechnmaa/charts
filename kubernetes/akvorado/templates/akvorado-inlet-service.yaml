@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels: 
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-inlet
+  name: {{ .Chart.Name }}-inlet
+spec:
+  ports:
+    - name: "2055"
+      port: 2055
+      protocol: UDP
+      targetPort: 2055
+    - name: "6343"
+      port: 6343
+      protocol: UDP
+      targetPort: 6343
+    - name: "10179"
+      port: 10179
+      targetPort: 10179
+  selector:
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-inlet
+  type: {{ .Values.inlet.service.type }}
+  {{- if and (eq .Values.inlet.service.type "LoadBalancer") (not (empty .Values.global.backendVip)) }}
+  loadBalancerIP: {{ .Values.global.backendVip }}
+  {{- end }}
