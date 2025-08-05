@@ -16,6 +16,8 @@
   value: {{ .Values.global.database.icingadb.database | default "icingadb" | quote }}
 - name: RETENTION_HISTORY_DAYS
   value: {{ .Values.master.icingadb.env.RETENTION_HISTORY_DAYS | default "30" | quote }}
+- name: RETENTION_SLA_DAYS
+  value: {{ .Values.master.icingadb.env.RETENTION_SLA_DAYS | default "30" | quote }}
 - name: RETENTION_OPTION_ACKNOWLEDGEMENT
   value: {{ .Values.master.icingadb.env.RETENTION_OPTION_ACKNOWLEDGEMENT | default "30" | quote }} 
 - name: RETENTION_OPTION_COMMENT
