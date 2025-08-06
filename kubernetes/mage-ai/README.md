@@ -1,4 +1,4 @@
-# 📦 NMAA MageAI Helm Chart
+# 📦 Newtopo Helm Chart
 
 This Helm chart deploys the **Mage AI Stack** for building and managing data pipelines. It includes components such as the webserver, scheduler, Redis, Traefik, and optional services. It supports external PostgreSQL, shared volumes (e.g., SeaweedFS), scheduling, ingress, and custom volume mounts.
 
@@ -6,14 +6,15 @@ This Helm chart deploys the **Mage AI Stack** for building and managing data pip
 
 ## 🚀 Prerequisites
 
-- Helm v3 or newer
-- A running Kubernetes cluster
-- Network access to GitHub Container Registry (`ghcr.io`)
-- An existing **PostgreSQL** instance (required)
+- Helm v3 or newer  
+- A running Kubernetes cluster  
+- Network access to GitHub Container Registry (`ghcr.io`)  
+- An existing **PostgreSQL** instance (required):  
   - We use this Helm chart to deploy PostgreSQL HA on Kubernetes:  
-    https://github.com/svtechnmaa/charts/tree/feature/mage-ai/kubernetes/postgresql-ha
-- If MageAI runs on a VM, configure the VM’s CPU type as `host`
-
+    https://github.com/svtechnmaa/charts/tree/feature/mage-ai/kubernetes/postgresql-ha  
+- If MageAI runs on a VM, configure the VM’s CPU type as `host`  
+- PersistentVolume (PV) and PersistentVolumeClaim (PVC) for MageAI must be provisioned using the provided values file and the `shared-volume` chart:  
+  https://github.com/svtechnmaa/charts/tree/main/kubernetes/shared-volume
 ---
 
 ## ⚙️ Required Configuration
@@ -21,8 +22,8 @@ This Helm chart deploys the **Mage AI Stack** for building and managing data pip
 ### 🔧 Global Settings
 
 - Set `pullCode: true` to pull pipeline code from `https://github.com/svtechnmaa/netlogic_ETL_pipelines.git` into the shared volume.
-- If `pullCode: false`, **require** to manually mount the pipeline code (e.g., for offline environments).
-- If set `pullCode: false`, not pull code manually will lead to pv mount of pipeline empty then result in missing or overwritten pipeline code.
+- If `pullCode: false`, manually mount the pipeline code (e.g., for offline environments).
+- Leaving `hostPath` empty may result in missing or overwritten pipeline code.
 - Set `hostPathPV.enabled: true` to use hostPath volumes.
 - Set `storageClass: seaweedfs-storage` to use SeaweedFS.
 - Provide GitHub credentials (`user`, `token`) for private repo access.
@@ -44,7 +45,7 @@ global:
 
   hostPathPV:
     enabled: true
-```
+
 ### 🔑 Image Pull Token
 
 You **must provide** a secret to pull container images:
@@ -71,8 +72,17 @@ postgresqlExternal:
 ```
 
 ## 🚀 Step to launch:
-- Step1: Install postgresql-ha as external database for mageai: https://github.com/svtechnmaa/charts/tree/feature/mage-ai/kubernetes/postgresql-ha
+Step 1: Install postgresql-ha as external database for mageai: https://github.com/svtechnmaa/charts/tree/feature/mage-ai/kubernetes/postgresql-ha
+       If redeploy the postgresql-ha and change the config of headless service, make sure you delete all pvc, pv and data to remove cache.
+       
+Step 2: Fill the value file according the above note.
 
-  If redeploy the postgresql-ha and change the config of headless service, make sure you delete all pvc, pv and data to remove cache.
-- Step2: Fill ```values.yaml``` according to the above instructions.
-- Step3: Install MageAI: ```helm install mageai .```
+Step 3: Install the shared volume using the Helm chart: https://github.com/svtechnmaa/charts/tree/main/kubernetes/shared-volume
+
+       Using value.yaml from the MageAI chart.
+       
+       Ex: helm install shared-volume . --values /opt/test/mage-ai/charts/kubernetes/mage-ai/values.yaml
+
+Step 4: Ensure that if you're using hostPath, the pipeline folder mounted to the PV is synchronized using Syncthing.
+       
+Step 5: Install mageai: ```helm install mageai .```
