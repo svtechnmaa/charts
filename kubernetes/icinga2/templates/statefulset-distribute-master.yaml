@@ -159,7 +159,6 @@ spec:
             - /bin/bash
             - -c
             - |
-              POD_INDEX=${POD_NAME: -1}
               cat > /etc/icingadb/icingadb.conf << EOF
               database:
                 host: $ICINGADB_DATABASE_HOST
@@ -176,7 +175,7 @@ spec:
                 # Number of days to RETAIN FULL HISTORICAL data. By default, historical data is retained forever.
                 history-days: $RETENTION_HISTORY_DAYS
                 # Number of days to retain historical data for SLA reporting. By default, it is retained forever.
-              #  sla-days:
+                sla-days: $RETENTION_SLA_DAYS
 
                 # Map of history category to number of days to retain its data in order to
                 # enable retention only for specific categories or to
