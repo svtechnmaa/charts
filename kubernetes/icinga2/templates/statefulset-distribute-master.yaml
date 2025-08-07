@@ -553,6 +553,9 @@ spec:
             {{- if has "icinga2" .shareFor }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
             {{- end }}
 
             {{- end }}
