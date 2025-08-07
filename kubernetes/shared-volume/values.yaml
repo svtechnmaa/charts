@@ -49,6 +49,30 @@ global:
       # storageClass: icinga2-conf-hostpath # for hostPath PV
       # folderName: icinga2_conf # for hostPath PV
 
+    # This volume is used to store the CA certificates for Icinga2 master, preventing the need to regenerate them on every pod restart.
+    - volumeName: icinga2-var-lib-ca
+      pvcName: icinga2-var-lib-ca-pvc
+      storageSize: 2Mi
+      path: /var/lib/icinga2/ca
+      accessModes: ReadWriteMany
+      shareFor:
+        - icinga2
+      storageClass: seaweedfs-storage
+      # storageClass: icinga2-var-lib-ca # for hostPath PV
+      # folderName: icinga2-ca # for hostPath PV
+    # This volume is used to store the runtime state of Icinga2
+    - volumeName: icinga2-runtime-state
+      pvcName: icinga2-runtime-state-pvc
+      storageSize: 50Mi
+      path: /var/lib/icinga2
+      subPath: icinga2.state
+      accessModes: ReadWriteMany
+      shareFor:
+        - icinga2
+      storageClass: seaweedfs-storage
+      # storageClass: icinga2-runtime-state-hostpath # for hostPath PV
+      # folderName: icinga2-runtime-state # for hostPath PV
+
     - volumeName: icinga2-scripts-volume
       pvcName: icinga2-scripts-pvc
       storageSize: 100Mi
