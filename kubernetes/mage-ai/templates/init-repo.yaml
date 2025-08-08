@@ -13,9 +13,10 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: ghcr-pull-
-      nodeName: dev-node-4
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: init-repo
           image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image "global" .Values.global) }}

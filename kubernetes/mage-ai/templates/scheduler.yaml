@@ -31,7 +31,7 @@ spec:
       initContainers:
         {{- if or .Values.redis.enabled .Values.redis.customRedisURL }}
         - name: wait-for-redis
-          image: alpine
+          image: alpine:3.22.1
           env:
             {{- if .Values.redis.enabled }}
             - name: REDIS_URL
@@ -45,8 +45,44 @@ spec:
 
         {{- if .Values.postgresql.enabled }}
         - name: wait-for-postgres
-          image: busybox
+          image: busybox:1.37.0
           command: ['sh', '-c', 'until nc -z {{ .Values.postgresql.fullnameOverride }} 5432; do echo waiting for postgres; sleep 2; done;']
+        {{- end }}
+
+        {{- if .Values.global.mageai.pullCode }}
+        - name: wait-for-code
+          image: alpine:3.22.1
+          env:
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+              {{- range .Values.global.sharedPersistenceVolume }}
+                {{- if eq .volumeName "mageai-pipeline-volume" }}
+            - name: CODE_PATH
+              value: {{ .path }}/NMAA-piplines-source
+                {{- end }}
+              {{- end }}
+            {{- end }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for completed file in $CODE_PATH..."
+              while [ ! -f "$CODE_PATH/completed" ]; do
+                echo "completed file not found, sleeping..."
+                sleep 5
+              done
+              echo "Found completed file. Proceeding."
+          volumeMounts:
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+              {{- range .Values.global.sharedPersistenceVolume }}
+                {{- if eq .volumeName "mageai-pipeline-volume" }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}/NMAA-piplines-source
+              {{- if .subPath }}
+              subPath: {{ .subPath }}
+              {{- end }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
         {{- end }}
       {{- end }}
 
