@@ -1,4 +1,4 @@
-# 📦 Newtopo Helm Chart
+# 📦 MageAI Helm Chart
 
 This Helm chart deploys the **Mage AI Stack** for building and managing data pipelines. It includes components such as the webserver, scheduler, Redis, Traefik, and optional services. It supports external PostgreSQL, shared volumes (e.g., SeaweedFS), scheduling, ingress, and custom volume mounts.
 
@@ -79,10 +79,17 @@ Step 2: Fill the value file according the above note.
 
 Step 3: Install the shared volume using the Helm chart: https://github.com/svtechnmaa/charts/tree/main/kubernetes/shared-volume
 
-       Using value.yaml from the MageAI chart.
+Using value.yaml from the MageAI chart.
        
-       Ex: helm install shared-volume . --values /opt/test/mage-ai/charts/kubernetes/mage-ai/values.yaml
+       helm install shared-volume . --values /opt/test/mage-ai/charts/kubernetes/mage-ai/values.yaml
 
 Step 4: Ensure that if you're using hostPath, the pipeline folder mounted to the PV is synchronized using Syncthing.
        
-Step 5: Install mageai: ```helm install mageai .```
+Step 5: You can install MageAI in any namespace, but make sure that:
+
+- The imagePullSecrets resource exists in the target namespace.
+- If PostgreSQL is in a different namespace, update postgresqlExternalHost to the full service name (including the namespace).
+
+Install mageai:
+
+        helm install mageai . --values /opt/test/mage-ai/charts/kubernetes/mage-ai/values.yaml
