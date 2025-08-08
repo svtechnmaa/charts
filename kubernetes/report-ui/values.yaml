@@ -1,6 +1,6 @@
 global:
   imageRegistry: ghcr.io
-  frontendVip: "10.98.100.193" # VIP for frontend service
+  frontendVip: "" # VIP for frontend service
 
 timezone: Asia/Ho_Chi_Minh
 
@@ -29,15 +29,6 @@ frontend:
     # - 10.10.10.0/24
     # clusterIP: None
 
-  sharedPersistenceVolume:
-    volumeName: "streamlit-data"
-    path: "/data/SVTECH-Junos-Automation"
-    pvcName: "streamlit-data-pvc"
-    pvcName: reflex-frontend-pvc
-    storageClass: seaweedfs-storage
-    accessModes:
-      - ReadWriteMany
-    storageSize: 50Mi
 
 backend:
   replicaCount: 2

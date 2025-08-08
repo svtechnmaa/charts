@@ -45,7 +45,7 @@ spec:
           subPath: .env
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has "{{ .Chart.Name }}" .shareFor }}
+        {{- if has "report-ui" .shareFor }}
         - name: {{ .volumeName }}
           mountPath: {{ .path }}
           {{- if .subPath }}
@@ -61,7 +61,7 @@ spec:
         name: report-ui-env
       {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
       {{- range .Values.global.sharedPersistenceVolume }}
-      {{- if has "{{ .Chart.Name }}" .shareFor }}
+      {{- if has "report-ui" .shareFor }}
       - name: {{ .volumeName }}
         persistentVolumeClaim:
           claimName: {{ .pvcName }}
