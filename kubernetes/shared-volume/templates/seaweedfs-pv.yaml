@@ -1,0 +1,27 @@
+{{- $namespace := .Release.Namespace }}
+
+{{- range .Values.global.sharedPersistenceVolume }}
+{{- if eq .storageClass "seaweedfs-storage" }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-{{ .pvcName }}-pv"
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  storageClassName: seaweedfs-storage
+  capacity:
+    # storage: 100Mi 
+    storage: {{ .storageSize }}
+  accessModes:
+    - {{ .accessModes }}
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: seaweedfs-csi-driver
+    volumeHandle: "{{ $namespace }}-{{ .pvcName }}-pv"
+    volumeAttributes:
+      path: "/{{ $namespace }}/csi/{{ $namespace }}-{{ .pvcName }}-pv"
+{{- end }}
+
+{{- end  }}

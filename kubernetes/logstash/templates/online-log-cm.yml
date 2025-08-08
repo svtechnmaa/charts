@@ -165,13 +165,15 @@ data:
             mutate {
               add_tag => "alert_watermark"
             }
+          }
         }
       }
       # if ["message"] {
+      if "_grokparsefailure" not in [tags] {
       mutate {
           remove_field => [ "message" ]
         }
-      # }
+      }
     }
 
 

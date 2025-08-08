@@ -25,10 +25,12 @@ global:
       pvcName: snmp-manager-pvc
       storageSize: 10Mi
       path: /etc/snmptt/
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - snmp-manager
-      storageClass: snmp-manager-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: snmp-manager-hostpath # for hostPath PV
+      # folderName: snmp-manager-conf # for hostPath PV
 clusterDomain: cluster.local
 
 image:

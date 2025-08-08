@@ -1,0 +1,46 @@
+{{- if .Values.dashboard.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-dashboard
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  name: {{ include "common.names.fullname" . }}-dashboard
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.dashboard.replicaCount "global" .Values.global ) }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: {{ .Chart.Name }}-dashboard
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: {{ .Chart.Name }}-dashboard
+        {{- include "common.labels.standard" . | nindent 8 }}
+    spec:
+      containers:
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.dashboard.image ) }}
+        {{- if .Values.dashboard.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
+        {{- end }}
+        name: rq-dashboard
+        command: 
+        - bash
+        - -c
+        - python3 -m rq_dashboard --url-prefix $HREF -p $PORT
+        env:
+          - name: TZ
+            value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+          - name: RQ_DASHBOARD_REDIS_URL
+            value: "redis://{{ .Chart.Name }}-redis:6379"
+          - name: PORT
+            value: "9181"
+          - name: HREF
+            value: /rq
+        ports:
+        - containerPort: 9181
+          name: dashboard
+{{- end }}

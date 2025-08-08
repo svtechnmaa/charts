@@ -28,7 +28,7 @@ global:
       pvcName: automation-repo-pvc
       storageSize: 2Gi
       path: /opt/SVTECH-Junos-Automation
-      accessModes: ReadWriteOnce #ReadWriteMany
+      accessModes: ReadWriteMany
       shareFor:
         - preparation
         - rundeck
@@ -39,7 +39,9 @@ global:
         - icinga2
         - icinga2-satellite
         - airflow
-      storageClass: automation-repo-hostpath
+      storageClass: seaweedfs-storage
+      # storageClass: automation-repo-hostpath # for hostPath PV
+      # folderName: repo_automation # for hostPath PV
 # Provide a name to substitute for the full names of resources
 fullnameOverride: ""
 
@@ -551,6 +553,7 @@ workers:
   extraInitContainers:
     - name: fix-volume-logs-permissions
       image: busybox
+      imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
         runAsUser: 0
@@ -682,6 +685,7 @@ scheduler:
   extraInitContainers:
     - name: fix-volume-logs-permissions
       image: busybox
+      imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
         runAsUser: 0
@@ -1095,6 +1099,7 @@ triggerer:
   extraInitContainers:
     - name: fix-volume-logs-permissions
       image: busybox
+      imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
         runAsUser: 0

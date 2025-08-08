@@ -1,0 +1,16 @@
+---
+{{- $basePath := .Values.global.basePath }}
+{{- $namespace := .Release.Namespace }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-automation-repo-pv"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: {{ .Values.sharedVolume.storageSize }}
+  hostPath:
+    path: {{ $basePath }}{{ $namespace }}/repo_automation
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ $namespace }}-automation-repo-hostpath
