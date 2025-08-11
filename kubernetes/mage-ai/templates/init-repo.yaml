@@ -27,12 +27,20 @@ spec:
             - |
                 name=`echo $REPO | sed  "s/:.*//"`
                 mkdir -p $REPO_PATH
-                status=`ls -A $REPO_PATH | grep -v ".stfolder" | wc -l`
+                status=`ls -A $REPO_PATH | grep -v "^\." | wc -l`
+                echo "$REPO_PATH"
+                echo "$status"
                 if [[ "$status" == "0" ]]; then
                   echo "$REPO_PATH is Empty. Clone repo"
-                  git clone --branch $BRANCH https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git $REPO_PATH
-                  echo "true" > $REPO_PATH/completed
-                  echo "Finished clone!"
+                  tmp_dir=$(mktemp -d)
+                  if git clone --branch $BRANCH https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git "$tmp_dir"; then
+                    cp -a "$tmp_dir"/. "$REPO_PATH"/
+                    echo "true" > $REPO_PATH/completed
+                    echo "Finished clone!"
+                  else
+                    echo "Git clone failed. Exiting."
+                    exit 1
+                  fi
                 else
                   if [[ ! -f "$REPO_PATH/completed" ]]; then
                     cd $REPO_PATH
