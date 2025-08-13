@@ -49,6 +49,18 @@ global:
       # storageClass: icinga2-conf-hostpath # for hostPath PV
       # folderName: icinga2_conf # for hostPath PV
 
+    # This volume is used to store the /var/lib/icinga2 folder for Icinga2 master (keep ca and icinga2.state)
+    - volumeName: icinga2-var-lib
+      pvcName: icinga2-var-lib-pvc
+      storageSize: 200Mi
+      path: /var/lib/icinga2
+      accessModes: ReadWriteMany
+      shareFor:
+        - icinga2
+      storageClass: seaweedfs-storage
+      # storageClass: icinga2-var-lib # for hostPath PV
+      # folderName: icinga2-var-lib # for hostPath PV
+
     - volumeName: icinga2-scripts-volume
       pvcName: icinga2-scripts-pvc
       storageSize: 100Mi
