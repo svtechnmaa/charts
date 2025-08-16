@@ -68,6 +68,17 @@ server {
     }
     {{- end  }}
 
+    {{- if and .Values.global.ci .Values.global.proxy.enabled (hasKey .Values.global "report-ui") (index .Values "global" "report-ui" "enabled" ) }}
+    location /report/ {
+        rewrite  ^/report/(.*)  /$1 break;
+        proxy_pass http://report-ui-frontend:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    {{- end  }}
+
     {{- if ( index .Values "global" "csv-view" "enabled" ) }}
     location /static_csv/ {
         alias /opt/SVTECH-Junos-Automation/addition_toolkit/csv-to-html-table/static/;

@@ -20,6 +20,19 @@ spec:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ .Chart.Name }}-backend
     spec:
+      initContainers:
+        - name: wait-for-mariadb
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.backend.init.image) }}
+          imagePullPolicy: {{ .Values.backend.init.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              {{- if .Values.backend.config.db_host }}
+              until nc -zvw5 {{ .Values.backend.config.db_host }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+              {{- else }}
+              until nc -zvw5 mariadb 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+              {{- end }}
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.backend.image "global" .Values.global) }}
         {{- if .Values.backend.image.pullPolicy }}
@@ -50,9 +63,9 @@ spec:
             path: /ping
             port: 8000
           initialDelaySeconds: 5
-          periodSeconds: 5
+          periodSeconds: 30
           successThreshold: 1
-          timeoutSeconds: 5
+          timeoutSeconds: 30
       volumes:
       - name: report-ui-env
         secret:
