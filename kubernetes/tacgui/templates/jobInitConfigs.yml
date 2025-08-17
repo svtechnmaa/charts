@@ -1,0 +1,51 @@
+{{- if and .Values.initConfigs (.Values.persistentVolumeClaim.enabled) }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "common.names.fullname" . }}-init-configs
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: tacgui
+    {{- if .Values.commonLabels }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  annotations:
+  {{- if .Values.commonAnnotations }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    spec:
+      containers:
+        - name: copy-files
+          image: busybox
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              cp /tmp/tac_plus.cfg /tmp/tacplus-data/tac_plus.cfg_test && \
+              cp /tmp/tac_plus.cfg /tmp/tacplus-data/tac_plus.cfg && \
+              chmod 777 /tmp/tacplus-data/tac_plus.cfg_test && \
+              chmod 777 /tmp/tacplus-data/tac_plus.cfg && \
+              mkdir -p /tmp/tacplus-data/backups && \
+              chmod 777 /tmp/tacplus-data/backups
+          volumeMounts:
+          - name: tacplus-cfg
+            mountPath: /tmp/tac_plus.cfg
+            subPath: tac_plus.cfg
+          - name: tacgui-data
+            mountPath: /tmp/tacplus-data
+      restartPolicy: OnFailure
+      volumes:
+        - name: tacplus-cfg
+          configMap:
+            name: {{ .Release.Name }}-init-cfgs
+            defaultMode: 0755
+            items:
+            - key: tacplus_cfg
+              path: tac_plus.cfg
+        - name: tacgui-data
+          persistentVolumeClaim:
+            claimName: {{ include "common.names.fullname" . }}-data
+{{- end }}
