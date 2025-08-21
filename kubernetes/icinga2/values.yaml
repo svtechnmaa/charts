@@ -48,14 +48,8 @@ init:
 
 image:
   repository: svtechnmaa/svtech_icinga2
-  tag: v1.2.0
+  tag: v1.1.8
   pullPolicy: IfNotPresent
-
-sidecar:
-  image:
-    repository: svtechnmaa/svtech_icinga2
-    tag: v1.2.0
-    pullPolicy: IfNotPresent
 
 clusterDomain: cluster.local
 commonAnnotations:
@@ -70,7 +64,6 @@ architecture: distribute
 ### Master
 master:
   replicaCount: 2
-
   updateStrategy: RollingUpdate
   podManagementPolicy: OrderedReady
   podAffinityPreset: ""
@@ -96,7 +89,6 @@ master:
   ## Affinity for pod assignment
   ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
   ##
-  affinity: {}
 
   ## Node labels for pod assignment
   nodeSelector: {}
@@ -268,7 +260,6 @@ master:
       - labelSelector:
           matchLabels:
             app.kubernetes.io/component: icinga2
-            # app.kubernetes.io/instance: nms
             app.kubernetes.io/name: icinga2
         topologyKey: kubernetes.io/hostname
 
@@ -284,3 +275,16 @@ satellite:
               values:
                 - icinga2-satellite
         topologyKey: kubernetes.io/hostname
+
+rebalance:
+  workloadType: Deployment
+  replicaCount: 1
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: rebalance
+            topologyKey: kubernetes.io/hostname
