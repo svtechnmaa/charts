@@ -7,11 +7,16 @@ metadata:
   name: {{ include "common.names.fullname" . }}-env
 stringData:
   .env: |
+    {{- if .Values.global.externalIP }}
+    API_URL=http://{{ .Values.global.externalIP }}:8000{{ $basehref }}
+    GRAFANA_URL=http://{{ .Values.global.externalIP }}:3000/grafana
+    {{- else }}
     API_URL=https://{{ .Values.global.frontendVip }}{{ $basehref }}
+    GRAFANA_URL=https://{{ .Values.global.frontendVip }}/grafana
+    {{- end }}
     FRONTEND_PATH="{{ $basehref }}/report"
     REFLEX_CHECK_LATEST_VERSION="False"
     DB_URL=mysql+pymysql://{{ .Values.backend.config.db_user }}:{{ .Values.backend.config.db_password }}@{{ .Values.backend.config.db_host }}/{{ .Values.backend.config.db_database }}
-    GRAFANA_URL=https://{{ .Values.global.frontendVip }}/grafana
     ICINGA_REDIS_DB={{ .Values.backend.config.icinga_redis_db | quote }}
     ICINGA_REDIS_HOST={{ .Values.backend.config.icinga_redis_host | quote }}
     ICINGA_REDIS_PORT={{ .Values.backend.config.icinga_redis_port | quote }}
@@ -27,7 +32,7 @@ stringData:
     INFLUXDB_USER={{ .Values.backend.config.influxdb_user | quote }}
     REDIS_HOST={{ .Chart.Name }}-redis
     REDIS_PORT="6379"
-    SEAWEEDFS_URL={{ .Values.backend.config.seaweedfs_url | quote }}
+    SEAWEEDFS_URL="{{ .Values.backend.config.seaweedfs_url }}/{{ .Release.Namespace }}/api"
     TASK_FAILURE_TTL={{ .Values.backend.config.task_failure_ttl | quote }}
     TASK_RESULT_TTL={{ .Values.backend.config.task_result_ttl | quote }}
     TASK_TIMEOUT={{ .Values.backend.config.task_timeout | quote }}

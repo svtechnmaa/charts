@@ -8,7 +8,7 @@ global:
     - volumeName: reflex-frontend-index
       pvcName: reflex-frontend-pvc
       storageSize: 50Mi
-      path: /app-dist/
+      path: /usr/share/nginx/html
       accessModes: ReadWriteMany
       shareFor:
         - report-ui

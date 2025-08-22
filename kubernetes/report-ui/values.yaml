@@ -1,6 +1,6 @@
 global:
   imageRegistry: ghcr.io
-  frontendVip: "10.98.100.193" # VIP for frontend service
+  frontendVip: "" # VIP for frontend service
 
 timezone: Asia/Ho_Chi_Minh
 
@@ -9,7 +9,7 @@ frontend:
   initJob:
     image:
       repository: svtechnmaa/svtech_report
-      tag: test-v17
+      tag: test-v18
       pullPolicy: IfNotPresent
   init:
     image:
@@ -18,6 +18,7 @@ frontend:
       tag: 1.33
       pullPolicy: IfNotPresent
   image:
+    registry: docker.io
     repository: bitnami/nginx
     tag: 1.22.0
     pullPolicy: IfNotPresent
@@ -29,21 +30,18 @@ frontend:
     # - 10.10.10.0/24
     # clusterIP: None
 
-  sharedPersistenceVolume:
-    volumeName: "streamlit-data"
-    path: "/data/SVTECH-Junos-Automation"
-    pvcName: "streamlit-data-pvc"
-    pvcName: reflex-frontend-pvc
-    storageClass: seaweedfs-storage
-    accessModes:
-      - ReadWriteMany
-    storageSize: 50Mi
 
 backend:
   replicaCount: 2
+  init:
+    image:
+      registry: docker.io
+      repository: busybox
+      tag: 1.33
+      pullPolicy: IfNotPresent
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v17
+    tag: test-v18
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -53,7 +51,7 @@ backend:
     # - 10.10.10.0/24
     # clusterIP: None
   config:
-    basehref: ""
+    basehref: ""        # Base href for the application, e.g., "/minedu"
     db_user: reflex
     db_password: reflex
     db_host: mariadb
@@ -80,14 +78,14 @@ scheduler:
   replicaCount: 1
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v17
+    tag: test-v18
     pullPolicy: IfNotPresent
 
 worker:
   replicaCount: 2
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v17
+    tag: test-v18
     pullPolicy: IfNotPresent
 
 redis:

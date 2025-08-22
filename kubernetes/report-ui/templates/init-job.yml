@@ -2,6 +2,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: init-report-fe
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
 spec:
   ttlSecondsAfterFinished: 120
   template:
@@ -11,18 +14,21 @@ spec:
         - bash
         - -ec
         - |
-          if [ ! -f /app-dist/completed ]; then
+          if [ ! -f /usr/share/nginx/html/completed ]; then
             echo "Starting Reflex frontend initialization..."
+            mkdir -p /usr/share/nginx/html
             sed -i '
             s/frontend_path="[^"]*"/frontend_path=os.environ["FRONTEND_PATH"]/
             s/frontend_packages=\[[^]]*\]/&,\n    api_url=os.environ["API_URL"]/
             ' rxconfig.py
             cat rxconfig.py
-            grep -rl "report/logo" | xargs sed -i "s|report/logo|{{ .Values.backend.config.basehref }}/report/logo|g"
+            {{- if not (empty .Values.backend.config.basehref) }}
+            grep -rl "/report/logo" | xargs sed -i "s|/report/logo|{{ .Values.backend.config.basehref }}/report/logo|g"
+            {{- end }}
             reflex export --frontend-only --no-zip
-            cp -r .web/_static/* /app-dist/
+            cp -r .web/_static/* /usr/share/nginx/html/
             if [ $? -eq 0 ]; then
-              echo "True" > /app-dist/completed
+              echo "True" > /usr/share/nginx/html/completed
             fi
           else
             echo "Reflex frontend already initialized."
@@ -45,7 +51,7 @@ spec:
           subPath: .env
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has "{{ .Chart.Name }}" .shareFor }}
+        {{- if has "report-ui" .shareFor }}
         - name: {{ .volumeName }}
           mountPath: {{ .path }}
           {{- if .subPath }}
@@ -61,7 +67,7 @@ spec:
         name: report-ui-env
       {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
       {{- range .Values.global.sharedPersistenceVolume }}
-      {{- if has "{{ .Chart.Name }}" .shareFor }}
+      {{- if has "report-ui" .shareFor }}
       - name: {{ .volumeName }}
         persistentVolumeClaim:
           claimName: {{ .pvcName }}

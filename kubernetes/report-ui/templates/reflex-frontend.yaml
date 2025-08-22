@@ -29,7 +29,7 @@ spec:
             - -c
             - |
               until nc -zvw5 {{ .Chart.Name }}-backend {{ .Values.backend.service.port }}; do echo "Waiting for Backend..."; sleep 2; done
-              until [ `ls -A /app-dist/ | grep 'completed' | wc -l` != 0 ];
+              until [ `ls -A /usr/share/nginx/html/ | grep 'completed' | wc -l` != 0 ];
               do
                 echo "Waiting for Init Repo...";
                 sleep 2;
@@ -38,7 +38,7 @@ spec:
           volumeMounts:
             {{- range .Values.global.sharedPersistenceVolume }}
 
-            {{- if has "{{ .Chart.Name }}" .shareFor }}
+            {{- if has "report-ui" .shareFor }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
               {{- if .subPath }}
@@ -49,11 +49,13 @@ spec:
             {{- end }}
           {{- end }}
       containers:
-      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global) }}
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image ) }}
         {{- if .Values.frontend.image.pullPolicy }}
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         {{- end }}
         name: reflex-frontend
+        securityContext:
+          runAsUser: 0
         env:
           - name: TZ
             value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
@@ -63,7 +65,7 @@ spec:
           subPath: nginx.conf
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has "{{ .Chart.Name }}" .shareFor }}
+        {{- if has "report-ui" .shareFor }}
         - name: {{ .volumeName }}
           mountPath: {{ .path }}
           {{- if .subPath }}
@@ -81,7 +83,7 @@ spec:
             name: reflex-fe-config
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has "{{ .Chart.Name }}" .shareFor }}
+        {{- if has "report-ui" .shareFor }}
         - name: {{ .volumeName }}
           persistentVolumeClaim:
             claimName: {{ .pvcName }}
