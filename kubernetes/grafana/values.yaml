@@ -24,6 +24,24 @@ image:
   pullPolicy: IfNotPresent
   # debug: true
 
+renderer:
+  image:
+    repository: grafana/grafana-image-renderer
+    tag: v4.0.10
+    pullPolicy: IfNotPresent
+  service:
+    port: 8081
+    type: ClusterIP
+
+chrome:
+  image:
+    repository: chromedp/headless-shell
+    tag: 138.0.7204.101
+    pullPolicy: IfNotPresent
+  service:
+    port: 9222
+    type: ClusterIP
+
 clusterDomain: cluster.local
 commonAnnotations:
   helm.sh/hook-weight: "0"
