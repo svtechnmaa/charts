@@ -73,6 +73,9 @@ backend:
     task_failure_ttl: "3600"
     task_result_ttl: "3600"
     task_timeout: "3600"
+    timeout: "600"
+    worker: "5"
+    use_granian: "True"  # Set to "True" to use Granian, "False" otherwise
 
 scheduler:
   replicaCount: 1

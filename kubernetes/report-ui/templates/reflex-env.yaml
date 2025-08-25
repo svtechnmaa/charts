@@ -36,3 +36,6 @@ stringData:
     TASK_FAILURE_TTL={{ .Values.backend.config.task_failure_ttl | quote }}
     TASK_RESULT_TTL={{ .Values.backend.config.task_result_ttl | quote }}
     TASK_TIMEOUT={{ .Values.backend.config.task_timeout | quote }}
+    TIMEOUT={{ .Values.backend.config.timeout | quote }}
+    GUNICORN_WORKERS={{ .Values.backend.config.worker | quote }}
+    REFLEX_USE_GRANIAN={{ .Values.backend.config.use_granian | quote }}
