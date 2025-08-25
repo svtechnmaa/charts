@@ -1,5 +1,4 @@
 ---
-{{- $basePath := .Values.global.basePath }}
 {{- $namespace := .Release.Namespace }}
 apiVersion: v1
 kind: PersistentVolume

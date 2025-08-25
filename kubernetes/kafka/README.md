@@ -29,7 +29,19 @@ In detail:
     git clone https://github.com/svtechnmaa/charts.git
     ```
 
-- Edit values.yaml at /opt/charts/kubernetes/kafka/values.yaml
+- Edit values.yaml at /opt/charts/kubernetes/kafka/values.yaml with the pre configuration parameter is listed:
+
+| Parameter                                               | Description                                                                                                                           | Default    |
+|---------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `global.kafka.topic`                              | Define Kafka topic, must defined in global to reuse in another charts (like akvorado,...)                                             | clickhouse |
+| `kafka.config.offsets_topic_replication_factor`         | Specifies the replication factor for the internal `__consumer_offsets` topic                                                          | 3          |
+| `kafka.config.transaction_state_log_replication_factor` | Sets the replication factor for the internal `__transaction_state` topic                                                              | 2          |
+| `kafka.config.transaction_state_log_min_isr`            | Specifies the minimum number of in-sync replicas (ISR) required for the `__transaction_state` topic before a producer can write to it | 2          |
+| `kafka.config.socket.request.max.bytes`                 | Defines the maximum size (in bytes) of a request that the broker will accept over the network.                                        | 419430400  |
+| `kafka.config.default_replication_factor`               | Sets the default replication factor for new topics created without explicitly specifying a replication factor                         | 3          |
+| `kafka.config.min_insync_replica`                       | Specifies the minimum number of in-sync replicas required for a topic’s partitions before a producer can write to them                | 2          |
+| `kafka.config.log_retention_hours`                      | Determines how long (hours) Kafka retains messages in topic logs before deleting them                                                 | 24         |
+
 - Start chart alone:
     ```
     helm install kafka /opt/charts/kubernetes/kafka \

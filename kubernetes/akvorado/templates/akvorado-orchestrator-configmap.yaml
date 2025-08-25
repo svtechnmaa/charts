@@ -8,13 +8,13 @@ data:
     # orchestrator /dev/null --dump --check`.
 
     kafka:
-      topic: {{ .Values.global.kafkaConfig.topic }}
+      topic: {{ .Values.global.kafka.topic }}
       version: 3.8.0
       brokers:
         - {{ .Release.Name }}-kafka-external-bootstrap.{{ .Release.Namespace }}.svc.cluster.local:9094
       topic-configuration:
-        num-partitions: {{ .Values.global.kafkaConfig.partition }}
-        replication-factor: {{ .Values.global.kafkaConfig.replicationFactor }}
+        num-partitions: {{ .Values.global.kafka.partition }}
+        replication-factor: {{ .Values.global.kafka.replicationFactor }}
         config-entries:
           # The retention policy in Kafka is mainly here to keep a buffer
           # for ClickHouse.
@@ -33,7 +33,7 @@ data:
     clickhouse:
       orchestrator-url: http://{{ .Chart.Name }}-orchestrator.{{ .Release.Namespace }}.svc.cluster.local:8080
       kafka:
-        consumers: {{ .Values.global.kafkaConfig.partition }}
+        consumers: {{ .Values.global.kafka.partition }}
       cluster: {{ .Values.global.clickhouse.clusterName }}
       servers:
         {{- if .Values.global.clickhouse.enabled }}

@@ -1,9 +1,7 @@
 global:
   kafka:
     enabled: true
-  kafkaConfig:
     topic: ""
-    partition: 1
 
 podAntiAffinityPreset: soft
 kafka:

@@ -33,7 +33,15 @@ In detail:
     git clone https://github.com/svtechnmaa/charts.git
     ```
 
-- Edit values.yaml at /opt/charts/kubernetes/clickhouse/values.yaml
+- Edit values.yaml at /opt/charts/kubernetes/clickhouse/values.yaml with the pre configuration parameter is listed:
+
+| Parameter                        | Description                                                                                                 | Default                       |
+|----------------------------------|-------------------------------------------------------------------------------------------------------------|-------------------------------|
+| `global.clickhouse.clusterName`  | Define Clickhouse cluster name, must defined in global to reuse in another charts (like akvorado,...)       | clickhouse                    |
+| `global.clickhouse.replicaCount` | Define Clickhouse replication factor, must defined in global to reuse in another charts (like akvorado,...) | 3                             |
+| `global.clickhouse.shardCount`   | Define Clickhouse shard factor, must defined in global to reuse in another charts (like akvorado,...)       | 1                             |
+| `clickhouse.users`               | Define username-host-password for clickhouse                                                                | juniper-0.0.0.0/0-juniper@123 |
+
 - Start chart alone:
     ```
     helm install clickhouse /opt/charts/kubernetes/clickhouse \
