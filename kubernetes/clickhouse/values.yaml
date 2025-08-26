@@ -7,6 +7,11 @@ global:
     clusterName: clickhouse
     replicaCount: 3
     shardCount: 1
+    users:
+    - name: juniper
+      password: juniper@123
+      networks: 
+      - 0.0.0.0/0
   clickhouseKeeper:
     enabled: true
 
@@ -46,11 +51,6 @@ clickhouse:
     repository: "clickhouse/clickhouse-server"
     tag: "24.8"
     pullPolicy: IfNotPresent
-  users:
-    - name: juniper
-      password: juniper@123
-      networks: 
-      - 0.0.0.0/0
   volumes:
     data:
       persistentVolumeReclaimPolicy: Retain

@@ -34,17 +34,22 @@ data:
       orchestrator-url: http://{{ .Chart.Name }}-orchestrator.{{ .Release.Namespace }}.svc.cluster.local:8080
       kafka:
         consumers: {{ .Values.global.kafka.partition }}
+      {{- if and (hasKey .Values.global "clickhouse") .Values.global.clickhouse.enabled }}
       cluster: {{ .Values.global.clickhouse.clusterName }}
       servers:
-        {{- if .Values.global.clickhouse.enabled }}
-        {{- include "generate_clickhouse_list" (dict "replicaCount" .Values.global.clickhouse.replicaCount "shardCount" .Values.global.clickhouse.shardCount "clusterName" .Values.global.clickhouse.clusterName "releaseName" .Release.Name) | nindent 8 -}}
-        {{- else }}
+        {{- include "generate_clickhouse_list" (dict "replicaCount" .Values.global.clickhouse.replicaCount "shardCount" .Values.global.clickhouse.shardCount "clusterName" .Values.global.clickhouse.clusterName "releaseName" .Release.Name) | nindent 8 }}
+      username: {{ index .Values.global.clickhouse.users 0 "name" }}
+      password: {{ index .Values.global.clickhouse.users 0 "password" | quote }}
+      {{- else }}
+      cluster: {{ .Values.clickhouse.clusterName }}
+      servers:
         {{- range .Values.clickhouse.servers }}
         - {{ . }}
         {{- end }}
-        {{- end }}
       username: {{ .Values.clickhouse.username }}
       password: {{ .Values.clickhouse.password | quote }}
+      {{- end }}
+      
       prometheus-endpoint: /metrics
       asns:
         64501: ACME Corporation

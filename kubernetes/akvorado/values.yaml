@@ -4,9 +4,6 @@ global:
   proxy: ""
   akvorado:
     enabled: true
-  clickhouse:
-    enabled: true
-    clusterName: clickhouse
   kafka:
     topic: flows
     partition: 1
@@ -96,6 +93,7 @@ geoip:
 
 
 clickhouse:
+  clusterName: netflows
   servers:
   - 10.98.5.221:9000
   - 10.98.5.222:9000

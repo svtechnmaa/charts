@@ -28,10 +28,9 @@ Key parameters in `values.yaml`:
 
 | Parameter                              | Description                                                                                               | Default       |
 |----------------------------------------|-----------------------------------------------------------------------------------------------------------|---------------|
-| `global.clickhouse.clusterName`        | Define Clickhouse cluster name, must defined in global to reuse in another charts (like clickhouse,...)   |  clickhouse   |
-| `global.kafka.topic`             | Define Kafka topic, must defined in global to reuse in another charts (like kafka,...)                    | ""            |
-| `global.kafka.partition`         | Define Kafka partition, must defined in global to reuse in another charts (like kafka,...)                | 1             |
-| `global.kafka.replicationFactor` | Define Kafka replication factor, must defined in global to reuse in another charts (like kafka,...)       | 1             |
+| `global.kafka.topic`                   | Define Kafka topic, must defined in global to reuse in another charts (like kafka,...)                    | ""            |
+| `global.kafka.partition`               | Define Kafka partition, must defined in global to reuse in another charts (like kafka,...)                | 1             |
+| `global.kafka.replicationFactor`       | Define Kafka replication factor, must defined in global to reuse in another charts (like kafka,...)       | 1             |
 | `inlet.config.providers`               | Define device subnet and community for collecting additional information                                  | `::/0-public` |
 | `geoip.env`                            | Define ipinfo db for getting geoip data and update time                                                   | {}            |
 | `clickhouse`                           | Define clickhouse cluster for connecting database                                                         | {}            |

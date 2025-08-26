@@ -17,7 +17,7 @@ spec:
           shardsCount: {{ include "common.replicas" ( dict "replicaCount" .Values.global.clickhouse.shardCount "global" .Values.global ) }}
           replicasCount: {{ include "common.replicas" ( dict "replicaCount" .Values.global.clickhouse.replicaCount "global" .Values.global ) }}
     users:
-      {{- range .Values.clickhouse.users }}
+      {{- range .Values.global.clickhouse.users }}
       {{ .name }}/password_sha256_hex:
         valueFrom:
           secretKeyRef:
