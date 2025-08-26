@@ -96,14 +96,73 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_INSTALL_PLUGINS
-              value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource
+              value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource,netsage-sankey-panel,retrodaredevil-wildgraphql-datasource,marcusolsson-dynamictext-panel,volkovlabs-echarts-panel,volkovlabs-table-panel,volkovlabs-form-panel
             - name: GF_PLUGIN_ALLOW_LOADING_UNSIGNED_PLUGINS
               value: "true"
             - name: GF_SERVER_ROOT_URL
               value: "https://{{ .Values.global.frontendVip }}/grafana"
-
+            - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
+              value: icinga2-report-datasource,icinga2-report-panel,icinga2-report-panel-transposed,mahendrapaipuri-dashboardreporter-app
+            - name: GF_LOG_FILTERS
+              value: rendering:debug plugin.mahendrapaipuri-dashboardreporter-app:debug
+            - name: GF_FEATURE_TOGGLES_ENABLE
+              value: accessControlOnCall,idForwarding
+            - name: GF_REPORTER_PLUGIN_APP_URL
+              value: http://grafana:3000/grafana/
+            - name: GF_RENDERING_SERVER_URL
+              value: http://renderer:8081/render
+            - name: GF_REPORTER_PLUGIN_REMOTE_CHROME_URL
+              value: http://chrome:9222
+            - name: GF_RENDERING_CALLBACK_URL
+              value: http://grafana:3000/grafana/
+            - name: GF_REPORTER_PLUGIN_SKIP_TLS_CHECK
+              value: "true"
+            - name: GF_REPORTER_PLUGIN_NATIVE_RENDERER
+              value: "false"
+            - name: GF_REPORTER_PLUGIN_REPORT_ORIENTATION
+              value: landscape
+            - name: GF_REPORTER_PLUGIN_REPORT_LAYOUT
+              value: grid
+            - name: GF_REPORTER_PLUGIN_REPORT_DASHBOARD_MODE
+              value: full
           ports:
             - name: grafana
               containerPort: 3000
+        - args:
+          - --ignore-certificate-errors
+          - --disable-gpu
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chrome.image ) }}
+          imagePullPolicy: {{ .Values.chrome.image.pullPolicy | quote }}
+          name: chrome
+          ports:
+          - containerPort: {{ .Values.chrome.service.port }}
+            protocol: TCP
+            name: chrome
+          volumeMounts:
+          - mountPath: /dev/shm
+            name: shm
+        - env:
+          - name: IGNORE_HTTPS_ERRORS
+            value: "true"
+          - name: RENDERING_MODE
+            value: clustered
+          - name: RENDERING_CLUSTERING_MODE
+            value: browser
+          - name: RENDERING_CLUSTERING_MAX_CONCURRENCY
+            value: "15"
+          - name: RENDERING_CLUSTERING_TIMEOUT
+            value: "120"
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.renderer.image ) }}
+          imagePullPolicy: {{ .Values.renderer.image.pullPolicy | quote }}
+          name: renderer
+          ports:
+          - containerPort: {{ .Values.renderer.service.port }}
+            name: renderer
+            protocol: TCP
+      volumes:
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 2Gi
+        name: shm
       imagePullSecrets:
       - name: ghcr-pull-secret
