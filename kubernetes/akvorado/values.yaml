@@ -35,6 +35,10 @@ console:
     type: LoadBalancer
 
 redis:
+  image:
+    repository: bitnami/valkey
+    tag: 7.2
+    pullPolicy: IfNotPresent
   replicaCount: 1
   updateStrategy: Recreate
   revisionHistoryLimit: 0
@@ -99,4 +103,4 @@ clickhouse:
   - 10.98.5.222:9000
   - 10.98.5.223:9000
   username: "default"
-  password: "juniper@123"
+  password: ""

@@ -25,7 +25,8 @@ spec:
         - env:
             - name: ALLOW_EMPTY_PASSWORD
               value: "yes"
-          image: bitnami/valkey:7.2
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image ) }}
+          imagePullPolicy: {{ .Values.redis.image.pullPolicy | quote }}
           livenessProbe:
             exec:
               command:

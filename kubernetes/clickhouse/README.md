@@ -10,7 +10,7 @@ In detail:
 +--- Chart.yaml : Chart information and dependencies (you can use as {{ .Chart }} variable on template files )
 +--- README.md
 +--- templates : define your template files in this folder
-|   +--- clickhouse-keeper.yaml
+|   +--- clickhouseKeeper.yaml
 |   +--- clickhouse.yaml 
 |   +--- secret.yaml
 |   +--- *.tpl : define your custom template variable here, and you can create new file .tpl

@@ -28,14 +28,14 @@ spec:
         generateName: "{{ .Chart.Name }}-keeper"
         spec:
           ports:
-          - name: zk
-            port: 2181
-            protocol: TCP
-            targetPort: 2181
-          - name: raft
-            port: 9444
-            protocol: TCP
-            targetPort: 9444
+            - name: zk
+              port: 2181
+              protocol: TCP
+              targetPort: 2181
+            - name: raft
+              port: 9444
+              protocol: TCP
+              targetPort: 9444
     podTemplates:
       - name: default
         generateName: "{{ include "common.names.fullname" . }}-keeper-{replicaIndex}"
@@ -43,6 +43,7 @@ spec:
           labels:
             app.kubernetes.io/component: {{ .Chart.Name }}-keeper
             {{- include "common.labels.matchLabels" . | nindent 12 }}
+        spec:
           containers:
             - name: clickhouse-keeper
               imagePullPolicy: {{ .Values.clickhouseKeeper.image.pullPolicy }}
