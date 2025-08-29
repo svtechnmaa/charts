@@ -9,7 +9,7 @@ frontend:
   initJob:
     image:
       repository: svtechnmaa/svtech_report
-      tag: test-v18
+      tag: test-v24
       pullPolicy: IfNotPresent
   init:
     image:
@@ -41,7 +41,7 @@ backend:
       pullPolicy: IfNotPresent
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v18
+    tag: test-v24
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -56,6 +56,7 @@ backend:
     db_password: reflex
     db_host: mariadb
     db_database: svtech_report
+    grafana_url: http://grafana:3000/grafana
     icinga_redis_db: "0"
     icinga_redis_host: icinga2
     icinga_redis_port: "6379"
@@ -81,14 +82,14 @@ scheduler:
   replicaCount: 1
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v18
+    tag: test-v24
     pullPolicy: IfNotPresent
 
 worker:
   replicaCount: 2
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v18
+    tag: test-v24
     pullPolicy: IfNotPresent
 
 redis:

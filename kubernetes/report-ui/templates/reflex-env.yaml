@@ -9,11 +9,10 @@ stringData:
   .env: |
     {{- if .Values.global.externalIP }}
     API_URL=http://{{ .Values.global.externalIP }}:8000{{ $basehref }}
-    GRAFANA_URL=http://{{ .Values.global.externalIP }}:3000/grafana
     {{- else }}
     API_URL=https://{{ .Values.global.frontendVip }}{{ $basehref }}
-    GRAFANA_URL=https://{{ .Values.global.frontendVip }}/grafana
     {{- end }}
+    GRAFANA_URL={{ .Values.backend.config.grafana_url | quote }}
     FRONTEND_PATH="{{ $basehref }}/report"
     REFLEX_CHECK_LATEST_VERSION="False"
     DB_URL=mysql+pymysql://{{ .Values.backend.config.db_user }}:{{ .Values.backend.config.db_password }}@{{ .Values.backend.config.db_host }}/{{ .Values.backend.config.db_database }}
