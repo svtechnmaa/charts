@@ -1,7 +1,9 @@
+{{- $basehref := .Values.backend.config.basehref | default "" -}}
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Chart.Name }}-ingress
+  name: {{ .Chart.Name }}-fe-ingress
   annotations:
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/use-regex: "true"
@@ -9,8 +11,8 @@ metadata:
     nginx.ingress.kubernetes.io/server-snippet: |
       location = /favicon.ico {
         set $app_favicon "";
-        if ($http_referer ~* "/report") {
-          set $app_favicon "/report/favicon.ico";
+        if ($http_referer ~* "{{ $basehref }}/report") {
+          set $app_favicon "{{ $basehref }}/report/favicon.ico";
         }
         if ($app_favicon = "") {
           return 404;
@@ -23,18 +25,33 @@ spec:
   - http:
       paths:
       # Main application path
-      - path: "/report/(.*)"
+      - path: "{{ $basehref }}/report(/|$)(.*)"
         pathType: Prefix
         backend:
           service:
             name: {{ .Chart.Name }}-frontend
             port:
               number: {{ .Values.frontend.service.port }}
-      # WebSocket paths
-      - path: "/(_event|ping|_upload)(/|$)(.*)"
-        pathType: ImplementationSpecific
-        backend:
+              
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+  name: {{ .Chart.Name }}-be-ingress
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+  - http:
+      paths:
+      - backend:
           service:
             name: {{ .Chart.Name }}-backend
             port:
               number: {{ .Values.backend.service.port }}
+        path: "{{ $basehref }}/(_event|ping|_upload)(/.*)?$"
+        pathType: ImplementationSpecific
