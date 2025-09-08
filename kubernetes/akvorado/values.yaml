@@ -1,0 +1,106 @@
+global:
+  frontendVip: ""
+  backendVip: ""
+  proxy: ""
+  akvorado:
+    enabled: true
+  kafka:
+    topic: flows
+    partition: 1
+    replicationFactor: 1
+
+init:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: 1.33
+    pullPolicy: IfNotPresent
+      
+console:
+  image:
+    repository: ghcr.io/akvorado/akvorado
+    tag: 1.11.2
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  revisionHistoryLimit: 0
+  updateStrategy: Recreate
+  sharedPersistenceVolume:
+    volumeName: console-volume
+    pvcName: console-pvc
+    storageSize: 2Gi
+    path: /run/akvorado
+    accessModes: ReadWriteMany
+    storageClass: seaweedfs-storage
+  service:
+    type: LoadBalancer
+
+redis:
+  image:
+    repository: bitnami/valkey
+    tag: 7.2
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  updateStrategy: Recreate
+  revisionHistoryLimit: 0
+  service:
+    type: ClusterIP
+  
+inlet:
+  image:
+    repository: ghcr.io/akvorado/akvorado
+    tag: 1.11.2
+    pullPolicy: IfNotPresent
+  replicaCount: 2
+  revisionHistoryLimit: 0
+  updateStrategy: Recreate
+  sharedPersistenceVolume:
+    volumeName: inlet-volume
+    pvcName: inlet-pvc
+    storageSize: 2Gi
+    path: /run/akvorado
+    accessModes: ReadWriteMany
+    storageClass: seaweedfs-storage
+  service:
+    type: LoadBalancer
+  config:
+    providers:
+    - ip: "::/0"
+      community: "public"
+
+orchestrator:
+  image:
+    repository: ghcr.io/akvorado/akvorado
+    tag: 1.11.2
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  revisionHistoryLimit: 0
+  updateStrategy: Recreate
+  service:
+    type: ClusterIP
+
+geoip:
+  image:
+    repository: ghcr.io/akvorado/ipinfo-geoipupdate
+    tag: latest
+    pullPolicy: IfNotPresent
+  env:
+    ipinfo_token: "a2632ea59736c7"
+    ipinfo_db: "country asn"
+    update_time: "48h"
+  sharedPersistenceVolume:
+    volumeName: geoip-volume
+    pvcName: geoip-pvc
+    storageSize: 2Gi
+    path: /usr/share/GeoIP
+    accessModes: ReadWriteMany
+    storageClass: seaweedfs-storage
+
+
+clickhouse:
+  clusterName: netflows
+  servers:
+  - 10.98.5.221:9000
+  - 10.98.5.222:9000
+  - 10.98.5.223:9000
+  username: "default"
+  password: ""

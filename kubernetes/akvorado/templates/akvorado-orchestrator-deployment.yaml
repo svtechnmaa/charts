@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-orchestrator
+  name: {{ .Release.Name }}-orchestrator
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.orchestrator.replicaCount "global" .Values.global ) }}
+  revisionHistoryLimit: {{ .Values.orchestrator.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}-orchestrator
+  strategy:
+    type: {{ .Values.orchestrator.updateStrategy }}
+    rollingUpdate: null
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}-orchestrator
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -zvw5 {{ .Release.Name }}-kafka-external-bootstrap.{{ .Release.Namespace }}.svc.cluster.local 9094; do echo "Waiting for Kafka..."; sleep 2; done
+
+      containers:
+        - name: geoip-sidecar
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.geoip.image ) }}
+          env:
+            - name: IPINFO_TOKEN
+              value: {{ .Values.geoip.env.ipinfo_token | quote }}
+            - name: IPINFO_DATABASES
+              value:  {{ .Values.geoip.env.ipinfo_db | quote }}
+            - name: UPDATE_FREQUENCY
+              value:  {{ .Values.geoip.env.update_time | quote }}
+            - name: HTTP_PROXY
+              value: {{ .Values.global.proxy | quote }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.global.proxy | quote }}
+          volumeMounts:
+            - mountPath: /data
+              name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
+        - args:
+            - orchestrator
+            - /etc/akvorado/akvorado.yaml
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.orchestrator.image ) }} 
+          name: orchestrator
+          volumeMounts:
+            - mountPath: /etc/akvorado
+              name: {{ .Chart.Name }}-orchestrator-config
+              readOnly: true
+            - mountPath: {{ .Values.geoip.sharedPersistenceVolume.path }}
+              name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
+      restartPolicy: Always
+      volumes:
+        - configMap:
+            name: {{ .Chart.Name }}-orchestrator-configmap
+          name: {{ .Chart.Name }}-orchestrator-config
+        - name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.geoip.sharedPersistenceVolume.pvcName }}

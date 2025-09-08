@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-inlet
+  name: {{ .Release.Name }}-inlet
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.inlet.replicaCount "global" .Values.global ) }}
+  revisionHistoryLimit: {{ .Values.inlet.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}-inlet
+  strategy:
+    type: {{ .Values.inlet.updateStrategy }}
+    rollingUpdate: null
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}-inlet
+    spec:
+      initContainers:
+        - name: wait-for-orchestrator
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -zvw5 {{ .Chart.Name }}-orchestrator.{{ .Release.Namespace }}.svc.cluster.local 8080; do echo "Waiting for Orchestrator..."; sleep 2; done
+
+      containers:
+        - args:
+            - inlet
+            - http://{{ .Chart.Name }}-orchestrator:8080
+          env:
+            - name: AKVORADO_CFG_INLET_METADATA_CACHEPERSISTFILE
+              value: /run/akvorado/metadata.cache
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.inlet.image ) }}
+          imagePullPolicy: {{ .Values.inlet.image.pullPolicy | quote }}
+          name: inlet
+          ports:
+            - containerPort: 2055
+              protocol: UDP
+            - containerPort: 6343
+              protocol: UDP
+            - containerPort: 10179
+              protocol: TCP
+          volumeMounts:
+            - mountPath: {{ .Values.inlet.sharedPersistenceVolume.path }}
+              name: {{ .Values.inlet.sharedPersistenceVolume.volumeName }}
+      restartPolicy: Always
+      volumes:
+        - name: {{ .Values.inlet.sharedPersistenceVolume.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.inlet.sharedPersistenceVolume.pvcName }}

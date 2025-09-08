@@ -1,0 +1,70 @@
+global:
+  TZ: Asia/Ho_Chi_Minh
+  akvorado:
+    enabled: false
+  clickhouse:
+    enabled: true
+    clusterName: clickhouse
+    replicaCount: 3
+    shardCount: 1
+    users:
+    - name: juniper
+      password: ""
+      networks: 
+      - 0.0.0.0/0
+  clickhouseKeeper:
+    enabled: true
+
+clickhouseKeeper:
+  replicaCount: 3
+  image:
+    repository: "clickhouse/clickhouse-keeper"
+    tag: "25.5"
+    pullPolicy: IfNotPresent
+  log_level: trace
+  resources:  
+    requests:
+      memory: "256Mi"
+      cpu: "1"
+    limits:
+      memory: "4Gi"
+      cpu: "2"
+  securityContext:
+    fsGroup: 101
+  volumes:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      limits: {}
+      requests:
+        storage: 10Gi
+
+
+clickhouse:
+  init:
+    image:
+      registry: docker.io
+      repository: busybox
+      tag: 1.33
+      pullPolicy: IfNotPresent
+  image:
+    repository: "clickhouse/clickhouse-server"
+    tag: "24.8"
+    pullPolicy: IfNotPresent
+  volumes:
+    data:
+      persistentVolumeReclaimPolicy: Retain
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        limits: {}
+        requests: 
+          storage: 100Gi
+    log:
+      persistentVolumeReclaimPolicy: Retain
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        limits: {}
+        requests: 
+          storage: 100Mi

@@ -1,0 +1,80 @@
+apiVersion: "clickhouse.altinity.com/v1"
+kind: "ClickHouseInstallation"
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}
+spec:
+  configuration:
+    zookeeper:
+      nodes:
+        - host: {{ .Chart.Name }}-keeper.{{ .Release.Namespace }}.svc.cluster.local
+          port: 2181
+    clusters:
+      - name: "{{ .Values.global.clickhouse.clusterName }}"
+        layout:
+          shardsCount: {{ include "common.replicas" ( dict "replicaCount" .Values.global.clickhouse.shardCount "global" .Values.global ) }}
+          replicasCount: {{ include "common.replicas" ( dict "replicaCount" .Values.global.clickhouse.replicaCount "global" .Values.global ) }}
+    users:
+      {{- range .Values.global.clickhouse.users }}
+      {{ .name }}/password_sha256_hex:
+        valueFrom:
+          secretKeyRef:
+            name: clickhouse-credentials
+            key: {{ .name }}_password_sha256_hex
+      {{ .name }}/networks/ip: {{ toYaml .networks | nindent 8 }}
+      {{- end }}
+  defaults:
+    templates:
+      serviceTemplate: clickhouse
+      podTemplate: clickhouse
+      {{- range $key,$values := .Values.clickhouse.volumes }}
+      {{ $key }}VolumeClaimTemplate: {{ $key }}-volume-template
+      {{- end }}
+  templates:
+    serviceTemplates:
+      - name: clickhouse
+        generateName: "{{ .Chart.Name }}"
+        spec:
+          ports:
+          - name: tcp
+            port: 9000
+            protocol: TCP
+            targetPort: 9000
+          - name: http
+            port: 8123
+            protocol: TCP
+            targetPort: 8123
+          - name: interserver
+            port: 9009
+            protocol: TCP
+            targetPort: 9009
+    podTemplates:
+      - name: clickhouse
+        generateName: "{{ include "common.names.fullname" . }}-{shardIndex}-{replicaIndex}"
+        metadata:
+          labels:
+            app.kubernetes.io/component: {{ .Chart.Name }}
+            {{- include "common.labels.matchLabels" . | nindent 12 }}
+        spec:
+          containers:
+            - name: clickhouse
+              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouse.image) }}
+              imagePullPolicy: {{ .Values.clickhouse.image.pullPolicy }}
+          {{- if .Values.global.akvorado.enabled }}
+              volumeMounts:
+                - name: initdb-volume
+                  mountPath: /var/lib/clickhouse/format_schemas/flow-LAABIGYMRYZPTGOYIIFZNYDEQM.proto
+                  subPath: flow-LAABIGYMRYZPTGOYIIFZNYDEQM.proto
+          volumes:
+            - name: initdb-volume
+              configMap:
+                name: akvorado-initdb-schema
+          {{- end }}
+              
+    volumeClaimTemplates:
+    {{- range $key, $values := .Values.clickhouse.volumes }}
+      - name: {{ $key }}-volume-template
+        spec: {{ toYaml $values | nindent 10 }}
+    {{- end }}
