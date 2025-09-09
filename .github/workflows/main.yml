@@ -614,7 +614,7 @@ jobs:
           python3 ${{ github.workspace }}/SVTECH_CICD_Utilities/python_script/public_helmchart_release.py \
             --BUILD_VARS_PATH=${{ github.workspace }} \
             --GITHUB_TOKEN=${{ secrets.PUSH_TOKEN}} \
-            --OWNER=chi-org \
+            --OWNER=svtechnmaa \
             --charts_string=${{ needs.check_charts.outputs.changed_charts }} \
             --REPO=charts
       - name: Commit Release charts
@@ -623,7 +623,7 @@ jobs:
           helm repo index "$artifacthub_path"
           cd ${{ github.workspace }}/charts
           # git remote set-url origin https://svtechnmaa:$GIT_TOKEN@github.com/svtechnmaa/charts.git
-          git remote set-url origin https://phamtranlinhchi:${{ secrets.PUSH_TOKEN }}@github.com/chi-org/charts.git
+          git remote set-url origin https://phamtranlinhchi:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/charts.git
           git fetch origin main
           git checkout main
           # git config --global user.name "svtechnmaa"
@@ -637,7 +637,7 @@ jobs:
           git add .
           git commit -m "no-ci: Release" 
           # git remote set-url origin https://svtechnmaa:$GIT_TOKEN@github.com/svtechnmaa/stacked_charts.git
-          git remote set-url origin https://phamtranlinhchi:${{ secrets.PUSH_TOKEN }}@github.com/chi-org/stacked_charts.git
+          git remote set-url origin https://phamtranlinhchi:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/stacked_charts.git
           git push origin master
       - uses: actions/setup-node@v4
         with:
