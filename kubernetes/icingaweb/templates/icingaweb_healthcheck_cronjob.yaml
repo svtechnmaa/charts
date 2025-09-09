@@ -6,6 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   schedule: "*/30 * * * *"  # Run every 30 minutes
+  failedJobsHistoryLimit: 0 # Don't keep failed jobs
   jobTemplate:
     spec:
       ttlSecondsAfterFinished: 100
@@ -42,7 +43,7 @@ spec:
                   echo "Icinga DB state is $ICINGA_DB_STATE (ne 0), restarting Icinga DB container."
                   kubectl get pod -n {{ .Release.Namespace }} | grep icinga2-master | awk '{print $1}' | while read -r POD ; do
                     kubectl -n {{ .Release.Namespace }} exec $POD -c icingadb -- /bin/bash -c "kill 1"
-                  done 
+                  done
                 fi
                 # Check if redis module is unhealthy
                 if [[ "$REDIS_STATE" -ne 0 ]]; then
