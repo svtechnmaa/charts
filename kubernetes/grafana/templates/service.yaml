@@ -46,7 +46,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-renderer
+  name: renderer
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: grafana
@@ -63,10 +63,6 @@ spec:
   {{- end }}
   {{- if and (eq .Values.renderer.service.type "LoadBalancer") .Values.renderer.service.loadBalancerSourceRanges }}
   loadBalancerSourceRanges: {{- toYaml .Values.renderer.service.loadBalancerSourceRanges | nindent 4 }}
-  {{- end }}
-  {{- if .Values.global.externalIP }}
-  externalIPs:
-    - {{ .Values.global.externalIP }}
   {{- end }}
   {{- if and (eq .Values.renderer.service.type "ClusterIP") .Values.renderer.service.clusterIP }}
   clusterIP: {{ .Values.renderer.service.clusterIP }}
@@ -92,7 +88,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Chart.Name }}-chrome
+  name: chrome
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: grafana
@@ -109,10 +105,6 @@ spec:
   {{- end }}
   {{- if and (eq .Values.chrome.service.type "LoadBalancer") .Values.chrome.service.loadBalancerSourceRanges }}
   loadBalancerSourceRanges: {{- toYaml .Values.chrome.service.loadBalancerSourceRanges | nindent 4 }}
-  {{- end }}
-  {{- if .Values.global.externalIP }}
-  externalIPs:
-    - {{ .Values.global.externalIP }}
   {{- end }}
   {{- if and (eq .Values.chrome.service.type "ClusterIP") .Values.chrome.service.clusterIP }}
   clusterIP: {{ .Values.chrome.service.clusterIP }}

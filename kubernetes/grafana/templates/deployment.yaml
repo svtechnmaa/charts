@@ -96,9 +96,7 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_INSTALL_PLUGINS
-              value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource,netsage-sankey-panel,retrodaredevil-wildgraphql-datasource,marcusolsson-dynamictext-panel,volkovlabs-echarts-panel,volkovlabs-table-panel,volkovlabs-form-panel
-            - name: GF_PLUGIN_ALLOW_LOADING_UNSIGNED_PLUGINS
-              value: "true"
+              value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource,netsage-sankey-panel,retrodaredevil-wildgraphql-datasource,marcusolsson-dynamictext-panel,volkovlabs-echarts-panel,volkovlabs-table-panel,volkovlabs-form-panel,volkovlabs-links-panel,volkovlabs-variable-panel,marcusolsson-static-datasource
             - name: GF_SERVER_ROOT_URL
               value: "https://{{ .Values.global.frontendVip }}/grafana"
             - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
