@@ -609,6 +609,13 @@ jobs:
         run: |
           cd ${{ github.workspace }}/SVTECH_CICD_Utilities/python_script/
           pip install -r requirements.txt
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6.2.0
+        with:
+          # GPG private key exported as an ASCII armored version or its base64 encoding
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+
       - name: Update helm chart version based on commit
         run: |
           python3 ${{ github.workspace }}/SVTECH_CICD_Utilities/python_script/public_helmchart_release.py \
@@ -626,18 +633,17 @@ jobs:
           git remote set-url origin https://phamtranlinhchi:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/charts.git
           git fetch origin main
           git checkout main
-          # git config --global user.name "svtechnmaa"
-          # git config --global user.email "nmaa@svtech.com.vn"
-          git config --global user.name "linhchi"
-          git config --global user.email "phamtranlinhchi02@gmail.com"
+          git config --global user.name "svtechnmaa"
+          git config --global user.email "nmaa@svtech.com.vn"
+          git config --global commit.gpgSign true
+          git config --global user.signingkey ${{ secrets.GPG_KEY_ID }}
           git add .
           git commit -m "no-ci: Release"
           git push origin main
           cd ${{ github.workspace }}/stacked_charts
           git add .
           git commit -m "no-ci: Release" 
-          # git remote set-url origin https://svtechnmaa:$GIT_TOKEN@github.com/svtechnmaa/stacked_charts.git
-          git remote set-url origin https://phamtranlinhchi:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/stacked_charts.git
+          git remote set-url origin https://svtechnmaa:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/stacked_charts.git
           git push origin master
       - uses: actions/setup-node@v4
         with:
