@@ -13,88 +13,35 @@ spec:
       restartPolicy: Never
       containers:
       - name: init-repo
-        image: {{ include "common.images.image" (dict "imageRoot" .Values.initRepo.image) }}
-        imagePullPolicy: {{ .Values.initRepo.pullPolicy | quote }}
-        command:
-          - bash
-          - -ec
-          - |
-              eval "list_repo=(`echo $REPO_LIST | tr "," " "`)"
-              for item in "${list_repo[@]}"; do
-                  name=`echo $item | sed  "s/:.*//"`
-                  if [[ "$item" =~ .*":".* ]]; then
-                      tag=`echo $item | sed  "s/^.*://"`
-                  else
-                      tag=""
-                  fi
-                  mkdir -p /opt/$name
-                  status=`ls -A /opt/$name | grep -v 'lost+found' | grep -v '.stfolder' | grep -v 'addition_toolkit' | wc -l`
-                  
-                  if [[ "$status" == "1" ]]; then
-                      cd /opt/$name
-                      rm -rf .git
-                  fi
+        image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        command:        
+        - sh        
+        - -c        
+        - |
+            list_repo=$(echo $REPO_LIST | tr "," " ")
+            for REPO in $list_repo; do
+                echo "repo: $REPO"
+                name=`echo $REPO | cut -d"/" -f3`
+                mkdir -p /opt/$REPO
+                cd /opt/$REPO
+                status=`ls -A /opt/$REPO | grep "completed" | wc -l`
 
-                  if [[ "$status" == "0" ]]; then
-                      echo "/opt/$name is Empty. Clone repo"
-                      cd /opt/$name && \
-                      git init
-                      git remote add origin https://${GH_USERNAME}:${GH_FG_TOKEN}@github.com/svtechnmaa/${name}.git
+                if [[ "$status" == "1" ]]; then
+                    echo "/opt/$REPO is not Empty. Ignore"
+                else
+                    cp -r /tmp/$REPO /opt
+                    if [ $? == 0 ]; then
+                        echo "Move repo $REPO done !"
+                        cd /opt/$REPO
+                        echo "true" > completed``
+                    fi
+                fi
+            done
 
-                      if [[ "$tag" == "latest" ]] || [[ "$tag" == "HEAD" ]]; then
-                          cd /opt/$name 
-                          # Get the commit ID of latest tag
-                          # commit_id=$(git rev-list --tags --max-count=1 --remotes)
-                          # Fetch the latest tag
-                          # git fetch --depth 1 origin tag `git ls-remote --tags --quiet |grep "$commit_id" | awk '{print $2}' | sed 's:.*/::'` --no-tags
-                          # Checkout the latest tag
-                          # git checkout tags/$(git describe --tags $commit_id)
-                          # echo "Checkout latest tag done!"
-                          git branch -m master
-                          git pull origin master --depth=1
-                          if [ $? == 0 ]; then
-                              echo "Clone ${name} done !"
-                              echo "true" > completed
-                          fi
-                      elif [[ "$tag" != "latest" ]] && [[ "$tag" != "" ]] && [[ "$tag" != "None" ]]; then
-                          cd /opt/$name 
-                          # Fetch specific tag
-                          # git fetch --depth 1 origin tag `git ls-remote --tags --quiet |grep "$tag" | awk '{print $2}' | sed 's:.*/::'` --no-tags
-                          # Checkout specific tag
-                          # git checkout tags/$(git describe --tags `git rev-list --tags --max-count=1`)
-                          # echo "Checkout $tag done!"
-                          git branch -m "$tag"
-                          git pull origin "$tag" --depth=1
-                          if [ $? == 0 ]; then
-                              echo "Clone ${name} done !"
-                              echo "true" > completed
-                          fi
-                      fi
-                      # Clearing the token from repository
-                      git remote remove origin
-                      git remote add origin https://github.com/svtechnmaa/${name}.git
-
-                  else
-                      echo "/opt/$name is not Empty. Ignore"
-                  fi
-              done
         env:
-          - name: GH_FG_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: gh-fg-token
-                key: GH_FG_TOKEN
-                optional: false
-          - name: GH_USERNAME
-            value: {{ .Values.global.github.user | quote }}
           - name: REPO_LIST
-            value: {{ .Values.initRepo.repoList | quote }}
-          {{- if not (empty .Values.global.http_proxy) }}
-          - name: http_proxy
-            value: {{ include "http_proxy" ( dict "proxy" .Values.global.http_proxy) | quote }}
-          - name: https_proxy
-            value: {{ include "http_proxy" ( dict "proxy" .Values.global.http_proxy) | quote }}
-          {{- end }}
+            value: {{ .Values.repoList | quote }}
 
       {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         volumeMounts:
@@ -106,6 +53,9 @@ spec:
           {{- end }}
 
           {{- end }}
+
+      imagePullSecrets:
+        - name: ghcr-pull-secret
 
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
