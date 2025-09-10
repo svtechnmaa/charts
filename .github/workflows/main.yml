@@ -38,7 +38,7 @@ on:
 
 env:
   REPO_BRANCH: ${{ github.head_ref || github.ref_name }} # To handle both push and pull_request events
-  COMMIT_FULL_ID: ${{ inputs.commit_id || github.event.after || github.sha }} # Default to the latest commit ID for push and pull_request events, also handle workflow_dispatch with no commit_id input
+  COMMIT_FULL_ID: ${{ inputs.commit_id || github.event.pull_request.head.sha || github.event.after || github.sha }} # Default to the latest commit ID for push and pull_request events, also handle workflow_dispatch with no commit_id input
   WAIT_SECONDS: ${{ inputs.wait_seconds || 600 }} 
   STACKED_CHARTS_BRANCH: ${{ inputs.stacked_charts_branch || 'master' }}
   STACKED_CHARTS_COMMIT_ID: ${{ inputs.stacked_charts_commit_id || '' }}
