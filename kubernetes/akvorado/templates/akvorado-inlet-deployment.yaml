@@ -38,6 +38,8 @@ spec:
           env:
             - name: AKVORADO_CFG_INLET_METADATA_CACHEPERSISTFILE
               value: /run/akvorado/metadata.cache
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.inlet.image ) }}
           imagePullPolicy: {{ .Values.inlet.image.pullPolicy | quote }}
           name: inlet

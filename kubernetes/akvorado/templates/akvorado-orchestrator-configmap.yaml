@@ -11,7 +11,9 @@ data:
       topic: {{ .Values.global.kafka.topic }}
       version: 3.8.0
       brokers:
-        - {{ .Release.Name }}-kafka-external-bootstrap.{{ .Release.Namespace }}.svc.cluster.local:9094
+      {{- range $i, $e := until (int .Values.global.kafka.replicationFactor) }}
+        - {{ $.Release.Name }}-kafka-{{ $i }}.{{ $.Release.Name }}-kafka-brokers.{{ $.Release.Namespace }}.svc.cluster.local:9092
+      {{- end }}
       topic-configuration:
         num-partitions: {{ .Values.global.kafka.partition }}
         replication-factor: {{ .Values.global.kafka.replicationFactor }}
@@ -49,7 +51,7 @@ data:
       username: {{ .Values.clickhouse.username }}
       password: {{ .Values.clickhouse.password | quote }}
       {{- end }}
-      
+
       prometheus-endpoint: /metrics
       asns:
         64501: ACME Corporation

@@ -62,6 +62,9 @@ spec:
             - name: clickhouse
               image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouse.image) }}
               imagePullPolicy: {{ .Values.clickhouse.image.pullPolicy }}
+              env:
+                - name: TZ
+                  value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
           {{- if .Values.global.akvorado.enabled }}
               volumeMounts:
                 - name: initdb-volume

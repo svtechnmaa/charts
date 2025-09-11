@@ -48,7 +48,10 @@ spec:
             - name: clickhouse-keeper
               imagePullPolicy: {{ .Values.clickhouseKeeper.image.pullPolicy }}
               image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouseKeeper.image) }}
-              resources: {{ toYaml .Values.clickhouseKeeper.resources | nindent 16 }}    
+              resources: {{ toYaml .Values.clickhouseKeeper.resources | nindent 16 }}
+              env:
+                - name: TZ
+                  value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
           securityContext: {{ toYaml .Values.clickhouseKeeper.securityContext | nindent 12 }}
 
     volumeClaimTemplates:

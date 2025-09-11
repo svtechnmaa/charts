@@ -2,11 +2,11 @@ global:
   kafka:
     enabled: true
     topic: ""
+    replicationFactor: 3
 
 podAntiAffinityPreset: soft
 kafka:
   version: 3.8.0
-  replicaCount: 3
   resources:
     requests:
       cpu: 50m
