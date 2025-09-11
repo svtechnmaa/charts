@@ -38,6 +38,8 @@ spec:
           env:
             - name: AKVORADO_CFG_CONSOLE_DATABASE_DSN
               value: /run/akvorado/console.sqlite
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.console.image ) }}
           imagePullPolicy: {{ .Values.console.image.pullPolicy | quote }}
           name: console

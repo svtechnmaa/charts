@@ -8,7 +8,7 @@ metadata:
 spec:
   kafka:
     version: {{ .Values.kafka.version }}
-    replicas: {{ .Values.kafka.replicaCount }}
+    replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.global.kafka.replicationFactor "global" .Values.global ) }}
     listeners:
       - name: external
         port: 9094
