@@ -219,8 +219,6 @@ jobs:
         STACKED_CHARTS_BRANCH: ${{ env.STACKED_CHARTS_BRANCH }}
         AUTOMATION_BRANCH: ${{ env.JUNOS_BRANCH }}
         INSTALLATION_BRANCH: ${{ env.INSTALLATION_BRANCH }}
-        images_test: ${{ env.IMAGE_NAME }}
-        tag_test: ${{ env.IMAGE_TEST_TAG }}
         repo_path: ${{ github.workspace }}
         EOF
     - name: Import global vars
