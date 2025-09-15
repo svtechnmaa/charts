@@ -82,7 +82,7 @@ jobs:
         if [ "${{ github.ref_name }}" == "main" ]; then
           GITHUB_COMPARE_BRANCH="${{ env.COMMIT_FULL_ID }}^"
         fi
-        get_changed_charts=`git diff ${{ env.COMMIT_FULL_ID }} "$GITHUB_COMPARE_BRANCH" --name-only | grep -oE "^kubernetes/(\w+[-]?)+(\w+)" | grep -oE "(\w+[-]?)+(\w+)$" | grep -v README| sort -u`
+        get_changed_charts=`git diff ${{ env.COMMIT_FULL_ID }} "$GITHUB_COMPARE_BRANCH" --name-only | grep -oE "^kubernetes/(\w+[-]?)+(\w+)" | grep -oE "(\w+[-]?)+(\w+)$" | grep -v README | sort -u`
         changed_charts=$(echo $get_changed_charts | tr " " ",")
         changed_charts="$(echo -e "$changed_charts" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
         echo "Changed charts: $changed_charts"
@@ -102,8 +102,8 @@ jobs:
       run: |
         echo "Changed charts: ${{ steps.get_changed_charts.outputs.changed_charts}}"
         changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
-        mappingFile="${{ github.workspace }}/stacked_charts//kubernetes/nmaa/image_chart_mapping.yml"
-        dependencyFile="${{ github.workspace }}/stacked_charts//kubernetes/nmaa/Chart.yml"
+        mappingFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/image_chart_mapping.yml"
+        dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/Chart.yml"
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
