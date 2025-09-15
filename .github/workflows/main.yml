@@ -627,8 +627,7 @@ jobs:
           artifacthub_path="${{ github.workspace }}/charts/artifacthub"
           helm repo index "$artifacthub_path"
           cd ${{ github.workspace }}/charts
-          # git remote set-url origin https://svtechnmaa:$GIT_TOKEN@github.com/svtechnmaa/charts.git
-          git remote set-url origin https://phamtranlinhchi:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/charts.git
+          git remote set-url origin https://svtechnmaa:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/charts.git
           git fetch origin main
           git checkout main
           git config --global user.name "svtechnmaa"
