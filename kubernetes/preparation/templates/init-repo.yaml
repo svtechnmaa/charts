@@ -34,7 +34,7 @@ spec:
                     if [ $? == 0 ]; then
                         echo "Move repo $REPO done !"
                         cd /opt/$REPO
-                        echo "true" > completed``
+                        echo "true" > completed
                     fi
                 fi
             done
