@@ -57,6 +57,12 @@ sidecar:
     tag: v1.2.0
     pullPolicy: IfNotPresent
 
+cronjob:
+  image:
+    repository: svtechnmaa/svtech_debuger
+    tag: v1.0.3
+    pullPolicy: IfNotPresent
+
 clusterDomain: cluster.local
 commonAnnotations:
   helm.sh/hook-weight: "0"
