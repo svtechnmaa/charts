@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/backend-protocol: HTTPS
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+  name: {{ .Chart.Name }}-api-ingress
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+  - http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Chart.Name }}
+            port:
+              number: {{ .Values.master.service.port.icinga2Api }}
+        path: /monitor-api/(.*)
+        pathType: Prefix
