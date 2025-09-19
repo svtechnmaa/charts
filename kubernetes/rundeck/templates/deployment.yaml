@@ -116,6 +116,7 @@ spec:
             - /bin/bash
             - -c
             - |
+                sed -i 's|^# *mibdirs .*|mibdirs /usr/share/snmp/mibs:/usr/share/snmp/mibs/iana:/usr/share/snmp/mibs/ietf:/opt/SVTECH-Junos-Automation/module_utils/mibs/converted|' /etc/snmp/snmp.conf
                 function check_empty_dir {
                     dir="$1"
                     default_dir="$2"
