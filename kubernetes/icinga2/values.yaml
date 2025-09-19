@@ -48,7 +48,7 @@ init:
 
 image:
   repository: svtechnmaa/svtech_icinga2
-  tag: v1.1.8
+  tag: v1.2.0
   pullPolicy: IfNotPresent
 
 clusterDomain: cluster.local
@@ -149,7 +149,7 @@ master:
 
   #   # hostPath: mount path on Host
   #   hostPath: /opt/k8s_configurations/icinga2
-
+  ticketsalt: ""
   influxdb_connection:
     enable: true
     influxdb_host: influxdb-relay

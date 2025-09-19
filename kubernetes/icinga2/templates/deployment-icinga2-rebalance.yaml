@@ -70,7 +70,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              until nc -zvw5 {{ include "common.names.fullname" . }}-master-0.icinga2-headless.{{ .Release.Namespace }} 5665;
+              until nc -zvw5 {{ .Chart.Name }} 5665;
               do
                 echo "Waiting for Icinga2 master...";
                 sleep 2;
@@ -86,25 +86,18 @@ spec:
             - |
               git config --global user.name "icinga"
               git config --global user.email "icinga@localhost"
-              touch /etc/icinga2/zones.d/master/zones.conf
-              touch /etc/icinga2/zones.d/master/satellite.conf
-              python3 /opt/SVTECH-Junos-Automation/module_utils/ICINGA2_DISCOVERY.py \
-                --sts_name {{ .Release.Name }}-icinga2-satellite \
+              python3 /opt/SVTECH-Junos-Automation/module_utils/icinga2_rebalance.py \
                 --namespace {{ .Release.Namespace }} \
-                --all_config_folder /etc/icinga2/zones.d/all_config \
-                --discovery_folder /etc/icinga2/zones.d \
-                --zone_prefix zone_satellite \
-                --endpoint_prefix {{ .Release.Name }}-icinga2-satellite \
-                --headless_service icinga2-satellite-headless \
-                --master_sts_name {{ .Release.Name }}-icinga2-master \
-                --master_zones_config /etc/icinga2/zones.d/master/zones.conf \
-                --master_endpoints_config /etc/icinga2/zones.d/master/endpoints.conf \
-                --master_constants_config /etc/icinga2/zones.d/master/constants.conf \
-                --master_folder /etc/icinga2/zones.d/master \
-                --master_zone_config_path /etc/icinga2/zones.d/master_zones.conf \
-                --master_headless_service icinga2-headless \
-                --checking_interval 60 \
-                --waiting_time_after_rebalancing 300
+                --master-headless-service {{ .Release.Name }}-headless \
+                --satellite-headless-service {{ .Release.Name }}-satellite-headless \
+                --master-zones-file /etc/icinga2/zones.d/master_zones.conf \
+                --satellite-zones-file /etc/icinga2/zones.d/master/satellite_zones.conf \
+                --icinga2-zones-folder /etc/icinga2/zones.d/ \
+                --all-hosts-folder /etc/icinga2/zones.d/all_config \ 
+                --zone-prefix zone-satellite- \
+                --interval 60 \
+                --loglevel INFO
+
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}

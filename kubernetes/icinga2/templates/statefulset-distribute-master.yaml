@@ -51,84 +51,6 @@ spec:
         fsGroup: {{ .Values.master.securityContext.fsGroup }}
       {{- end }}
       containers:
-        # redis container
-        {{- if .Values.global.redis.enabled }}
-        - name: redis
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.redis.image ) }} # {{ .Values.master.redis.image.repository }}:{{ .Values.master.redis.image.tag }}
-          {{- if .Values.master.redis.image.pullPolicy }}
-          imagePullPolicy: {{ .Values.master.redis.image.pullPolicy }}
-          {{- end}}
-          {{- range $key, $value := .Values.master.redis.containerPort }}
-          ports:
-          - name: {{ $key }}
-            containerPort: {{ $value }}
-          {{- end}}
-          ## ENV
-          env:
-          {{- range $key, $value := .Values.master.redis.env }}
-          - name: {{ $key }}
-            value: {{ $value | quote }}
-          {{- end }}
-        {{- end }}
-        # icingadb container
-        {{- if .Values.global.icingadb.enabled }}
-        - name: icingadb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.icingadb.image ) }}
-          {{- if .Values.master.icingadb.pullPolicy }}
-          imagePullPolicy: {{ .Values.master.icingadb.pullPolicy }}
-          {{- end}}
-          {{- range $key, $value := .Values.master.icingadb.containerPort }}
-          ports:
-          - name: {{ $key }}
-            containerPort: {{ $value }}
-          {{- end}}
-          ## ENV
-          env:
-          - name: POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          {{- include "icinga2-icingadb.conf" . | indent 10 }}
-          {{- range $key, $value := .Values.master.icingadb.env }}
-          - name: {{ $key }}
-            value: {{ $value | quote }}
-          {{- end }}
-          ## Config icingadb
-          command:
-            - /bin/bash
-            - -c
-            - |
-              cat > /etc/icingadb/icingadb.conf << EOF
-              database:
-                host: $ICINGADB_DATABASE_HOST
-                port: $ICINGADB_DATABASE_PORT
-                database: $ICINGADB_DATABASE_DATABASE
-                user: $ICINGADB_DATABASE_USER
-                password: $ICINGADB_DATABASE_PASSWORD
-              redis:
-                host: $ICINGADB_REDIS_HOST
-                port: $ICINGADB_REDIS_PORT
-
-
-              retention:
-                # Number of days to RETAIN FULL HISTORICAL data. By default, historical data is retained forever.
-                history-days: $RETENTION_HISTORY_DAYS
-                # Number of days to retain historical data for SLA reporting. By default, it is retained forever.
-                sla-days: $RETENTION_SLA_DAYS
-
-                # Map of history category to number of days to retain its data in order to
-                # enable retention only for specific categories or to
-                # override the number that has been configured in history-days.
-                options:
-                  acknowledgement: $RETENTION_OPTION_ACKNOWLEDGEMENT
-                  comment: $RETENTION_OPTION_COMMENT
-                  downtime: $RETENTION_OPTION_DOWNTIME
-                  flapping: $RETENTION_OPTION_FLAPPING
-                  notification: $RETENTION_OPTION_NOTIFICATION
-                  state: $RETENTION_OPTION_STATE
-              EOF
-              /entrypoint
-        {{- end }}
         # icinga2 container
         - name: icinga2
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
@@ -183,16 +105,16 @@ spec:
             # Icinga2 Setup
             MASTER_NAME_ORIGIN={{ include "common.names.fullname" . }}-master
             SATELLITE_NAME_ORIGIN={{ include "common.names.fullname" . }}-satellite
-            FULL_POD_NAME=${POD_NAME}.icinga2-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
+            FULL_POD_NAME=${POD_NAME}.{{ .Chart.Name }}-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
             COMMON_NAME=${POD_NAME}
             POD_INDEX=${POD_NAME: -1}
             if [[ $POD_INDEX != "0" ]]; then
               echo "Init variable for icinga2 master node setup as satellite role"
-              MASTER_POD_NAME=${MASTER_NAME_ORIGIN}-0.icinga2-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
+              # MASTER_POD_NAME=${MASTER_NAME_ORIGIN}-0.icinga2-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
               ROLE="satellite"
               PARENT_NAME=${MASTER_NAME_ORIGIN}-0
               PARENT_ZONE=${ZONE}
-              PARENT_HOST=$MASTER_POD_NAME
+              PARENT_HOST={{ .Chart.Name }}
               PARENT_PORT=5665
               TRUSTEDCERT=/var/lib/icinga2/certs/trusted-parent.crt
               ZONE=${ZONE}
@@ -310,7 +232,7 @@ spec:
             echo 'Force rebalancing...'
             NAMESPACE=($(dig srv +search +short icinga2-headless | awk '{print $4}' | cut -d"." -f3))
             STS_NAME=($(dig srv +search +short icinga2-satellite-headless | awk '{print $4}' | cut -d"." -f1 | sed 's/-.$//' | uniq))
-            python3 /opt/SVTECH-Junos-Automation/module_utils/ICINGA2_DISCOVERY.py --sts_name=${STS_NAME} --namespace=${NAMESPACE} --force_rebalance
+            python3 /opt/SVTECH-Junos-Automation/module_utils/icinga2_rebalance.py --namespace=${NAMESPACE} --force_rebalance
             EOF
 
             # Check git folder
@@ -388,6 +310,13 @@ spec:
               value: "0.0.0.0"
             - name: ICINGA_PORT
               value: "5665"
+            {{- if .Values.master.ticketsalt }}
+            - name: TICKET_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: tiketsalt-secret
+                  key: ticketsalt
+            {{- end }}
             - name: INFLUXDB_ENABLE
               value: {{ .Values.master.influxdb_connection.enable | quote }}
             {{- if .Values.master.influxdb_connection.enable }}
@@ -498,7 +427,86 @@ spec:
 
             {{- end }}
           {{- end }}
+        # redis container
+        {{- if .Values.global.redis.enabled }}
+        - name: redis
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.redis.image ) }} # {{ .Values.master.redis.image.repository }}:{{ .Values.master.redis.image.tag }}
+          {{- if .Values.master.redis.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.master.redis.image.pullPolicy }}
+          {{- end}}
+          {{- range $key, $value := .Values.master.redis.containerPort }}
+          ports:
+          - name: {{ $key }}
+            containerPort: {{ $value }}
+          {{- end}}
+          ## ENV
+          env:
+          {{- range $key, $value := .Values.master.redis.env }}
+          - name: {{ $key }}
+            value: {{ $value | quote }}
+          {{- end }}
+        {{- end }}
+        # icingadb container
+        {{- if .Values.global.icingadb.enabled }}
+        - name: icingadb
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.icingadb.image ) }}
+          {{- if .Values.master.icingadb.pullPolicy }}
+          imagePullPolicy: {{ .Values.master.icingadb.pullPolicy }}
+          {{- end}}
+          {{- range $key, $value := .Values.master.icingadb.containerPort }}
+          ports:
+          - name: {{ $key }}
+            containerPort: {{ $value }}
+          {{- end}}
+          ## ENV
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          {{- include "icinga2-icingadb.conf" . | indent 10 }}
+          {{- range $key, $value := .Values.master.icingadb.env }}
+          - name: {{ $key }}
+            value: {{ $value | quote }}
+          {{- end }}
+          ## Config icingadb
+          command:
+            - /bin/bash
+            - -c
+            - |
+              cat > /etc/icingadb/icingadb.conf << EOF
+              database:
+                host: $ICINGADB_DATABASE_HOST
+                port: $ICINGADB_DATABASE_PORT
+                database: $ICINGADB_DATABASE_DATABASE
+                user: $ICINGADB_DATABASE_USER
+                password: $ICINGADB_DATABASE_PASSWORD
+              redis:
+                host: $ICINGADB_REDIS_HOST
+                port: $ICINGADB_REDIS_PORT
+
+
+              retention:
+                # Number of days to RETAIN FULL HISTORICAL data. By default, historical data is retained forever.
+                history-days: $RETENTION_HISTORY_DAYS
+                # Number of days to retain historical data for SLA reporting. By default, it is retained forever.
+                sla-days: $RETENTION_SLA_DAYS
+
+                # Map of history category to number of days to retain its data in order to
+                # enable retention only for specific categories or to
+                # override the number that has been configured in history-days.
+                options:
+                  acknowledgement: $RETENTION_OPTION_ACKNOWLEDGEMENT
+                  comment: $RETENTION_OPTION_COMMENT
+                  downtime: $RETENTION_OPTION_DOWNTIME
+                  flapping: $RETENTION_OPTION_FLAPPING
+                  notification: $RETENTION_OPTION_NOTIFICATION
+                  state: $RETENTION_OPTION_STATE
+              EOF
+              /entrypoint
+        {{- end }}
       {{- if .Values.init }}
+      # init containers
       initContainers:
         - name: wait-for-init-repo
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}

@@ -94,11 +94,11 @@ spec:
             ZONE_INDEX=$(($POD_INDEX/2))
             SATELLITE_ZONE_NAME=${ZONE}-${ZONE_INDEX}
 
-            MASTER_POD_NAME=${MASTER_NAME_ORIGIN}-0.icinga2-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
+            # MASTER_POD_NAME=${MASTER_NAME_ORIGIN}-0.icinga2-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
             ROLE="satellite"
             PARENT_NAME=${MASTER_NAME_ORIGIN}-0
             PARENT_ZONE=${PARENT_ZONE}
-            PARENT_HOST=$MASTER_POD_NAME
+            PARENT_HOST={{ .Chart.Name }}
             PARENT_PORT=5665
             TRUSTEDCERT=/var/lib/icinga2/certs/trusted-parent.crt
             COMMON_NAME=${POD_NAME}
@@ -182,6 +182,13 @@ spec:
               value: zone-satellite
             - name: PARENT_ZONE
               value: master
+            {{- if .Values.master.ticketsalt }}
+            - name: TICKET_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: tiketsalt-secret
+                  key: ticketsalt
+            {{- end }}
           ports:
             - name: icinga2-api
               containerPort: {{ .Values.master.containerPorts.icinga2Api }}
@@ -248,7 +255,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              until nc -zvw5 {{ include "common.names.fullname" . }}-master-0.icinga2-headless.{{ .Release.Namespace }} 5665;
+              until nc -zvw5 {{ .Chart.Name }} 5665;
               do
                 echo "Waiting for Icinga2 master...";
                 sleep 2;
