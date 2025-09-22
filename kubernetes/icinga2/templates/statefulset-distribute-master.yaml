@@ -156,7 +156,7 @@ spec:
             fi
 
             if [[ $POD_INDEX != "0" ]]; then
-              if [[ -f /etc/icinga2/zones.d/master_zones.conf && $(grep -v "${MASTER_NAME_ORIGIN}-${POD_INDEX}" /etc/icinga2/zones.d/master_zones.conf) != "0" ]]; then
+              if [[ -f /etc/icinga2/zones.d/master_zones.conf && $(grep "${MASTER_NAME_ORIGIN}-${POD_INDEX}" /etc/icinga2/zones.d/master_zones.conf) != "0" ]]; then
                 echo "Create /etc/icinga2/zones.d/master_zones.conf"
                 cat <<EOF | tee /etc/icinga2/zones.d/master_zones.conf
             {{- range $index, $_ := until 2 }}
