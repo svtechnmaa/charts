@@ -20,18 +20,18 @@ spec:
   {{- if eq $workloadType "StatefulSet" }}
   serviceName: {{ .Chart.Name }}-headless
   {{- end }}
-  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.rebalance.replicaCount "global" .Values.global ) }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
       app.kubernetes.io/component: rebalance
-  {{- if and (eq $workloadType "Deployment") .Values.strategy }}
+  {{- if and (eq $workloadType "Deployment") .Values.rebalance.strategy }}
   strategy:
-    {{- toYaml .Values.strategy | nindent 4 }}
+    {{- toYaml .Values.rebalance.strategy | nindent 4 }}
   {{- end }}
-  {{- if and (eq $workloadType "StatefulSet") .Values.updateStrategy }}
+  {{- if and (eq $workloadType "StatefulSet") .Values.rebalance.updateStrategy }}
   updateStrategy:
-    {{- toYaml .Values.updateStrategy | nindent 4 }}
+    {{- toYaml .Values.rebalance.updateStrategy | nindent 4 }}
   {{- end }}
   template:
     metadata:
@@ -48,11 +48,11 @@ spec:
         podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
         nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
       {{- end }}
-      {{- if .Values.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- if .Values.rebalance.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.rebalance.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
-      {{- if .Values.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- if .Values.rebalance.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.rebalance.tolerations "context" $) | nindent 8 }}
       {{- end }}
 
       imagePullSecrets:
@@ -93,8 +93,8 @@ spec:
                 --master-zones-file /etc/icinga2/zones.d/master_zones.conf \
                 --satellite-zones-file /etc/icinga2/zones.d/master/satellite_zones.conf \
                 --icinga2-zones-folder /etc/icinga2/zones.d/ \
-                --all-hosts-folder /etc/icinga2/zones.d/all_config \ 
-                --zone-prefix zone-satellite- \
+                --all-hosts-folder /etc/icinga2/zones.d/all_config \
+                --zone-prefix zone-satellite \
                 --interval 60 \
                 --loglevel INFO
 
@@ -104,7 +104,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: TZ
-              value: {{ default $timezone | quote }}
+              value: {{ $timezone | quote }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

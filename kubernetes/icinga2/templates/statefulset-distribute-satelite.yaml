@@ -186,7 +186,7 @@ spec:
             - name: TICKET_SALT
               valueFrom:
                 secretKeyRef:
-                  name: tiketsalt-secret
+                  name: ticketsalt-secret
                   key: ticketsalt
             {{- end }}
           ports:
