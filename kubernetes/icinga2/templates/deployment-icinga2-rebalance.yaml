@@ -88,8 +88,8 @@ spec:
               git config --global user.email "icinga@localhost"
               python3 /opt/SVTECH-Junos-Automation/module_utils/icinga2_rebalance.py \
                 --namespace {{ .Release.Namespace }} \
-                --master-headless-service {{ .Release.Name }}-headless \
-                --satellite-headless-service {{ .Release.Name }}-satellite-headless \
+                --master-headless-service {{ .Chart.Name }}-headless \
+                --satellite-headless-service {{ .Chart.Name }}-satellite-headless \
                 --master-zones-file /etc/icinga2/zones.d/master_zones.conf \
                 --satellite-zones-file /etc/icinga2/zones.d/master/satellite_zones.conf \
                 --icinga2-zones-folder /etc/icinga2/zones.d/ \
