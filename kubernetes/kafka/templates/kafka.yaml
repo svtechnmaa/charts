@@ -1,0 +1,80 @@
+{{- $namespace := .Release.Namespace }}
+
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  kafka:
+    version: {{ .Values.kafka.version }}
+    replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.global.kafka.replicationFactor "global" .Values.global ) }}
+    listeners:
+      - name: external
+        port: 9094
+        type: nodeport
+        tls: false
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    config:
+      offsets.topic.replication.factor: {{ .Values.kafka.config.offsets_topic_replication_factor }}
+      transaction.state.log.replication.factor: {{ .Values.kafka.config.transaction_state_log_replication_factor }}
+      transaction.state.log.min.isr: {{ .Values.kafka.config.transaction_state_log_min_isr }}
+      default.replication.factor: {{ .Values.kafka.config.default_replication_factor }}
+      min.insync.replicas: {{ .Values.kafka.config.min_insync_replica }}
+      inter.broker.protocol.version: "3.8"
+      log.retention.hours: {{ .Values.kafka.config.log_retention_hours }}
+      socket.request.max.bytes: 419430400
+    storage:
+      type: persistent-claim
+      #class: kafka-{{ $namespace }}
+      class: local-path
+      size: {{ .Values.persistence.kafka.size }}
+      deleteClaim: false
+    resources:
+      {{- toYaml .Values.kafka.resources | nindent 6}}
+    template:
+      pod:
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: kafka
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        securityContext:
+          runAsUser: 0
+  zookeeper:
+    replicas: {{ .Values.zookeeper.replicaCount }}
+    storage:
+      type: persistent-claim
+      #class: zookeeper-{{ $namespace }}
+      class: local-path
+      size: {{ .Values.persistence.zookeeper.size }}
+      deleteClaim: false
+    template:
+      pod:
+        affinity:
+          podAntiAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: zookeeper
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        securityContext:
+          runAsUser: 0
+    resources:
+      {{- toYaml .Values.zookeeper.resources | nindent 6}}
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}

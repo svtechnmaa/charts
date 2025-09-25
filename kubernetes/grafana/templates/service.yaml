@@ -41,3 +41,86 @@ spec:
   sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .Values.service.sessionAffinityConfig "context" $) | nindent 4 }}
   {{- end }}
   {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: renderer
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.renderer.service.type }}
+  {{- if and (eq .Values.renderer.service.type "LoadBalancer") (not (empty .Values.renderer.service.loadBalancerIP)) }}
+  loadBalancerIP: {{ .Values.renderer.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.renderer.service.type "LoadBalancer") .Values.renderer.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{- toYaml .Values.renderer.service.loadBalancerSourceRanges | nindent 4 }}
+  {{- end }}
+  {{- if and (eq .Values.renderer.service.type "ClusterIP") .Values.renderer.service.clusterIP }}
+  clusterIP: {{ .Values.renderer.service.clusterIP }}
+  {{- end }}
+  ports:
+    - name: renderer
+      port: {{ .Values.renderer.service.port }}
+      targetPort: renderer
+      {{- if eq .Values.renderer.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+
+  {{- if .Values.renderer.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.renderer.service.sessionAffinity }}
+  {{- if .Values.renderer.service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .Values.renderer.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- end }}
+  {{- end }}
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chrome
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.chrome.service.type }}
+  {{- if and (eq .Values.chrome.service.type "LoadBalancer") (not (empty .Values.chrome.service.loadBalancerIP)) }}
+  loadBalancerIP: {{ .Values.chrome.service.loadBalancerIP }}
+  {{- end }}
+  {{- if and (eq .Values.chrome.service.type "LoadBalancer") .Values.chrome.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges: {{- toYaml .Values.chrome.service.loadBalancerSourceRanges | nindent 4 }}
+  {{- end }}
+  {{- if and (eq .Values.chrome.service.type "ClusterIP") .Values.chrome.service.clusterIP }}
+  clusterIP: {{ .Values.chrome.service.clusterIP }}
+  {{- end }}
+  ports:
+    - name: chrome
+      port: {{ .Values.chrome.service.port }}
+      targetPort: chrome
+      {{- if eq .Values.chrome.service.type "ClusterIP" }}
+      nodePort: null
+      {{- end }}
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+
+  {{- if .Values.chrome.service.sessionAffinity }}
+  sessionAffinity: {{ .Values.chrome.service.sessionAffinity }}
+  {{- if .Values.chrome.service.sessionAffinityConfig }}
+  sessionAffinityConfig: {{- include "common.tplvalues.render" (dict "value" .Values.chrome.service.sessionAffinityConfig "context" $) | nindent 4 }}
+  {{- end }}
+  {{- end }}

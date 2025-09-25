@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-console
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-console
+spec:
+  replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.console.replicaCount "global" .Values.global ) }}
+  revisionHistoryLimit: {{ .Values.console.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}-console
+  strategy:
+    type: {{ .Values.console.updateStrategy }}
+    rollingUpdate: null
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}-console
+    spec:
+      initContainers:
+        - name: wait-for-orchestrator
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -zvw5 {{ .Chart.Name }}-orchestrator.{{ .Release.Namespace }}.svc.cluster.local 8080; do echo "Waiting for Orchestrator..."; sleep 2; done
+
+      containers:
+        - args:
+            - console
+            - http://{{ .Chart.Name }}-orchestrator:8080
+          env:
+            - name: AKVORADO_CFG_CONSOLE_DATABASE_DSN
+              value: /run/akvorado/console.sqlite
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.console.image ) }}
+          imagePullPolicy: {{ .Values.console.image.pullPolicy | quote }}
+          name: console
+          volumeMounts:
+            - mountPath: {{ .Values.console.sharedPersistenceVolume.path }}
+              name: {{ .Values.console.sharedPersistenceVolume.volumeName }}
+      restartPolicy: Always
+      volumes:
+        - name: {{ .Values.console.sharedPersistenceVolume.volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.console.sharedPersistenceVolume.pvcName }}

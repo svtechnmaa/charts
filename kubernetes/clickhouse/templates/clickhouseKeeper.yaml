@@ -1,0 +1,59 @@
+apiVersion: "clickhouse-keeper.altinity.com/v1"
+kind: "ClickHouseKeeperInstallation"
+metadata:
+  name: {{ include "common.names.fullname" . }}-keeper
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-keeper
+spec:
+  configuration:
+    clusters:
+      - name: "{{ include "common.names.name" . }}"
+        layout:
+          replicasCount: {{ include "common.replicas" ( dict "replicaCount" .Values.clickhouseKeeper.replicaCount "global" .Values.global ) }}
+    settings:
+      logger/level: "{{ .Values.clickhouseKeeper.log_level }}"
+
+
+  defaults:
+    templates:
+      # Templates are specified as default for all clusters
+      podTemplate: default
+      serviceTemplate: default
+      dataVolumeClaimTemplate: default
+
+  templates:
+    serviceTemplates:
+      - name: default
+        generateName: "{{ .Chart.Name }}-keeper"
+        spec:
+          ports:
+            - name: zk
+              port: 2181
+              protocol: TCP
+              targetPort: 2181
+            - name: raft
+              port: 9444
+              protocol: TCP
+              targetPort: 9444
+    podTemplates:
+      - name: default
+        generateName: "{{ include "common.names.fullname" . }}-keeper-{replicaIndex}"
+        metadata:
+          labels:
+            app.kubernetes.io/component: {{ .Chart.Name }}-keeper
+            {{- include "common.labels.matchLabels" . | nindent 12 }}
+        spec:
+          containers:
+            - name: clickhouse-keeper
+              imagePullPolicy: {{ .Values.clickhouseKeeper.image.pullPolicy }}
+              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouseKeeper.image) }}
+              resources: {{ toYaml .Values.clickhouseKeeper.resources | nindent 16 }}
+              env:
+                - name: TZ
+                  value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+          securityContext: {{ toYaml .Values.clickhouseKeeper.securityContext | nindent 12 }}
+
+    volumeClaimTemplates:
+      - name: default
+        spec: {{ toYaml .Values.clickhouseKeeper.volumes | nindent 10 }}
