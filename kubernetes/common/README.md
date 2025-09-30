@@ -155,7 +155,7 @@ registry:
 repository:
   type: string
   description: Repository and image name
-  example: bitnami/nginx
+  example: bitnamilegacy/nginx
 
 tag:
   type: string
@@ -179,7 +179,7 @@ debug:
 
 ## An instance would be:
 # registry: docker.io
-# repository: bitnami/nginx
+# repository: bitnamilegacy/nginx
 # tag: 1.16.1-debian-10-r63
 # pullPolicy: IfNotPresent
 # debug: false
