@@ -61,7 +61,7 @@ timezone: Asia/Ho_Chi_Minh
 
 image:
   registry: docker.io
-  repository: bitnami/influxdb
+  repository: bitnamilegacy/influxdb
   tag: 1.7.9
 
   ## Specify a imagePullPolicy. Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -424,7 +424,7 @@ relay:
   ##
   image:
     registry: docker.io
-    repository: bitnami/influxdb-relay-archived
+    repository: bitnamilegacy/influxdb-relay-archived
     tag: 0.20200717.0-scratch-r7
     ## Specify a imagePullPolicy. Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
