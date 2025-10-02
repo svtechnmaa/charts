@@ -1,7 +1,9 @@
+{{- $basehref := .Values.backend.config.basehref | default "" -}}
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "common.names.fullname" . }}-fe-config
+  name: reflex-fe-config
 data:
   nginx.conf: |+
     server {
@@ -15,11 +17,11 @@ data:
         root /usr/share/nginx/html;
       }
 
-      location /report/ {
+      location {{ $basehref }}/report/ {
         proxy_pass http://localhost:80/;
       }
 
-      location /report/(.*) {
+      location {{ $basehref }}/report/(.*) {
         proxy_pass http://localhost:80/$1;
       }
     }

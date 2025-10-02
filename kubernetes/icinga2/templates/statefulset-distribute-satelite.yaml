@@ -59,85 +59,68 @@ spec:
           - bash
           - -ec
           - |
-            # COMMON_NAME=$() # DO NOT CHANGE THIS
-            COMMON_NAME=${HOSTNAME%-*} # DO NOT CHANGE THIS
-
-            SATELLITE_ZONE_NAME="zone_satellite" # DO NOT CHANGE THIS; DO NOT NAME IT 'satellite'
-            satellite_index=$(awk -F'-' '{print $NF}' <<< $HOSTNAME)
-            zone_index=$(($satellite_index/2))
-            full_satellite_zone_name=${SATELLITE_ZONE_NAME}-${zone_index}
-
             function check_empty_dir {
-                dir="$1"
-                default_dir="$2"
-                status=`ls -A $dir | grep -v 'lost+found' | grep -v '^\.st*' | wc -l`
-
-                if [[ "$status" != "0" ]]; then
-                    echo "$dir is not Empty. Take no action"
-                else
-                    echo "$dir is Empty. Push icinga2 default config to /etc/icinga2:"
-                    rsync -avzhp  $default_dir/* $dir
-                    chown icinga:icinga $dir -R && chmod 775 $dir -R
-                fi
+              dir="$1"
+              default_dir="$2"
+              status=`ls -A $dir | grep -v 'lost+found' | grep -v '^\.st*' | wc -l`
+              if [[ $status -ne 0 ]]; then
+                echo "$dir is not Empty. Take no action"
+              else
+                echo "$dir is Empty. Copying default files from $default_dir to $dir"
+                rsync -avzhp  $default_dir/* $dir
+                chown icinga:icinga $dir -R && chmod 775 $dir -R
+              fi
             }
 
+            # ADD ICINGA2s' PREBUILD CONFIG and PLUGINS by SVTECH
             export REPO_DIR="/opt/SVTECH-Junos-Automation"
-            if [ -d "$REPO_DIR" ];then
-                # ADD ICINGA2s' PREBUILD CONFIG and PLUGINS by SVTECH
-                rsync -azhp $REPO_DIR/icinga2-entities/plugins-* /opt/default_plugin
-                rsync -azhp $REPO_DIR/module_utils /opt/default_plugin
-                check_empty_dir "/etc/icinga2/zones.d/global-templates" "$REPO_DIR/icinga2-entities/configs/global-templates"
-                check_empty_dir "/etc/icinga2/zones.d/master" "$REPO_DIR/icinga2-entities/configs/master"
-                check_empty_dir "/etc/icinga2/scripts" "$REPO_DIR/icinga2-entities/scripts"
+            if [[ -d $REPO_DIR ]];then
+              echo "SVTECH-Junos-Automation repo found, copying svtech's plugins to prebuild folder (/opt/default_plugin)"
+              rsync -azhp $REPO_DIR/icinga2-entities/plugins-* /opt/default_plugin
+              rsync -azhp $REPO_DIR/module_utils /opt/default_plugin
+
+              check_empty_dir "/etc/icinga2/scripts" "$REPO_DIR/icinga2-entities/scripts"
             fi
 
+            # Check and copy default config and plugins if not present
             check_empty_dir "/etc/icinga2/conf.d" "/opt/default_config/conf.d"
             check_empty_dir "/etc/icinga2/features-available" "/opt/default_config/features-available"
             check_empty_dir "/usr/share/icinga2/plugins/libexec" "/opt/default_plugin"
 
-            FULL_POD_NAME=${POD_NAME}.icinga2-satellite-headless.{{ .Release.Namespace }}
-            FULL_NAME={{ .Release.Name }}-icinga2-master
-            COMMON_NAME_ORIGIN=${COMMON_NAME}
+            # Icinga2 Setup
+            MASTER_NAME_ORIGIN={{ include "common.names.fullname" . }}-master
+            SATELLITE_NAME_ORIGIN={{ include "common.names.fullname" . }}-satellite
             POD_INDEX=${POD_NAME: -1}
+            ZONE_INDEX=$(($POD_INDEX/2))
+            SATELLITE_ZONE_NAME=${ZONE}-${ZONE_INDEX}
 
-            # if [ $POD_INDEX != 0 ]; then
-            master_pod_name=${FULL_NAME}-0.icinga2-headless.{{ .Release.Namespace }}
+            # MASTER_POD_NAME=${MASTER_NAME_ORIGIN}-0.icinga2-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
+            ROLE="satellite"
+            PARENT_NAME=${MASTER_NAME_ORIGIN}-0
+            PARENT_ZONE=${PARENT_ZONE}
+            PARENT_HOST={{ .Chart.Name }}
+            PARENT_PORT=5665
+            TRUSTEDCERT=/var/lib/icinga2/certs/trusted-parent.crt
+            COMMON_NAME=${POD_NAME}
+            ZONE=${SATELLITE_ZONE_NAME}
 
-            export ROLE="satellite"
-
-            export PARENT_NAME=${COMMON_NAME}
-            export PARENT_ZONE=${ZONE}
-
-            export PARENT_HOST=$master_pod_name
-            export PARENT_PORT=5665
-            export TRUSTEDCERT=/var/lib/icinga2/certs/trusted-parent.crt
-
-            export COMMON_NAME="${COMMON_NAME}-${POD_INDEX}"
-            export ZONE="${ZONE}-${POD_INDEX}"
-            # else
-            #   export COMMON_NAME="${COMMON_NAME}-${POD_INDEX}"
-            # fi
-
-
-
-            # Init Config
+            echo "*****************************"
+            echo "ICINGA2 NODE SETUP"
+            echo "role: $ROLE, endpoint: $PARENT_NAME, parent_host: $PARENT_HOST, parent_port: $PARENT_PORT, parent_zone: $PARENT_ZONE, common_name: $COMMON_NAME, zone: $ZONE, icinga2_host: $ICINGA2_HOST, icinga2_port: $ICINGA2_PORT"
+            echo "*****************************"
             /opt/scripts/entrypoint.sh no_start
 
-            MY_ZONE_INDEX=$(($(awk -F'-' '{print $NF}' <<< "${HOSTNAME}")/2))
-
-            #$( awk -F'-' '{print $NF}'| <<< $(echo $HOSTNAME 2>/dev/null))
-            MY_ZONE="zone_satellite"-${MY_ZONE_INDEX}
-
+            # override zones.conf
+            echo "OVERRIDE /etc/icinga2/zones.conf"
             cat <<EOF | tee /etc/icinga2/zones.conf
-            {{- range $index, $topping := until (int .Values.master.replicaCount ) }}
-            object Endpoint "master-{{ $index }}" {
+            {{- range $index, $_ := until 2 }}
+            object Endpoint "${MASTER_NAME_ORIGIN}-{{ $index }}" {
             }
             {{- end }}
-
-            object Zone "master" {
+            object Zone "${PARENT_ZONE}" {
               endpoints = [
-              {{- range $index, $topping := until (int .Values.master.replicaCount ) }}
-              "master-{{ $index }}" ,
+              {{- range $index, $_ := until 2 }}
+              "${MASTER_NAME_ORIGIN}-{{ $index }}",
               {{- end }}
               ]
             }
@@ -145,92 +128,39 @@ spec:
             object Endpoint "$COMMON_NAME" {
             }
 
-            object Zone "$MY_ZONE" {
-                    endpoints = [ "$COMMON_NAME" ]
-                    parent = "master"
+            object Zone "$SATELLITE_ZONE_NAME" {
+              endpoints = [ "$COMMON_NAME" ]
+              parent = "$PARENT_ZONE"
             }
 
             object Zone "global-templates" {
-                    global = true
+              global = true
             }
 
             object Zone "director-global" {
-                    global = true
+              global = true
             }
             EOF
 
+            # Add script to reload satellite
+            touch /usr/bin/reload-satellite
+            chmod -R 775 /usr/bin/reload-satellite
+            chown icinga:icinga /usr/bin/reload-satellite
+            cat << 'EOF' > /usr/bin/reload-satellite
+            echo 'Restarting satellite...'
+            SATELLITE_LIST=$(dig srv +search +short icinga2-satellite-headless |awk '{print $4}' | uniq | sed 's/.$//g')
+            NAMESPACE=($(dig srv +search +short icinga2-headless | awk '{print $4}' | cut -d"." -f3))
+            for SATELLITE in ${SATELLITE_LIST}
+            do
+            satellite_index=$(echo "$SATELLITE" | cut -d'.' -f1  | awk -F'-' '{print $NF}')
+            url="https://{{ .Release.Name }}-icinga2-satellite-${satellite_index}.icinga2-satellite-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
+            curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST "$url"
+            done
+            EOF
 
-            # fix these later
-            # truncate -s 0 /etc/icinga2/features-enabled/api.conf
-            # truncate -s 0 /etc/icinga2/zones.d/master/endpoints.conf
-            # truncate -s 0 /etc/icinga2/zones.d/master/zones.conf
-            rm -rf /etc/icinga2/zones.d/* # it has a copy default config to this dir, but satellite does not need these
-            touch /etc/icinga2/zones.d/empty.conf # git commit throw empty, and might stop at this point? review later
-
-            # Check git folder
-            check_git=`ls -la /etc/icinga2/zones.d | grep ".git" | wc -l`
-            echo $check_git
-            if [ $check_git == 0 ]; then
-                cd /etc/icinga2/zones.d/ && \
-                git init && \
-                git config --global user.name icinga && \
-                git config --global user.email icinga@localhost && \
-                git add -A && git commit -m "init config"
-
-
-                # **add its reload here, later
-                # # Add curl into post-commit
-                # echo "curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST 'https://${FULL_NAME}-0.icinga2-satellite-headless.{{ .Release.Namespace }}:5665/v1/actions/restart-process?pretty=1'" >> /etc/icinga2/zones.d/.git/hooks/post-commit
-                # echo "curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST 'https://${FULL_NAME}-1.icinga2-satellite-headless.{{ .Release.Namespace }}:5665/v1/actions/restart-process?pretty=1'" >> /etc/icinga2/zones.d/.git/hooks/post-commit
-                # echo "curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST 'https://${FULL_NAME}-2.icinga2-satellite-headless.{{ .Release.Namespace }}:5665/v1/actions/restart-process?pretty=1'" >> /etc/icinga2/zones.d/.git/hooks/post-commit
-
-            fi
-
-            # Add curl into reload
-            # cat /etc/icinga2/zones.d/.git/hooks/post-commit > /usr/bin/reload
-
-            # ** no /etc/icinga2/zones.d/master after I remove this dir; fix this later
-            # mkdir /etc/icinga2/zones.d/${full_satellite_zone_name}
-            # if [ ! -e "/etc/icinga2/zones.d/${full_satellite_zone_name}/${COMMON_NAME}.conf" ]; then
-            # cat << EOF > /etc/icinga2/zones.d/${full_satellite_zone_name}/${COMMON_NAME}.conf
-            # object Host "${COMMON_NAME}" {
-            #   import "generic-host-nms"
-            #   check_command = "hostalive"
-            #   address = "${FULL_POD_NAME}"
-            #   address6 = "::1"
-            #   vars.agent_endpoint = name
-            #   vars.device_type = ""
-            #   vars.os = "Linux"
-            #   vars.http_vhosts["http"] = {
-            #     http_uri = "/thruk"
-            #   }
-            #   vars.disks["disk"] = {
-            #     /* No parameters. */
-            #   }
-            #   vars.notification["mail"] = {
-            #     groups = [ "icingaadmins" ]
-            #   }
-            # }
-            # EOF
-            # fi
-
-            # truncate some config files
-            truncate -s 0 /etc/icinga2/conf.d/services.conf
-            truncate -s 0 /etc/icinga2/conf.d/hosts.conf
-
-            # chmod 777 /etc/icinga2/zones.d -R
-
+            # Disable some features
             icinga2 feature disable command icingadb ido-mysql influxdb livestatus notification syslog
-            # **check this, icinga satellite still need this file to be created manually
-            cat > /etc/icinga2/features-enabled/api.conf << EOF
-            object ApiListener "api" {
-              accept_config = true
-              accept_commands = true
-            }
-            EOF
-
-            # remove some default folder inside image 
-
+            # Start icinga2 with tini
             echo "Start Icinga2:"
             exec /tini -- icinga2 daemon
           env:
@@ -245,60 +175,19 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: ROLE
-              value: master
+              value: satellite
             - name: COMMON_NAME
-              value: master
+              value: satellite
             - name: ZONE
+              value: zone-satellite
+            - name: PARENT_ZONE
               value: master
-            - name: ICINGA_HOST
-              value: "0.0.0.0"
-            - name: ICINGA_PORT
-              value: "5665"
-            - name: INFLUXDB_ENABLE
-              value: {{ .Values.master.influxdb_connection.enable | quote }}
-            {{- if .Values.master.influxdb_connection.enable }}
-            - name: INFLUXDB_HOST
-              value: {{ .Values.master.influxdb_connection.influxdb_host | quote }}
-            - name: INFLUXDB_PORT
-              value: {{ .Values.master.influxdb_connection.influxdb_port | quote}}
-            - name: INFLUXDB_DATABASE
-              value: {{ .Values.master.influxdb_connection.influxdb_database | quote }}
-            - name: INFLUXDB_USER
-              value: {{ .Values.master.influxdb_connection.influxdb_user | quote }}
-            - name: INFLUXDB_PASSWORD
-              value: {{ .Values.master.influxdb_connection.influxdb_password | quote }}
-            {{- end }}
-            {{- if .Values.master.ido_connection.enable }}
-            - name: IDO_ENABLE
-              value: {{ .Values.master.ido_connection.enable | quote }}
-            - name: IDO_HOST
-              value: {{ .Values.master.ido_connection.ido_host | quote }}
-            - name: IDO_PORT
-              value: {{ .Values.master.ido_connection.ido_port | quote}}
-            - name: IDO_USER
-              value: {{ .Values.master.ido_connection.ido_user | quote }}
-            - name: IDO_PASSWORD
-              value: {{ .Values.master.ido_connection.ido_password | quote }}
-            - name: IDO_DATABASE
-              value: {{ .Values.master.ido_connection.ido_database | quote }}
-            - name: IDO_CATEGORIES
-              value: {{ .Values.master.ido_connection.ido_catagories | quote}}
-            - name: IDO_CLEANUP_STATEHISTORY
-              value: {{ .Values.master.ido_connection.ido_cleanup_statehistory | quote }}
-            - name: IDO_CLEANUP_NOTIFICAION
-              value: {{ .Values.master.ido_connection.ido_cleanup_notificaion | quote }}
-            - name: IDO_CLEANUP_SERVICECHECK
-              value: {{ .Values.master.ido_connection.ido_cleanup_servicecheck | quote }}
-            {{- end }}
-            {{- if .Values.master.notifications.enable }}
-            - name: NOTI_ENABLE
-              value: {{ .Values.master.notifications.enable | quote }}
-            - name: MAILHUB_HOST
-              value: {{ .Values.master.notifications.mailhub_host | quote }}
-            - name: MAILHUB_PORT
-              value: {{ .Values.master.notifications.mailhub_port | quote }}
-            - name: RELAY_EMAIL
-              value: {{ .Values.master.notifications.relay_email | quote }}
+            {{- if .Values.master.ticketsalt }}
+            - name: TICKET_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: ticketsalt-secret
+                  key: ticketsalt
             {{- end }}
           ports:
             - name: icinga2-api
@@ -359,60 +248,20 @@ spec:
       - name: ghcr-pull-secret
       {{- if .Values.init }}
       initContainers:
-        - name: wait-for-init-repo
+        - name: wait-icinga2-master
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
             - -c
             - |
-                until [ `ls -A /opt/SVTECH-Junos-Automation | grep 'completed' | wc -l` != 0 ];
-                do
-                  echo "Waiting for Init Repo...";
-                  sleep 2;
-                done
-          volumeMounts:
-          {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-            {{- range .Values.global.sharedPersistenceVolume }}
-
-            {{- if and (eq .volumeName "automation-repo-volume") (has "icinga2-satellite" .shareFor) }}
-            - name: {{ .volumeName }}
-              mountPath: {{ .path }}
-            {{- end }}
-
-            {{- end }}
-          {{- end  }}
-      {{- if .Values.master.influxdb_connection.enable }}
-        - name: wait-for-influxdb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
-          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              {{- if .Values.master.influxdb_connection.influxdb_host }}
-              until nc -zvw5 {{ .Values.master.influxdb_connection.influxdb_host }} 9096; do echo "Waiting for InfluxDB..."; sleep 2; done
-              {{- else }}
-              until nc -zvw5 influxdb-relay 9096; do echo "Waiting for InfluxDB..."; sleep 2; done
-              {{- end }}
+              until nc -zvw5 {{ .Chart.Name }} 5665;
+              do
+                echo "Waiting for Icinga2 master...";
+                sleep 2;
+              done
       {{- end }}
 
-      {{- if .Values.master.ido_connection.enable }}
-        - name: wait-for-mariadb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
-          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              {{- if .Values.master.ido_connection.ido_host }}
-              until nc -zvw5 {{ .Values.master.ido_connection.ido_host }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
-              {{- else }}
-              until nc -zvw5 mariadb 3306; do echo "Waiting for MariaDB..."; sleep 2; done
-              {{- end }}
-      {{- end }}
-
-      {{- end }}
       {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
       volumes:
       {{- range .Values.global.sharedPersistenceVolume }}

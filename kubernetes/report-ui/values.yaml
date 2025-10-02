@@ -1,11 +1,16 @@
 global:
   imageRegistry: ghcr.io
-  frontendVip: "10.98.100.193" # VIP for frontend service
+  frontendVip: "" # VIP for frontend service
 
 timezone: Asia/Ho_Chi_Minh
 
 frontend:
   replicaCount: 1
+  initJob:
+    image:
+      repository: svtechnmaa/svtech_report
+      tag: test-v24
+      pullPolicy: IfNotPresent
   init:
     image:
       registry: docker.io
@@ -13,8 +18,9 @@ frontend:
       tag: 1.33
       pullPolicy: IfNotPresent
   image:
-    repository: svtechnmaa/svtech_report_frontend
-    tag: test-v17
+    registry: docker.io
+    repository: bitnami/nginx
+    tag: 1.22.0
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -24,11 +30,18 @@ frontend:
     # - 10.10.10.0/24
     # clusterIP: None
 
+
 backend:
   replicaCount: 2
+  init:
+    image:
+      registry: docker.io
+      repository: busybox
+      tag: 1.33
+      pullPolicy: IfNotPresent
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v17
+    tag: test-v24
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -38,10 +51,12 @@ backend:
     # - 10.10.10.0/24
     # clusterIP: None
   config:
+    basehref: ""        # Base href for the application, e.g., "/minedu"
     db_user: reflex
     db_password: reflex
     db_host: mariadb
     db_database: svtech_report
+    grafana_url: http://grafana:3000/grafana
     icinga_redis_db: "0"
     icinga_redis_host: icinga2
     icinga_redis_port: "6379"
@@ -59,19 +74,22 @@ backend:
     task_failure_ttl: "3600"
     task_result_ttl: "3600"
     task_timeout: "3600"
+    timeout: "600"
+    worker: "5"
+    use_granian: "True"  # Set to "True" to use Granian, "False" otherwise
 
 scheduler:
   replicaCount: 1
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v17
+    tag: test-v24
     pullPolicy: IfNotPresent
 
 worker:
   replicaCount: 2
   image:
     repository: svtechnmaa/svtech_report
-    tag: test-v17
+    tag: test-v24
     pullPolicy: IfNotPresent
 
 redis:

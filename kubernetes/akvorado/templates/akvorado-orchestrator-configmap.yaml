@@ -1,0 +1,133 @@
+apiVersion: v1
+data:
+  akvorado.yaml: |
+    ---
+    # This configuration file is documented in docs/02-configuration.md.
+    # You can get all default values with `akvorado orchestrator /dev/null
+    # --dump --check` or `docker compose run akvorado-orchestrator
+    # orchestrator /dev/null --dump --check`.
+
+    kafka:
+      topic: {{ .Values.global.kafka.topic }}
+      version: 3.8.0
+      brokers:
+      {{- range $i, $e := until (int .Values.global.kafka.replicationFactor) }}
+        - {{ $.Release.Name }}-kafka-{{ $i }}.{{ $.Release.Name }}-kafka-brokers.{{ $.Release.Namespace }}.svc.cluster.local:9092
+      {{- end }}
+      topic-configuration:
+        num-partitions: {{ .Values.global.kafka.partition }}
+        replication-factor: {{ .Values.global.kafka.replicationFactor }}
+        config-entries:
+          # The retention policy in Kafka is mainly here to keep a buffer
+          # for ClickHouse.
+          segment.bytes: 1073741824
+          retention.ms: 86400000 # 1 day
+          cleanup.policy: delete
+          compression.type: producer
+
+    geoip:
+      optional: true
+      asn-database:
+        - /usr/share/GeoIP/asn.mmdb
+      geo-database:
+        - /usr/share/GeoIP/country.mmdb
+
+    clickhouse:
+      orchestrator-url: http://{{ .Chart.Name }}-orchestrator.{{ .Release.Namespace }}.svc.cluster.local:8080
+      kafka:
+        consumers: {{ .Values.global.kafka.partition }}
+      {{- if and (hasKey .Values.global "clickhouse") .Values.global.clickhouse.enabled }}
+      cluster: {{ .Values.global.clickhouse.clusterName }}
+      servers:
+        {{- include "generate_clickhouse_list" (dict "replicaCount" .Values.global.clickhouse.replicaCount "shardCount" .Values.global.clickhouse.shardCount "clusterName" .Values.global.clickhouse.clusterName "releaseName" .Release.Name) | nindent 8 }}
+      username: {{ index .Values.global.clickhouse.users 0 "name" }}
+      password: {{ index .Values.global.clickhouse.users 0 "password" | quote }}
+      {{- else }}
+      cluster: {{ .Values.clickhouse.clusterName }}
+      servers:
+        {{- range .Values.clickhouse.servers }}
+        - {{ . }}
+        {{- end }}
+      username: {{ .Values.clickhouse.username }}
+      password: {{ .Values.clickhouse.password | quote }}
+      {{- end }}
+
+      prometheus-endpoint: /metrics
+      asns:
+        64501: ACME Corporation
+      networks:
+        # You should customize this section with your networks. This
+        # populates the Src/DstNetName/Role/Site/Region/Tenant fields.
+        # 192.0.2.0/24:
+        #   name: ipv4-customers
+        #   role: customers
+        # 203.0.113.0/24:
+        #   name: ipv4-servers
+        #   role: servers
+        # 2a01:db8:cafe:1::/64:
+        #   name: ipv6-customers
+        #   role: customers
+        # 2a01:db8:cafe:2::/64:
+        #   name: ipv6-servers
+        #   role: servers
+
+    inlet: !include "inlet.yaml"
+    console: !include "console.yaml"
+
+  console.yaml: |
+    ---
+    http:
+      cache:
+        type: redis
+        server: {{ .Chart.Name }}-redis.{{ .Release.Namespace }}.svc.cluster.local:6379
+  inlet.yaml: |
+    ---
+    kafka:
+      compression-codec: zstd
+    metadata:
+      workers: 10
+      provider:
+        type: snmp
+        communities:
+        {{- range .Values.inlet.config.providers }}
+          {{ .ip }}: {{ .community }}
+        {{- end }}
+    flow:
+      inputs:
+        - type: udp
+          decoder: netflow
+          listen: :2055
+          workers: 6
+          receive-buffer: 10485760
+          use-src-addr-for-exporter-addr: false
+        - type: udp
+          decoder: sflow
+          listen: :6343
+          workers: 6
+          receive-buffer: 10485760
+          use-src-addr-for-exporter-addr: false
+    core:
+      workers: 6
+      default-sampling-rate: 100
+      exporter-classifiers:
+        # This is an example. This should be customized depending on how
+        # your exporters are named.
+        - ClassifySiteRegex(Exporter.Name, "^([^-]+)-", "$1")
+        - ClassifyRegion("europe")
+        - ClassifyTenant("acme")
+        - ClassifyRole("edge")
+      interface-classifiers:
+        # This is an example. This must be customized depending on the
+        # descriptions of your interfaces. In the following, we assume
+        # external interfaces are named "Transit: Cogent" Or "IX:
+        # FranceIX".
+        - |
+          ClassifyConnectivityRegex(Interface.Description, "^(?i)(transit|pni|ppni|ix):? ", "$1") &&
+          ClassifyProviderRegex(Interface.Description, "^\\S+?\\s(\\S+)", "$1") &&
+          ClassifyExternal()
+        - ClassifyInternal()
+kind: ConfigMap
+metadata:
+  labels:
+    app.kubernetes.io/component: {{ .Chart.Name }}-orchestrator
+  name: {{ .Chart.Name }}-orchestrator-configmap

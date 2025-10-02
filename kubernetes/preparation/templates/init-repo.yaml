@@ -22,7 +22,6 @@ spec:
             list_repo=$(echo $REPO_LIST | tr "," " ")
             for REPO in $list_repo; do
                 echo "repo: $REPO"
-                name=`echo $REPO | cut -d"/" -f3`
                 mkdir -p /opt/$REPO
                 cd /opt/$REPO
                 status=`ls -A /opt/$REPO | grep "completed" | wc -l`
