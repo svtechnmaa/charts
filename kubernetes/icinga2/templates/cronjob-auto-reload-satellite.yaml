@@ -1,0 +1,34 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ printf "%s-auto-reload-satellite" .Release.Name }}
+spec:
+  schedule: "0 8 * * 1"
+  concurrencyPolicy: Replace
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 100
+      template:
+        spec:
+          containers:
+          - name: auto-reload-satellite
+            image: {{ include "common.images.image" ( dict "imageRoot" .Values.cronjob.image "global" .Values.global) }}
+            imagePullPolicy: {{ .Values.cronjob.image.pullPolicy | quote }}
+            command:
+            - bash
+            - -ec
+            - |
+              echo "CronJob run at:"
+              date
+              SATELLITE_LIST=($(dig srv +search +short icinga2-satellite-headless | awk '{print $4}' | uniq | sed 's/.$//g'))
+              for SATELLITE in "${SATELLITE_LIST[@]}"
+              do
+              satellite_index=$(cut -d'.' -f1 <<< $(echo $SATELLITE 2>/dev/null) | awk -F'-' '{print $NF}')
+              echo "Reloading satellite ${satellite_index}..."
+              url="https://{{ .Release.Name }}-icinga2-satellite-${satellite_index}.icinga2-satellite-headless.{{ .Release.Namespace }}:5665/v1/actions/restart-process?pretty=1"
+              curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST "$url"
+              done
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: ghcr-pull-secret

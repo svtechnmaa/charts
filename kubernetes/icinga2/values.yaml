@@ -52,6 +52,12 @@ image:
   pullPolicy: IfNotPresent
 
 
+cronjob:
+  image:
+    repository: svtechnmaa/svtech_debuger
+    tag: v1.0.3
+    pullPolicy: IfNotPresent
+
 clusterDomain: cluster.local
 commonAnnotations:
   helm.sh/hook-weight: "0"
