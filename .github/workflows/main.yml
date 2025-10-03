@@ -669,15 +669,9 @@ jobs:
       - name: Get Commit ID and Committer Info
         if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
         run: |
-          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
-            COMMIT_ID=${{ env.COMMIT_FULL_ID }}
-            COMMITTER_EMAIL=$(git show -s --format='%ce' $COMMIT_ID)
-            COMMITTER_NAME=$(git show -s --format='%cn' $COMMIT_ID)
-          else
-            COMMIT_ID=${{ github.event.head_commit.id }}
-            COMMITTER_EMAIL=${{ github.event.head_commit.committer.email }}
-            COMMITTER_NAME=${{ github.event.head_commit.committer.name }}
-          fi
+          COMMIT_ID=${{ env.COMMIT_FULL_ID }}
+          COMMITTER_EMAIL=$(git show -s --format='%ce' $COMMIT_ID)
+          COMMITTER_NAME=$(git show -s --format='%cn' $COMMIT_ID)
           echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
