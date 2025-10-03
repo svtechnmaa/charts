@@ -58,6 +58,10 @@ spec:
             app.kubernetes.io/component: {{ .Chart.Name }}
             {{- include "common.labels.matchLabels" . | nindent 12 }}
         spec:
+          {{- if hasKey .Values.clickhouse "affinity" }}
+          affinity:
+            {{- toYaml .Values.clickhouse.affinity | nindent 12 }}
+          {{- end }}
           containers:
             - name: clickhouse
               image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouse.image) }}
