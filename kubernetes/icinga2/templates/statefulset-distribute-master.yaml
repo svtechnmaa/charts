@@ -120,6 +120,9 @@ spec:
               ZONE=${ZONE}
             fi
 
+            # change permission /var/lib/icinga2 because of persistent volume from different user
+            chmod 777 /var/lib/icinga2 -R
+
             echo "*****************************"
             echo "ICINGA2 NODE SETUP"
             echo "role: $ROLE, endpoint: $PARENT_NAME, parent_host: $PARENT_HOST, parent_port: $PARENT_PORT, parent_zone: $PARENT_ZONE, common_name: $COMMON_NAME, zone: $ZONE, icinga2_host: $ICINGA2_HOST, icinga2_port: $ICINGA2_PORT"
