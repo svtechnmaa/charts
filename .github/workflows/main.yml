@@ -580,6 +580,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           ref: ${{ env.COMMIT_FULL_ID }}
           path: charts
           token: ${{ secrets.PUSH_TOKEN }}
@@ -587,6 +588,7 @@ jobs:
       - name: Checkout stacked_charts 
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           repository: '${{ github.repository_owner }}/stacked_charts'
           token: ${{ secrets.PUSH_TOKEN }}
           path: stacked_charts
