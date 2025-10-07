@@ -582,6 +582,7 @@ jobs:
         with:
           ref: ${{ env.COMMIT_FULL_ID }}
           path: charts
+          token: ${{ secrets.PUSH_TOKEN }}
 
       - name: Checkout stacked_charts 
         uses: actions/checkout@v4
