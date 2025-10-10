@@ -46,6 +46,8 @@ env:
   INSTALLATION_BRANCH: ${{ inputs.installation_branch || 'master' }}
   JUNOS_BRANCH: ${{ inputs.junos_branch || 'master' }}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
 
 jobs:  
   check_charts:
@@ -642,17 +644,6 @@ jobs:
           git commit -m "no-ci: Release" 
           git remote set-url origin https://svtechnmaa:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/stacked_charts.git
           git push origin master
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Semantic Release charts
-        uses: cycjimmy/semantic-release-action@v4
-        id: semantic
-        with:
-          working_directory: ${{ github.workspace }}/charts
-        env:
-          GITHUB_TOKEN: ${{ secrets.PUSH_TOKEN }} 
 
   cleanup:
     runs-on: ansible-dind
@@ -675,6 +666,9 @@ jobs:
           COMMIT_ID=${{ env.COMMIT_FULL_ID }}
           COMMITTER_EMAIL=$(git show -s --format='%ce' $COMMIT_ID)
           COMMITTER_NAME=$(git show -s --format='%cn' $COMMIT_ID)
+          if [ "$COMMITTER_NAME" = "GitHub" ]; then
+            COMMITTER_NAME="committers"
+          fi
           echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
@@ -699,7 +693,7 @@ jobs:
             
             Best regards,
             SRE Team
-          to: ${{ env.COMMITTER_EMAIL }}
+          to: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
           from: ${{ vars.MAIL_USERNAME }}
 
 
