@@ -235,7 +235,7 @@ spec:
             echo 'Force rebalancing...'
             NAMESPACE=($(dig srv +search +short icinga2-headless | awk '{print $4}' | cut -d"." -f3))
             STS_NAME=($(dig srv +search +short icinga2-satellite-headless | awk '{print $4}' | cut -d"." -f1 | sed 's/-.$//' | uniq))
-            python3 /opt/SVTECH-Junos-Automation/module_utils/icinga2_rebalance.py --namespace=${NAMESPACE} --force_rebalance
+            python3 /opt/SVTECH-Junos-Automation/module_utils/icinga2_rebalance.py --namespace=${NAMESPACE} --force-rebalance
             EOF
 
             # Check git folder
