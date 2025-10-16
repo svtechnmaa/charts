@@ -16,8 +16,8 @@ spec:
         image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         command:        
-        - bash
-        - -ec
+        - sh
+        - -c
         - |
             list_repo=$(echo $REPO_LIST | tr "," " ")
             for REPO in $list_repo; do
