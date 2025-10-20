@@ -583,7 +583,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-          ref: ${{ env.COMMIT_FULL_ID }}
+          ref: main
           path: charts
           token: ${{ secrets.PUSH_TOKEN }}
 
@@ -631,7 +631,6 @@ jobs:
           cd ${{ github.workspace }}/charts
           git remote set-url origin https://svtechnmaa:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/charts.git
           git fetch origin main
-          git checkout main
           git config --global user.name "svtechnmaa"
           git config --global user.email "nmaa@svtech.com.vn"
           git config --global commit.gpgSign true
