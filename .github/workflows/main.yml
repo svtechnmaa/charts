@@ -709,10 +709,14 @@ jobs:
           subject: "[SVTECH GITHUB] Workflow #${{ github.run_number }} from repo ${{ github.repository }} failed!"
           body: |
             Hi ${{ env.COMMITTER_NAME || 'contributors' }},
-            The workflow #${{ github.run_number }} from repo ${{ github.repository }} has failed.
-            After the failure, the workflow will wait for ${{ env.WAIT_SECONDS }}s before cleaning up the environment.
             
-            Please check the details and take appropriate action at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            The workflow #${{ github.run_number }} that run commit #${{ env.COMMIT_ID }} from repo ${{ github.repository }} has failed.
+            Link to the commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_FULL_ID }}
+
+            After the failure, the workflow will wait for ${{ env.WAIT_SECONDS }}s before cleaning up the environment.
+            Please check the workflow details and take appropriate action at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            For more information, please contact the SRE team.
             
             Best regards,
             SRE Team
