@@ -663,11 +663,27 @@ jobs:
         if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
         run: |
           COMMIT_ID=${{ env.COMMIT_FULL_ID }}
+
+          # Get committer info
           COMMITTER_EMAIL=$(git show -s --format='%ce' $COMMIT_ID)
           COMMITTER_NAME=$(git show -s --format='%cn' $COMMIT_ID)
+
+          # Get author info if committer is GitHub and email is noreply
           if [ "$COMMITTER_NAME" = "GitHub" ]; then
-            COMMITTER_NAME="committers"
+            COMMITTER_NAME=$(git show -s --format='%an' $COMMIT_ID)
           fi
+          if [[ "$COMMITTER_EMAIL" == *noreply* ]]; then 
+            COMMITTER_EMAIL=$(git show -s --format='%ae' $COMMIT_ID)
+          fi
+
+          # Fallback to github event info if still GitHub
+          if [ "$COMMITTER_NAME" = "GitHub" ]; then
+            COMMITTER_NAME=${{ github.event.pusher.name || github.event.sender.login }}
+          fi
+          if [[ "$COMMITTER_EMAIL" == *noreply* ]]; then 
+            COMMITTER_EMAIL=${{ github.event.pusher.email}}
+          fi
+          
           echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
@@ -678,13 +694,13 @@ jobs:
         uses: dawidd6/action-send-mail@v6
         with:
           server_address: smtp.gmail.com
-          server_port: 465
+          server_port: 465s
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "[SVTECH GITHUB] Workflow #${{ github.run_number }} from repo ${{ github.repository }} failed!"
           body: |
-            Hi ${{ env.COMMITTER_NAME }},
+            Hi ${{ env.COMMITTER_NAME || 'contributors' }},
             The workflow #${{ github.run_number }} from repo ${{ github.repository }} has failed.
             After the failure, the workflow will wait for ${{ env.WAIT_SECONDS }}s before cleaning up the environment.
             
