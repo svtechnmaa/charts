@@ -654,13 +654,13 @@ jobs:
     if: always() && !cancelled() && needs.check_charts.outputs.no_ci != 'true' && needs.create_vm.result == 'success' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true') 
     steps:
       - name: Checkout code
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'      
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')      
         uses: actions/checkout@v4
         with:
           ref: ${{ env.COMMIT_FULL_ID }}
 
       - name: Get Commit ID and Committer Info
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')
         run: |
           COMMIT_ID=${{ env.COMMIT_FULL_ID }}
 
@@ -697,7 +697,7 @@ jobs:
           echo "COMMITTER_EMAIL: ${{ env.COMMITTER_EMAIL }}"
         
       - name: Send mail to committer
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')
         continue-on-error: true
         uses: dawidd6/action-send-mail@v6
         with:
@@ -707,25 +707,28 @@ jobs:
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "[SVTECH GITHUB] Workflow #${{ github.run_number }} from repo ${{ github.repository }} failed!"
-          body: |
-            Hi ${{ env.COMMITTER_NAME || 'contributors' }},
+          html_body: |
+            <p>Hi ${{ env.COMMITTER_NAME || 'contributors' }},</p>
             
-            The workflow #${{ github.run_number }} that run commit #${{ env.COMMIT_ID }} from repo ${{ github.repository }} has failed.
-            Link to the commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_FULL_ID }}
-
-            After the failure, the workflow will wait for ${{ env.WAIT_SECONDS }}s before cleaning up the environment.
-            Please check the workflow details and take appropriate action at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-            For more information, please contact the SRE team.
+            <p>The workflow #${{ github.run_number }} that run commit <a href="${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_FULL_ID }}">#${{ env.COMMIT_ID }}</a> from repo ${{ github.repository }} has failed.</p>
             
-            Best regards,
+            <p>
+              After the failure, the workflow will wait for ${{ env.WAIT_SECONDS }}s before cleaning up the environment.<br />
+              Please check the workflow details and take appropriate action at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            </p>
+            
+            <p>For more information, please contact the SRE team.</p>
+            
+            <p>
+            Best regards,<br />
             SRE Team
+            </p>
           to: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
           from: ${{ vars.MAIL_USERNAME }}
 
 
       - name: Wait before cleanup
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')
         continue-on-error: true
         run: |
           if [ ${{ env.WAIT_SECONDS }} -gt 3600 ]; then
