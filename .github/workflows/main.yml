@@ -654,13 +654,11 @@ jobs:
     if: always() && !cancelled() && needs.check_charts.outputs.no_ci != 'true' && needs.create_vm.result == 'success' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true') 
     steps:
       - name: Checkout code
-        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')      
         uses: actions/checkout@v4
         with:
           ref: ${{ env.COMMIT_FULL_ID }}
 
       - name: Get Commit ID and Committer Info
-        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')
         run: |
           COMMIT_ID=${{ env.COMMIT_FULL_ID }}
 
