@@ -696,7 +696,7 @@ jobs:
           echo "COMMITTER_NAME: ${{ env.COMMITTER_NAME }}"
           echo "COMMITTER_EMAIL: ${{ env.COMMITTER_EMAIL }}"
         
-      - name: Send mail to committer
+      - name: Send mail to committer to notify failure
         if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')
         continue-on-error: true
         uses: dawidd6/action-send-mail@v6
@@ -706,7 +706,7 @@ jobs:
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "[SVTECH GITHUB] Workflow #${{ github.run_number }} from repo ${{ github.repository }} failed!"
+          subject: "[SVTECH GITHUB] Run failed: Workflow #${{ github.run_number }} from repo ${{ github.repository }}"
           html_body: |
             <p>Hi ${{ env.COMMITTER_NAME || 'contributors' }},</p>
             
@@ -745,6 +745,33 @@ jobs:
           token: ${{ secrets.PUSH_TOKEN }}
           path: SVTECH_CICD_Utilities
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
+
+      - name: Send mail to committer to notify success
+        if: ${{ ! ( (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') ) }}
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[SVTECH GITHUB] Run succeeded: Workflow #${{ github.run_number }} from repo ${{ github.repository }}"
+          html_body: |
+            <p>Hi ${{ env.COMMITTER_NAME || 'contributors' }},</p>
+            
+            <p>
+              The workflow #${{ github.run_number }} that run commit <a href="${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_FULL_ID }}">#${{ env.COMMIT_ID }}</a> from repo ${{ github.repository }} has succeeded.<br />
+              For more details, please visit this workflow link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            </p>
+                        
+            <p>
+            Best regards,<br />
+            SRE Team
+            </p>
+          to: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+          from: ${{ vars.MAIL_USERNAME }}
+        
 
       - name: Download build_vars artifact
         uses: actions/download-artifact@v4
