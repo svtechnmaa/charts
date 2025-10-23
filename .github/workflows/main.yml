@@ -654,13 +654,11 @@ jobs:
     if: always() && !cancelled() && needs.check_charts.outputs.no_ci != 'true' && needs.create_vm.result == 'success' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true') 
     steps:
       - name: Checkout code
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'      
         uses: actions/checkout@v4
         with:
           ref: ${{ env.COMMIT_FULL_ID }}
 
       - name: Get Commit ID and Committer Info
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
         run: |
           COMMIT_ID=${{ env.COMMIT_FULL_ID }}
 
@@ -669,35 +667,29 @@ jobs:
           COMMITTER_EMAIL=$(git show -s --format='%ce' $COMMIT_ID)
           COMMITTER_NAME=$(git show -s --format='%cn' $COMMIT_ID)
 
-          # Get author info if committer is GitHub and email is noreply
-          if [ "$COMMITTER_NAME" = "GitHub" ]; then
-            echo "Committer is GitHub, getting author info..."
-            COMMITTER_NAME=$(git show -s --format='%an' $COMMIT_ID)
-          fi
+          # Get author info if committer email is noreply
           if [[ "$COMMITTER_EMAIL" == *noreply* ]]; then 
-            echo "Committer email is noreply, getting author email..."
+            echo "Committer email is noreply, getting author info..."
+            COMMITTER_NAME=$(git show -s --format='%an' $COMMIT_ID)
             COMMITTER_EMAIL=$(git show -s --format='%ae' $COMMIT_ID)
           fi
 
-          # Fallback to github event info if still GitHub
-          if [ "$COMMITTER_NAME" = "GitHub" ]; then
-            echo "Committer name is still GitHub, using github event info..."
-            COMMITTER_NAME=${{ github.event.pusher.name || github.event.sender.login }}
-          fi
+          # Fallback to github event info if still noreply
           if [[ "$COMMITTER_EMAIL" == *noreply* ]]; then 
             echo "Committer email is still noreply, using github event info..."
+            COMMITTER_NAME=${{ github.event.pusher.name || github.event.sender.login }}
             COMMITTER_EMAIL=${{ github.event.pusher.email}}
           fi
 
           echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
           echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
           echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
-          echo "COMMIT_ID: ${{ env.COMMIT_ID }}"
-          echo "COMMITTER_NAME: ${{ env.COMMITTER_NAME }}"
-          echo "COMMITTER_EMAIL: ${{ env.COMMITTER_EMAIL }}"
+          echo "COMMIT_ID: $COMMIT_ID"
+          echo "COMMITTER_NAME: $COMMITTER_NAME"
+          echo "COMMITTER_EMAIL: $COMMITTER_EMAIL"
         
-      - name: Send mail to committer
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
+      - name: Send mail to committer to notify failure
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')
         continue-on-error: true
         uses: dawidd6/action-send-mail@v6
         with:
@@ -706,26 +698,29 @@ jobs:
           secure: true
           username: ${{ vars.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "[SVTECH GITHUB] Workflow #${{ github.run_number }} from repo ${{ github.repository }} failed!"
-          body: |
-            Hi ${{ env.COMMITTER_NAME || 'contributors' }},
+          subject: "[SVTECH GITHUB] Run failed: Workflow #${{ github.run_number }} from repo ${{ github.repository }}"
+          html_body: |
+            <p>Hi ${{ env.COMMITTER_NAME || 'contributors' }},</p>
             
-            The workflow #${{ github.run_number }} that run commit #${{ env.COMMIT_ID }} from repo ${{ github.repository }} has failed.
-            Link to the commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_FULL_ID }}
-
-            After the failure, the workflow will wait for ${{ env.WAIT_SECONDS }}s before cleaning up the environment.
-            Please check the workflow details and take appropriate action at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-            For more information, please contact the SRE team.
+            <p>The workflow #${{ github.run_number }} that run commit <a href="${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_FULL_ID }}">#${{ env.COMMIT_ID }}</a> from repo ${{ github.repository }} has failed.</p>
             
-            Best regards,
+            <p>
+              After the failure, the workflow will wait for ${{ env.WAIT_SECONDS }}s before cleaning up the environment.<br />
+              Please check the workflow details and take appropriate action at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            </p>
+            
+            <p>For more information, please contact the SRE team.</p>
+            
+            <p>
+            Best regards,<br />
             SRE Team
+            </p>
           to: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
           from: ${{ vars.MAIL_USERNAME }}
 
 
       - name: Wait before cleanup
-        if: needs.test_elk.result != 'success' || needs.test_nmaa.result != 'success'
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success')
         continue-on-error: true
         run: |
           if [ ${{ env.WAIT_SECONDS }} -gt 3600 ]; then
@@ -742,6 +737,33 @@ jobs:
           token: ${{ secrets.PUSH_TOKEN }}
           path: SVTECH_CICD_Utilities
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
+
+      - name: Send mail to committer to notify success
+        if: ${{ ! ( (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') ) }}
+        continue-on-error: true
+        uses: dawidd6/action-send-mail@v6
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[SVTECH GITHUB] Run succeeded: Workflow #${{ github.run_number }} from repo ${{ github.repository }}"
+          html_body: |
+            <p>Hi ${{ env.COMMITTER_NAME || 'contributors' }},</p>
+            
+            <p>
+              The workflow #${{ github.run_number }} that run commit <a href="${{ github.server_url }}/${{ github.repository }}/commit/${{ env.COMMIT_FULL_ID }}">#${{ env.COMMIT_ID }}</a> from repo ${{ github.repository }} has succeeded.<br />
+              For more details, please visit this workflow link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            </p>
+                        
+            <p>
+            Best regards,<br />
+            SRE Team
+            </p>
+          to: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+          from: ${{ vars.MAIL_USERNAME }}
+        
 
       - name: Download build_vars artifact
         uses: actions/download-artifact@v4
