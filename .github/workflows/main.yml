@@ -563,7 +563,7 @@ jobs:
           name: robot-elk-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
 
-  release:
+  release_helm_charts:
     if: ${{ !failure() && !cancelled() && github.ref_name == 'main' && github.event_name != 'workflow_dispatch' && needs.check_charts.outputs.no_ci != 'true' && needs.check_charts.outputs.changed_charts != '' }}
     runs-on: ubuntu-dind
     needs: 
@@ -636,11 +636,11 @@ jobs:
           git config --global commit.gpgSign true
           git config --global user.signingkey ${{ secrets.GPG_KEY_ID }}
           git add .
-          git commit -m "no-ci: Release"
+          git commit -m "no-ci: Release helm charts"
           git push origin main
           cd ${{ github.workspace }}/stacked_charts
           git add .
-          git commit -m "no-ci: Release" 
+          git commit -m "no-ci: Release helm charts" 
           git remote set-url origin https://svtechnmaa:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/stacked_charts.git
           git push origin master
 
