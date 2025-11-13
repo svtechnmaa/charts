@@ -18,6 +18,26 @@ global:
 timezone: "Asia/Ho_Chi_Minh"
 
 clickhouseKeeper:
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/component
+              operator: In
+              values:
+              - clickhouse-keeper
+          topologyKey: "kubernetes.io/hostname"
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: clickhouse
+            operator: In
+            values:
+            - keeper
   replicaCount: 3
   image:
     repository: "clickhouse/clickhouse-keeper"
@@ -43,6 +63,27 @@ clickhouseKeeper:
 
 
 clickhouse:
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/component
+              operator: In
+              values:
+              - clickhouse
+          topologyKey: "kubernetes.io/hostname"
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: clickhouse
+            operator: In
+            values:
+            - data
+
   init:
     image:
       registry: docker.io
