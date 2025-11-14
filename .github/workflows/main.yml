@@ -563,7 +563,7 @@ jobs:
           name: robot-elk-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
 
-  release:
+  release_helm_charts:
     if: ${{ !failure() && !cancelled() && github.ref_name == 'main' && github.event_name != 'workflow_dispatch' && needs.check_charts.outputs.no_ci != 'true' && needs.check_charts.outputs.changed_charts != '' }}
     runs-on: ubuntu-dind
     needs: 
@@ -616,14 +616,20 @@ jobs:
           # GPG private key exported as an ASCII armored version or its base64 encoding
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
-      - name: Update helm chart version based on commit
+      - name: Update charts version based on commit on stacked_charts and charts repos
         run: |
           python3 ${{ github.workspace }}/SVTECH_CICD_Utilities/python_script/public_helmchart_release.py \
             --BUILD_VARS_PATH=${{ github.workspace }} \
-            --GITHUB_TOKEN=${{ secrets.PUSH_TOKEN}} \
+            --GITHUB_TOKEN=${{ secrets.GH_TOKEN}} \
             --OWNER=svtechnmaa \
             --charts_string=${{ needs.check_charts.outputs.changed_charts }} \
-            --REPO=charts
+            --TARGET_REPO=charts \
+            --SOURCE_REPO=charts \
+            --COMMIT_SHA=${{ env.COMMIT_FULL_ID }}
+
+          RELEASE_MSG=$(cat /tmp/release_info.txt)
+          echo "RELEASE_MSG=$RELEASE_MSG" >> $GITHUB_ENV
+          
       - name: Commit Release charts
         run: |
           artifacthub_path="${{ github.workspace }}/charts/artifacthub"
@@ -636,11 +642,11 @@ jobs:
           git config --global commit.gpgSign true
           git config --global user.signingkey ${{ secrets.GPG_KEY_ID }}
           git add .
-          git commit -m "no-ci: Release"
+          git commit -m "no-ci: Release charts ${{ env.RELEASE_MSG }}"
           git push origin main
           cd ${{ github.workspace }}/stacked_charts
           git add .
-          git commit -m "no-ci: Release" 
+          git commit -m "no-ci: Release charts ${{ env.RELEASE_MSG }}"
           git remote set-url origin https://svtechnmaa:${{ secrets.PUSH_TOKEN }}@github.com/svtechnmaa/stacked_charts.git
           git push origin master
 
