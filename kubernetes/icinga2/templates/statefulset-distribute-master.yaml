@@ -291,7 +291,7 @@ spec:
             # copy existing state file if present
             if [[ -f /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state ]]; then
               echo "Sync existing icinga2.state file from /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state to /var/lib/icinga2/icinga2.state"
-              /usr/bin/rsync -az /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state /var/lib/icinga2/icinga2.state
+              /usr/bin/rsync -acz --ignore-existing /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state /var/lib/icinga2/icinga2.state
             fi
             # # truncate some config files
             # truncate -s 0 /etc/icinga2/conf.d/services.conf
