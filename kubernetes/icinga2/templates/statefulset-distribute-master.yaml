@@ -285,6 +285,14 @@ spec:
             EOF
             fi
 
+            # Create cronjob to sync icinga2.state file every 5 minutes
+            crontab -l 2>/dev/null | echo "*/5 * * * * rsync -acz /var/lib/icinga2/icinga2.state /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state 2>/dev/null" | crontab -
+            cron -f &
+            # copy existing state file if present
+            if [[ -f /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state ]]; then
+              echo "Sync existing icinga2.state file from /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state to /var/lib/icinga2/icinga2.state"
+              /usr/bin/rsync -acz --ignore-existing /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state /var/lib/icinga2/icinga2.state
+            fi
             # # truncate some config files
             # truncate -s 0 /etc/icinga2/conf.d/services.conf
             # truncate -s 0 /etc/icinga2/conf.d/hosts.conf
