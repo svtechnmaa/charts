@@ -34,10 +34,10 @@ clickhouseKeeper:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          - key: clickhouse
+          - key: clickhouse-keeper
             operator: In
             values:
-            - keeper
+            - enabled
   replicaCount: 3
   image:
     repository: "clickhouse/clickhouse-keeper"
@@ -79,10 +79,10 @@ clickhouse:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
         - matchExpressions:
-          - key: clickhouse
+          - key: clickhouse-data
             operator: In
             values:
-            - data
+            - enabled
 
   init:
     image:
