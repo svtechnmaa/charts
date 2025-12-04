@@ -9,7 +9,7 @@ frontend:
   initJob:
     image:
       repository: svtechnmaa/svtech_report
-      tag: v1.0.0
+      tag: v1.0.1
       pullPolicy: IfNotPresent
   init:
     image:
@@ -41,7 +41,7 @@ backend:
       pullPolicy: IfNotPresent
   image:
     repository: svtechnmaa/svtech_report
-    tag: v1.0.0
+    tag: v1.0.1
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -82,14 +82,14 @@ scheduler:
   replicaCount: 1
   image:
     repository: svtechnmaa/svtech_report
-    tag: v1.0.0
+    tag: v1.0.1
     pullPolicy: IfNotPresent
 
 worker:
   replicaCount: 2
   image:
     repository: svtechnmaa/svtech_report
-    tag: v1.0.0
+    tag: v1.0.1
     pullPolicy: IfNotPresent
 
 redis:
