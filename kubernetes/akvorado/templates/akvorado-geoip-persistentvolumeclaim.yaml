@@ -28,6 +28,7 @@ metadata:
     helm.sh/resource-policy: keep
 spec:
   storageClassName: {{ $namespace }}-{{ .Values.geoip.sharedPersistenceVolume.storageClass }}
+  volumeName: {{ $namespace }}-{{ .Values.geoip.sharedPersistenceVolume.pvcName }}-pv
   accessModes:
     - {{ .Values.geoip.sharedPersistenceVolume.accessModes }}
   resources:
