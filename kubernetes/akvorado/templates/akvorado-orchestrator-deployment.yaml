@@ -32,6 +32,20 @@ spec:
               until nc -zvw5 {{ .Release.Name }}-kafka-external-bootstrap.{{ .Release.Namespace }}.svc.cluster.local 9094; do echo "Waiting for Kafka..."; sleep 2; done
 
       containers:
+        - args:
+            - orchestrator
+            - /etc/akvorado/akvorado.yaml
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.orchestrator.image ) }}
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+          name: orchestrator
+          volumeMounts:
+            - mountPath: /etc/akvorado
+              name: {{ .Chart.Name }}-orchestrator-config
+              readOnly: true
+            - mountPath: {{ .Values.geoip.sharedPersistenceVolume.path }}
+              name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
         - name: geoip-sidecar
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.geoip.image ) }}
           env:
@@ -49,20 +63,6 @@ spec:
             {{- end }}
           volumeMounts:
             - mountPath: /data
-              name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
-        - args:
-            - orchestrator
-            - /etc/akvorado/akvorado.yaml
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.orchestrator.image ) }}
-          env:
-            - name: TZ
-              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-          name: orchestrator
-          volumeMounts:
-            - mountPath: /etc/akvorado
-              name: {{ .Chart.Name }}-orchestrator-config
-              readOnly: true
-            - mountPath: {{ .Values.geoip.sharedPersistenceVolume.path }}
               name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
       restartPolicy: Always
       volumes:

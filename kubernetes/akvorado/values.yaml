@@ -74,6 +74,11 @@ orchestrator:
     tag: 1.11.2
     pullPolicy: IfNotPresent
   replicaCount: 1
+  env:
+    ttl_raw: 8760h
+    ttl_1m: 168h
+    ttl_5m: 2160h
+    ttl_1h: 8760h
   revisionHistoryLimit: 0
   updateStrategy: Recreate
   service:
@@ -87,7 +92,7 @@ geoip:
   env:
     ipinfo_token: "a2632ea59736c7"
     ipinfo_db: "country asn"
-    update_time: "48h"
+    update_time: "48h"            # If run only once, set to "infinity"
   sharedPersistenceVolume:
     volumeName: geoip-volume
     pvcName: geoip-pvc
