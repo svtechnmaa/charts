@@ -13,35 +13,37 @@
       }
     },
     "style": {
-      "endArrow": {
-        "fill": "#fa00ff",
-        "path": "M 0,0 L 12,-4 L 12,4 Z",
-        "stroke": "#fa00ff"
-      },
-      "lineDash": [],
-      "lineWidth": 5,
-      "startArrow": {
-        "fill": "#fa00ff",
-        "path": "M 0,0 L 12,-4 L 12,4 Z",
-        "stroke": "#fa00ff"
-      },
       "stroke": "#fa00ff",
-      "strokeOpacity": 1
+      "strokeOpacity": 1,
+      "lineWidth": 5,
+      "lineDash": [],
+      "startArrow": {
+        "path": "M 0,0 L 12,-4 L 12,4 Z",
+        "fill": "#fa00ff",
+        "stroke": "#fa00ff"
+      },
+      "endArrow": {
+        "path": "M 0,0 L 12,-4 L 12,4 Z",
+        "fill": "#fa00ff",
+        "stroke": "#fa00ff"
+      }
     }
   },
   "node": {
-    "clipCfg": {
-      "r": 30,
-      "show": true,
-      "type": "circle",
-      "x": 0,
-      "y": -3
-    },
-    "haloColor": "#ba00fb",
+    "type": "image",
     "img": "/public/router-big_unknown.svg",
+    "haloColor": "#ba00fb",
+    "clipCfg": {
+      "type": "circle",
+      "r": 30,
+      "x": 0,
+      "y": -3,
+      "show": true
+    },
+    "size": [45, 30],
     "labelCfg": {
-      "offset": 12,
       "position": "bottom",
+      "offset": 12,
       "style": {
         "background": {
           "padding": [3, 6, 3, 6]
@@ -51,14 +53,12 @@
         "fontStyle": "bold"
       }
     },
-    "size": [45, 30],
     "style": {
-      "fillOpacity": 1,
-      "lineDash": [],
-      "lineWidth": 1,
       "opacity": 1,
-      "strokeOpacity": 0.1
-    },
-    "type": "image"
+      "fillOpacity": 1,
+      "strokeOpacity": 0.1,
+      "lineWidth": 1,
+      "lineDash": []
+    }
   }
 }

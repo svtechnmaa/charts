@@ -14,30 +14,32 @@
       }
     },
     "style": {
-      "endArrow": {
-        "fill": "#ffffff",
-        "path": "M 0,0 L 12,-4 L 12,4 Z",
-        "stroke": "#ffffff"
-      },
-      "lineDash": [],
+      "stroke": "#ffffff",
       "lineWidth": 5,
+      "lineDash": [],
       "startArrow": false,
-      "stroke": "#ffffff"
+      "endArrow": {
+        "path": "M 0,0 L 12,-4 L 12,4 Z",
+        "fill": "#ffffff",
+        "stroke": "#ffffff"
+      }
     }
   },
   "node": {
-    "clipCfg": {
-      "r": 30,
-      "show": true,
-      "type": "circle",
-      "x": 0,
-      "y": -3
-    },
-    "haloColor": "#000000",
+    "type": "image",
     "img": "/public/router-big_down.svg",
+    "haloColor": "#000000",
+    "clipCfg": {
+      "type": "circle",
+      "r": 30,
+      "x": 0,
+      "y": -3,
+      "show": true
+    },
+    "size": [45, 30],
     "labelCfg": {
-      "offset": 12,
       "position": "bottom",
+      "offset": 12,
       "style": {
         "background": {
           "padding": [3, 6, 3, 6]
@@ -48,12 +50,10 @@
         "opacity": 1
       }
     },
-    "size": [45, 30],
     "style": {
-      "lineDash": [],
       "lineWidth": 1,
-      "strokeOpacity": 0.1
-    },
-    "type": "image"
+      "strokeOpacity": 0.1,
+      "lineDash": []
+    }
   }
 }

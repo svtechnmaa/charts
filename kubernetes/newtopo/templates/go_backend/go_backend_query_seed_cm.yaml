@@ -42,7 +42,7 @@ data:
           "Name": "default_in_ult_from_redis",
           "DatasourceID": 4,
           "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
-          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var inUltMatch = performanceData.match(/in_ult=(\\d+)%/);\n    var inUltValue = inUltMatch ? parseInt(inUltMatch[1], 10) : 0;\n\n    emit(k, inUltValue);\n  })\n}",
+          "ResultMapper": "ffunction(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var inUltMatch = performanceData.match(/in_ult=(\\d+)%/);\n    var inUltInt = inUltMatch ? parseInt(inUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var inUltValue = inUltInt + \" %\";\n\n    emit(k, inUltValue);\n  })\n}",
           "Schedule": "@every 5m"
         },
         {
@@ -50,7 +50,7 @@ data:
           "Name": "default_out_ult_from_redis",
           "DatasourceID": 4,
           "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
-          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var outUltMatch = performanceData.match(/out_ult=(\\d+)%/);\n    var outUltValue = outUltMatch ? parseInt(outUltMatch[1], 10) : 0;\n\n    emit(k, outUltValue);\n  })\n}",
+          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var outUltMatch = performanceData.match(/out_ult=(\\d+)%/);\n    var outUltInt = outUltMatch ? parseInt(outUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var outUltValue = outUltInt + \" %\";\n    emit(k, outUltValue);\n  })\n}",
           "Schedule": "@every 5m"
         },
         {
@@ -94,8 +94,8 @@ data:
           "Name": "default_critical_service_count_from_icingadb",
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
-          "Content": "SELECT t1.name AS hostname, t1.address, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service_state t3 ON t1.id = t3.host_id WHERE t3.hard_state = 2 GROUP BY t1.id, t1.name;",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; var id_string = 'number_service_critical'; emit([hostname, address, id_string].join('|'), { number_service_critical: hard_state_count }) }) }",
+          "Content": "SELECT t1.name AS hostname,t1.address, t3.hard_state, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name NOT LIKE 'If%' GROUP BY t1.id, t1.name, t1.address, t3.hard_state;",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { number_service_critical: hard_state_count }) }) }",
           "Schedule": "@every 15m"
         },
         {
@@ -103,8 +103,8 @@ data:
           "Name": "default_warning_service_count_from_icingadb",
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
-          "Content": "SELECT t1.name AS hostname, t1.address, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service_state t3 ON t1.id = t3.host_id WHERE t3.hard_state = 1 GROUP BY t1.id, t1.name;",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; var id_string = 'number_service_warning'; emit([hostname, address, id_string].join('|'), { number_service_warning: hard_state_count }) }) }",
+          "Content": "SELECT t1.name AS hostname,t1.address, t3.hard_state, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name NOT LIKE 'If%' GROUP BY t1.id, t1.name, t1.address, t3.hard_state;",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { number_service_warning: hard_state_count }) }) }",
           "Schedule": "@every 15m"
         },
         {
@@ -113,7 +113,7 @@ data:
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
           "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, t3.hard_state AS red_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_RedAlarm';",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var red_alarm_count = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), { number_red_alarm: red_alarm_count }) }) }",
+          "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var red_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert to integer safely\n    var number_red_alarm = parseInt(red_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_red_alarm: number_red_alarm\n    });\n  });\n}\n",
           "Schedule": "@every 15m"
         },
         {
@@ -122,7 +122,7 @@ data:
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
           "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS service_name, t3.hard_state AS yellow_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_YellowAlarm';",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var yellow_alarm_count = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), { number_yellow_alarm: yellow_alarm_count }) }) }",
+          "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var yellow_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert safely to integer\n    var number_yellow_alarm = parseInt(yellow_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_yellow_alarm: number_yellow_alarm\n    });\n  });\n}\n",
           "Schedule": "@every 15m"
         }
       ]

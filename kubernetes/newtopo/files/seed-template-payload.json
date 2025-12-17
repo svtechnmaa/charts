@@ -2,7 +2,10 @@
   "graphLevelStyle": {
     "node": {
       "manualStyle": {
-        "size": [45, 30],
+        "size": [
+          45,
+          30
+        ],
         "style": {
           "fillOpacity": 1,
           "lineDash": [],
@@ -20,7 +23,12 @@
           "fontStyle": "bold",
           "opacity": 1,
           "background": {
-            "padding": [3, 6, 3, 6]
+            "padding": [
+              3,
+              6,
+              3,
+              6
+            ]
           }
         },
         "offset": 12
@@ -34,12 +42,13 @@
           "stroke": "#00ff29",
           "strokeOpacity": 1,
           "startArrow": false,
-          "arrowOffset": 13,
           "endArrow": {
             "fill": "#00ff29",
             "stroke": "#00ff29",
-            "path": "M 0,0 L 12,-4 L 12,4 Z"
-          }
+            "path": "M 26,0 L 38,-4 L 38,4 Z"
+          },
+          "arrowColor": "#00ff29",
+          "arrowOffset": 13
         }
       },
       "manualLabelCfg": {
@@ -49,7 +58,12 @@
           "fontStyle": "bold",
           "opacity": 1,
           "background": {
-            "padding": [3, 6, 3, 6]
+            "padding": [
+              3,
+              6,
+              3,
+              6
+            ]
           }
         },
         "position": "center",
@@ -73,7 +87,12 @@
           "fillOpacity": 1,
           "fontStyle": "bold",
           "background": {
-            "padding": [6, 14, 4, 14],
+            "padding": [
+              6,
+              14,
+              4,
+              14
+            ],
             "radius": 0
           }
         },
@@ -81,82 +100,85 @@
       }
     }
   },
-  "metaEdgeCfg": [
-    {
-      "queryId": "2",
-      "queryFormat": "${source_hostname}|${source_address}|IfCheck-${physical_interface}",
-      "alias": "redis_ifcheck_id"
-    },
-    {
-      "queryId": "4",
-      "queryFormat": "${redis_ifcheck_id}",
-      "alias": "redis_ifcheck_state"
-    },
-    {
-      "queryId": "5",
-      "queryFormat": "${source_hostname}|IfCheck-${physical_interface}",
-      "alias": "in_ultilization"
-    },
-    {
-      "queryId": "6",
-      "queryFormat": "${source_hostname}|IfCheck-${physical_interface}",
-      "alias": "out_ultilization"
-    },
-    {
-      "queryId": "9",
-      "queryFormat": "${source_hostname}|IfCheck-${physical_interface}|OpticRX",
-      "alias": "RX"
-    },
-    {
-      "queryId": "10",
-      "queryFormat": "${source_hostname}|IfCheck-${physical_interface}|OpticTX",
-      "alias": "TX"
-    }
-  ],
+  "nodeLoggingConfigs": [],
+  "edgeLoggingConfigs": [],
   "nodeMetricConfigs": [
     {
-      "url": "https://10.98.0.185/grafana/d-solo/device-detail/device-detail?var-hostgroup=$__all&var-hostname={{hostname}}&orgId=1&from=now-24h&to=now&timezone=browser&var-address=100.1.20.4&var-interface=$__all&var-FPC=$__all&var-rp=six_months&var-service=$__all&panelId=2&__feature.dashboardSceneSolo",
+      "url": "https://10.98.5.224/grafana/d-solo/icinga2-default/icinga2-default?orgId=1&from=now-24h&to=now&timezone=browser&var-hostname={{hostname}}&var-service=ping4&panelId=1&__feature.dashboardSceneSolo",
       "{{hostname}}": "hostname"
     }
   ],
   "edgeMetricConfigs": [
     {
-      "url": "https://10.98.0.185/grafana/d-solo/aeivihvpya8lce/interface-detail?orgId=1&from=now-24h&to=now&timezone=browser&var-hostgroup=$__all&var-hostname={{source_hostname}}&var-service={{interface_name}}&var-command=Interface-check-command&var-perf=OpticRX&var-rp=six_months&panelId=3&__feature.dashboardSceneSolo",
+      "url": "https://10.98.5.224/grafana/d-solo/icinga2-default/icinga2-default?orgId=1&from=now-24h&to=now&timezone=browser&var-hostname={{source_hostname}}&var-service=IfCheck-{{physical_interface}}&panelId=1&__feature.dashboardSceneSolo",
       "{{hostname}}": "hostname",
       "{{interface_name}}": "physical_interface",
+      "{{physical_interface}}": "physical_interface",
       "{{source_hostname}}": "source_hostname"
     }
   ],
   "metaNodeCfg": [
     {
-      "queryId": "1",
+      "alias": "redis_host_id",
       "queryFormat": "${hostname}|${address}",
-      "alias": "redis_host_id"
+      "queryId": "1"
     },
     {
-      "queryId": "3",
+      "alias": "redis_host_state",
       "queryFormat": "${redis_host_id}",
-      "alias": "redis_host_state"
+      "queryId": "3"
     },
     {
-      "queryId": "11",
+      "alias": "critical_service_count",
       "queryFormat": "${hostname}|${address}",
-      "alias": "critical_service_count"
+      "queryId": "11"
     },
     {
-      "queryId": "12",
+      "alias": "warning_service_count",
       "queryFormat": "${hostname}|${address}",
-      "alias": "warning_service_count"
+      "queryId": "12"
     },
     {
-      "queryId": "13",
+      "alias": "red_alarm_count",
       "queryFormat": "${hostname}|${address}",
-      "alias": "red_alarm_count"
+      "queryId": "13"
     },
     {
-      "queryId": "14",
       "alias": "yellow_alarm_count",
-      "queryFormat": "${hostname}|${address}"
+      "queryFormat": "${hostname}|${address}",
+      "queryId": "14"
+    }
+  ],
+  "metaEdgeCfg": [
+    {
+      "alias": "redis_ifcheck_id",
+      "queryFormat": "${source_hostname}|${source_address}|IfCheck-${physical_interface}",
+      "queryId": "2"
+    },
+    {
+      "alias": "redis_ifcheck_state",
+      "queryFormat": "${redis_ifcheck_id}",
+      "queryId": "4"
+    },
+    {
+      "alias": "in_ultilization",
+      "queryFormat": "${redis_ifcheck_id}",
+      "queryId": "5"
+    },
+    {
+      "alias": "out_ultilization",
+      "queryFormat": "${redis_ifcheck_id}",
+      "queryId": "6"
+    },
+    {
+      "alias": "RX",
+      "queryFormat": "${redis_ifcheck_id}",
+      "queryId": "9"
+    },
+    {
+      "alias": "TX",
+      "queryFormat": "${redis_ifcheck_id}",
+      "queryId": "10"
     }
   ],
   "nodeRuleCfg": [
@@ -198,5 +220,397 @@
       "expression": "id is defined",
       "state": 5
     }
-  ]
+  ],
+  "nodeBadgeFieldCfg": {},
+  "edgeBadgeFieldCfg": {
+    "availableFields": [
+      {
+        "fieldName": "dest_address",
+        "path": "dest_address"
+      },
+      {
+        "fieldName": "dest_hostname",
+        "path": "dest_hostname"
+      },
+      {
+        "fieldName": "id",
+        "path": "id"
+      },
+      {
+        "fieldName": "label",
+        "path": "label"
+      },
+      {
+        "fieldName": "neighbor_physical_interface",
+        "path": "neighbor_physical_interface"
+      },
+      {
+        "fieldName": "neighbor_physical_interface_name",
+        "path": "neighbor_physical_interface_name"
+      },
+      {
+        "fieldName": "operational_state",
+        "path": "operational_state"
+      },
+      {
+        "fieldName": "pair_id",
+        "path": "pair_id"
+      },
+      {
+        "fieldName": "physical_interface",
+        "path": "physical_interface"
+      },
+      {
+        "fieldName": "physical_interface_name",
+        "path": "physical_interface_name"
+      },
+      {
+        "fieldName": "remote_ifindex",
+        "path": "remote_ifindex"
+      },
+      {
+        "fieldName": "runtime",
+        "path": "runtime"
+      },
+      {
+        "fieldName": "source",
+        "path": "source"
+      },
+      {
+        "fieldName": "source_address",
+        "path": "source_address"
+      },
+      {
+        "fieldName": "source_hostname",
+        "path": "source_hostname"
+      },
+      {
+        "fieldName": "target",
+        "path": "target"
+      },
+      {
+        "fieldName": "redis_ifcheck_id",
+        "path": "redis_ifcheck_id"
+      },
+      {
+        "fieldName": "in_ultilization",
+        "path": "in_ultilization"
+      },
+      {
+        "fieldName": "out_ultilization",
+        "path": "out_ultilization"
+      },
+      {
+        "fieldName": "haloColor",
+        "path": "haloColor"
+      },
+      {
+        "fieldName": "badgeEmoji",
+        "path": "badgeEmoji"
+      },
+      {
+        "fieldName": "redis_ifcheck_state",
+        "path": "redis_ifcheck_state"
+      }
+    ],
+    "selectedField": "in_ultilization"
+  },
+  "nodeLabelFieldCfg": {
+    "availableFields": [
+      {
+        "fieldName": "address",
+        "path": "address"
+      },
+      {
+        "fieldName": "hostname",
+        "path": "hostname"
+      },
+      {
+        "fieldName": "id",
+        "path": "id"
+      },
+      {
+        "fieldName": "x",
+        "path": "x"
+      },
+      {
+        "fieldName": "y",
+        "path": "y"
+      }
+    ],
+    "selectedField": "hostname"
+  },
+  "edgeLabelFieldCfg": {
+    "availableFields": [
+      {
+        "fieldName": "dest_address",
+        "path": "dest_address"
+      },
+      {
+        "fieldName": "dest_hostname",
+        "path": "dest_hostname"
+      },
+      {
+        "fieldName": "neighbor_physical_interface",
+        "path": "neighbor_physical_interface"
+      },
+      {
+        "fieldName": "neighbor_physical_interface_name",
+        "path": "neighbor_physical_interface_name"
+      },
+      {
+        "fieldName": "pair_id",
+        "path": "pair_id"
+      },
+      {
+        "fieldName": "physical_interface",
+        "path": "physical_interface"
+      },
+      {
+        "fieldName": "physical_interface_name",
+        "path": "physical_interface_name"
+      },
+      {
+        "fieldName": "remote_ifindex",
+        "path": "remote_ifindex"
+      },
+      {
+        "fieldName": "runtime",
+        "path": "runtime"
+      },
+      {
+        "fieldName": "source_address",
+        "path": "source_address"
+      },
+      {
+        "fieldName": "source_hostname",
+        "path": "source_hostname"
+      },
+      {
+        "fieldName": "id",
+        "path": "id"
+      },
+      {
+        "fieldName": "source",
+        "path": "source"
+      },
+      {
+        "fieldName": "target",
+        "path": "target"
+      }
+    ],
+    "selectedField": "physical_interface"
+  },
+  "nodeFieldViewCfg": {
+    "availableFields": [
+      {
+        "fieldName": "address",
+        "path": "address",
+        "selected": true
+      },
+      {
+        "fieldName": "depth",
+        "path": "depth",
+        "selected": false
+      },
+      {
+        "fieldName": "hostname",
+        "path": "hostname",
+        "selected": true
+      },
+      {
+        "fieldName": "id",
+        "path": "id",
+        "selected": false
+      },
+      {
+        "fieldName": "label",
+        "path": "label",
+        "selected": false
+      },
+      {
+        "fieldName": "lldp.router_id",
+        "path": "lldp.router_id",
+        "selected": false
+      },
+      {
+        "fieldName": "operational_state",
+        "path": "operational_state",
+        "selected": false
+      },
+      {
+        "fieldName": "x",
+        "path": "x",
+        "selected": false
+      },
+      {
+        "fieldName": "y",
+        "path": "y",
+        "selected": false
+      },
+      {
+        "fieldName": "redis_host_id",
+        "path": "redis_host_id",
+        "selected": false
+      },
+      {
+        "fieldName": "redis_host_state",
+        "path": "redis_host_state",
+        "selected": false
+      },
+      {
+        "fieldName": "critical_service_count",
+        "path": "critical_service_count",
+        "selected": true
+      },
+      {
+        "fieldName": "warning_service_count",
+        "path": "warning_service_count",
+        "selected": true
+      },
+      {
+        "fieldName": "red_alarm_count",
+        "path": "red_alarm_count",
+        "selected": true
+      },
+      {
+        "fieldName": "yellow_alarm_count",
+        "path": "yellow_alarm_count",
+        "selected": true
+      },
+      {
+        "fieldName": "haloColor",
+        "path": "haloColor",
+        "selected": false
+      }
+    ],
+    "computedFields": []
+  },
+  "edgeFieldViewCfg": {
+    "availableFields": [
+      {
+        "fieldName": "badgeEmoji",
+        "path": "badgeEmoji",
+        "selected": false
+      },
+      {
+        "fieldName": "dest_address",
+        "path": "dest_address",
+        "selected": true
+      },
+      {
+        "fieldName": "dest_hostname",
+        "path": "dest_hostname",
+        "selected": true
+      },
+      {
+        "fieldName": "id",
+        "path": "id",
+        "selected": true
+      },
+      {
+        "fieldName": "label",
+        "path": "label",
+        "selected": false
+      },
+      {
+        "fieldName": "neighbor_physical_interface",
+        "path": "neighbor_physical_interface",
+        "selected": true
+      },
+      {
+        "fieldName": "neighbor_physical_interface_name",
+        "path": "neighbor_physical_interface_name",
+        "selected": false
+      },
+      {
+        "fieldName": "operational_state",
+        "path": "operational_state",
+        "selected": false
+      },
+      {
+        "fieldName": "pair_id",
+        "path": "pair_id",
+        "selected": false
+      },
+      {
+        "fieldName": "physical_interface",
+        "path": "physical_interface",
+        "selected": true
+      },
+      {
+        "fieldName": "physical_interface_name",
+        "path": "physical_interface_name",
+        "selected": false
+      },
+      {
+        "fieldName": "remote_ifindex",
+        "path": "remote_ifindex",
+        "selected": false
+      },
+      {
+        "fieldName": "runtime",
+        "path": "runtime",
+        "selected": false
+      },
+      {
+        "fieldName": "source",
+        "path": "source",
+        "selected": false
+      },
+      {
+        "fieldName": "source_address",
+        "path": "source_address",
+        "selected": true
+      },
+      {
+        "fieldName": "source_hostname",
+        "path": "source_hostname",
+        "selected": true
+      },
+      {
+        "fieldName": "target",
+        "path": "target",
+        "selected": false
+      },
+      {
+        "fieldName": "redis_ifcheck_id",
+        "path": "redis_ifcheck_id",
+        "selected": true
+      },
+      {
+        "fieldName": "redis_ifcheck_state",
+        "path": "redis_ifcheck_state",
+        "selected": true
+      },
+      {
+        "fieldName": "in_ultilization",
+        "path": "in_ultilization",
+        "selected": true
+      },
+      {
+        "fieldName": "out_ultilization",
+        "path": "out_ultilization",
+        "selected": true
+      },
+      {
+        "fieldName": "RX",
+        "path": "RX",
+        "selected": false
+      },
+      {
+        "fieldName": "TX",
+        "path": "TX",
+        "selected": false
+      },
+      {
+        "fieldName": "haloColor",
+        "path": "haloColor",
+        "selected": false
+      }
+    ],
+    "computedFields": []
+  },
+  "nodeStatisticCfg": [],
+  "edgeStatisticCfg": []
 }
