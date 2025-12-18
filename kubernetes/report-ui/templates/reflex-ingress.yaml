@@ -53,5 +53,6 @@ spec:
             name: {{ .Chart.Name }}-backend
             port:
               number: {{ .Values.backend.service.port }}
-        path: "{{ $basehref }}/(_event|ping|_upload)(/.*)?$"
+        path: "{{ $basehref }}/(_event|ping|_upload|_health|graphql|pingtrace)(/.*)?$"
         pathType: ImplementationSpecific
+
