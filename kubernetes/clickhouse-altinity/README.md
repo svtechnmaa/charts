@@ -16,6 +16,6 @@ helm install clickhouse . \
 
 ```bash
 helm un clickhouse -n clickhouse
-kubectl delete ns clickhouse # this will be hang, remove finalizer from chi
+kubectl delete ns clickhouse # this will be hung, remove finalizer from chi
 kubectl edit chi clickhouse -n clickhouse
 ```
