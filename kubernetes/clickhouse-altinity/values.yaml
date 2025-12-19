@@ -1,123 +1,124 @@
 # https://github.com/Altinity/helm-charts/blob/main/charts/clickhouse/values.yaml
 
-clickhouse:
-  replicasCount: 3 
-  shardsCount: 1 
+clickhouse: 
+  clickhouse:
+    replicasCount: 3 
+    shardsCount: 1 
 
-  defaultUser:
-    password: "" # CHANGE ME
-    # -- Allow the default user to access ClickHouse from any IP.
-    # If set, will override `hostIP` to always be `0.0.0.0/0`.
-    allowExternalAccess: false
-    # defaultUser.hostIP -- (string) Set a mask for IPs allowed for the
-    # default user. Should not be set if allowExternalAccess is set.
-    # @default -- 127.0.0.1/32
-    hostIP: 127.0.0.1/32
+    defaultUser:
+      password: "" # CHANGE ME
+      # -- Allow the default user to access ClickHouse from any IP.
+      # If set, will override `hostIP` to always be `0.0.0.0/0`.
+      allowExternalAccess: false
+      # defaultUser.hostIP -- (string) Set a mask for IPs allowed for the
+      # default user. Should not be set if allowExternalAccess is set.
+      # @default -- 127.0.0.1/32
+      hostIP: 127.0.0.1/32
 
-  users:
-  - name: juniper  # CHANGE ME
-    # printf '<password>' | sha256sum
-    password_sha256_hex: "" # CHANGE ME
-    grants:
-    - "GRANT SELECT ON database.*"
+    users:
+    - name: juniper  # CHANGE ME
+      # printf '<password>' | sha256sum
+      password_sha256_hex: "" # CHANGE ME
+      grants:
+      - "GRANT SELECT ON database.*"
 
-  image:
-    repository: altinity/clickhouse-server
-    pullPolicy: IfNotPresent
-    tag: "25.3.6.10034.altinitystable"
+    image:
+      repository: altinity/clickhouse-server
+      pullPolicy: IfNotPresent
+      tag: "25.3.6.10034.altinitystable"
 
-  persistence:
-    # -- enable storage
-    enabled: true
-    # -- volume size (per replica)
-    size: 10Gi
-    accessMode: ReadWriteOnce
-    ## -- StorageClass for PV (e.g. gp2, standard, ...)
-    storageClass: ""
-    logs:
-      # -- enable pvc for logs
-      enabled: false
-      # -- size for logs pvc
+    persistence:
+      # -- enable storage
+      enabled: true
+      # -- volume size (per replica)
       size: 10Gi
       accessMode: ReadWriteOnce
+      ## -- StorageClass for PV (e.g. gp2, standard, ...)
+      storageClass: ""
+      logs:
+        # -- enable pvc for logs
+        enabled: false
+        # -- size for logs pvc
+        size: 10Gi
+        accessMode: ReadWriteOnce
 
-  # -- Additional ports to expose in the ClickHouse container
-  # Example:
-  # extraPorts:
-  #   - name: custom-port
-  #     containerPort: 8080
-  extraPorts: []
+    # -- Additional ports to expose in the ClickHouse container
+    # Example:
+    # extraPorts:
+    #   - name: custom-port
+    #     containerPort: 8080
+    extraPorts: []
 
-  # -- Miscellanous config for ClickHouse (in xml format)
-  extraConfig: |
-    <clickhouse>
-    </clickhouse>
-  # -- Additional users config for ClickHouse (in xml format)
-  extraUsers: |
-    <clickhouse>
-    </clickhouse>
+    # -- Miscellanous config for ClickHouse (in xml format)
+    extraConfig: |
+      <clickhouse>
+      </clickhouse>
+    # -- Additional users config for ClickHouse (in xml format)
+    extraUsers: |
+      <clickhouse>
+      </clickhouse>
 
-  # -- Extra containers for clickhouse pods
-  extraContainers: []
+    # -- Extra containers for clickhouse pods
+    extraContainers: []
 
-  # -- Extra volumes for clickhouse pods
-  extraVolumes: []
+    # -- Extra volumes for clickhouse pods
+    extraVolumes: []
 
-  # -- Init scripts ConfigMap configuration
-  initScripts:
-    # -- Set to true to enable init scripts feature
-    enabled: false
-    # -- Name of an existing ConfigMap containing init scripts
-    # The scripts will be mounted at /docker-entrypoint-initdb.d/
-    configMapName: ""
-    # -- Set to true to always run init scripts on container startup
-    alwaysRun: true
+    # -- Init scripts ConfigMap configuration
+    initScripts:
+      # -- Set to true to enable init scripts feature
+      enabled: false
+      # -- Name of an existing ConfigMap containing init scripts
+      # The scripts will be mounted at /docker-entrypoint-initdb.d/
+      configMapName: ""
+      # -- Set to true to always run init scripts on container startup
+      alwaysRun: true
 
-  # If enabled, will prevent ClickHouse pods from running on the same node
-  antiAffinity: false
+    # If enabled, will prevent ClickHouse pods from running on the same node
+    antiAffinity: false
 
-  # -- Scope for anti-affinity policy when antiAffinity is enabled.
-  # Determines the level at which pod distribution is enforced.
-  # Available scopes:
-  #   - ClickHouseInstallation: Pods from the same installation won't run on the same node (default)
-  #   - Shard: Pods from the same shard won't run on the same node
-  #   - Replica: Pods from the same replica won't run on the same node
-  #   - Cluster: Pods from the same cluster won't run on the same node
-  #   - Namespace: Pods from the same namespace won't run on the same node
-  # @default -- ClickHouseInstallation
-  antiAffinityScope: "ClickHouseInstallation"
+    # -- Scope for anti-affinity policy when antiAffinity is enabled.
+    # Determines the level at which pod distribution is enforced.
+    # Available scopes:
+    #   - ClickHouseInstallation: Pods from the same installation won't run on the same node (default)
+    #   - Shard: Pods from the same shard won't run on the same node
+    #   - Replica: Pods from the same replica won't run on the same node
+    #   - Cluster: Pods from the same cluster won't run on the same node
+    #   - Namespace: Pods from the same namespace won't run on the same node
+    # @default -- ClickHouseInstallation
+    antiAffinityScope: "ClickHouseInstallation"
 
+    keeper:
+      # -- Specify a keeper host.
+      # Should be left empty if `keeper.enabled` is `true` (clickhouse keeper).
+      # Will override the defaults set from `keeper.enabled`.
+      host: ""
+      # -- Override the default keeper port
+      port: 2181
+
+  # Clickhouse Keeper settings
   keeper:
-    # -- Specify a keeper host.
-    # Should be left empty if `keeper.enabled` is `true` (clickhouse keeper).
-    # Will override the defaults set from `keeper.enabled`.
-    host: ""
-    # -- Override the default keeper port
-    port: 2181
+    # Required for replicated tables.
+    enabled: true
+    # -- Number of keeper replicas.
+    # Must be an odd number.
+    # !! DO NOT CHANGE AFTER INITIAL DEPLOYMENT
+    replicaCount: 3
+    image: "altinity/clickhouse-keeper"
+    tag: "25.3.6.10034.altinitystable"
+    # allows to configure multiple aspects and behavior for `clickhouse-keeper`
+    # instance
+    settings: {}
+    localStorage:
+      size: 5Gi
+      storageClass: ""
+    resources:
+      cpuRequestsMs: 100
+      memoryRequestsMiB: 512Mi
+      cpuLimitsMs: 500
+      memoryLimitsMiB: 1Gi
 
-# Clickhouse Keeper settings
-keeper:
-  # Required for replicated tables.
-  enabled: true
-  # -- Number of keeper replicas.
-  # Must be an odd number.
-  # !! DO NOT CHANGE AFTER INITIAL DEPLOYMENT
-  replicaCount: 3
-  image: "altinity/clickhouse-keeper"
-  tag: "25.3.6.10034.altinitystable"
-  # allows to configure multiple aspects and behavior for `clickhouse-keeper`
-  # instance
-  settings: {}
-  localStorage:
-    size: 5Gi
-    storageClass: ""
-  resources:
-    cpuRequestsMs: 100
-    memoryRequestsMiB: 512Mi
-    cpuLimitsMs: 500
-    memoryLimitsMiB: 1Gi
-
-operator:
-  # -- Whether to enable the Altinity Operator for ClickHouse.
-  # Disable if you already have the Operator installed cluster-wide.
-  enabled: true
+  operator:
+    # -- Whether to enable the Altinity Operator for ClickHouse.
+    # Disable if you already have the Operator installed cluster-wide.
+    enabled: true

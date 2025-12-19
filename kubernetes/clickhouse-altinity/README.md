@@ -4,10 +4,10 @@
 
 ```bash
 git clone .../charts.git
-cd .../charts/kubernetes/clickhouse
+cd ./charts/kubernetes/clickhouse
 vi values.yaml # Modify values to suit your needs
 helm dep build
-helm install clickhouse .../charts/kubernetes/clickhouse \
+helm install clickhouse . \
         --namespace clickhouse \
         --create-namespace
 ```
