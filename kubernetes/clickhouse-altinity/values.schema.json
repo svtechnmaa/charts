@@ -1,0 +1,417 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "nameOverride": {
+      "type": "string",
+      "description": "Overrides the name of the chart."
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "description": "Overrides the full name of the chart."
+    },
+    "namespaceDomainPattern": {
+      "type": "string",
+      "description": "Custom cluster domain of Kubernetes cluster."
+    },
+    "clickhouse": {
+      "type": "object",
+      "properties": {
+        "defaultUser": {
+          "type": "object",
+          "properties": {
+            "password": {
+              "type": "string",
+              "description": "Password for the default ClickHouse user."
+            },
+            "allowExternalAccess": {
+              "type": "boolean",
+              "description": "Allow the default user to access ClickHouse from any IP."
+            },
+            "hostIP": {
+              "type": "string",
+              "description": "Mask for IPs allowed for the default user.",
+              "default": "127.0.0.1/32"
+            }
+          }
+        },
+        "users": {
+          "type": "array",
+          "description": "Users to initialize in ClickHouse",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name for the user",
+                "pattern": "^[a-zA-Z0-9]+$"
+              },
+              "hostIP": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "description": "Single IP mask allowed for this user."
+                  },
+                  {
+                    "type": "array",
+                    "description": "Multiple IP masks allowed for this user.",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ],
+                "description": "Mask for IPs allowed for this user. Can be a string or array of strings.",
+                "default": "0.0.0.0/0"
+              },
+              "password_secret_name": {
+                "type": "string",
+                "description": "Name of a Kubernetes secret containing the plaintext password"
+              },
+              "password_sha256_hex": {
+                "type": "string",
+                "description": "SHA256 of the password (ignored if password_secret_name is passed)"
+              },
+              "grants": {
+                "type": "array",
+                "description": "List of grants to provide for the user",
+                "items": {
+                  "type": "string",
+                  "examples": [
+                    "GRANT SELECT ON default.*",
+                    "GRANT SELECT, DELETE ON foo.bar"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "replicasCount": {
+          "type": "integer",
+          "description": "Number of ClickHouse replicas. If greater than 1, Keeper must be enabled or a Keeper host must be provided.",
+          "default": 1
+        },
+        "shardsCount": {
+          "type": "integer",
+          "description": "Number of shards.",
+          "default": 1
+        },
+        "zones": {
+          "type": "array",
+          "description": "Specify the zones for ClickHouse pods.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "antiAffinity": {
+          "type": "boolean",
+          "description": "If enabled, prevents ClickHouse pods from running on the same node."
+        },
+        "antiAffinityScope": {
+          "type": "string",
+          "description": "Scope for anti-affinity policy when antiAffinity is enabled.",
+          "enum": [
+            "Shard",
+            "Replica",
+            "Cluster",
+            "ClickHouseInstallation",
+            "Namespace"
+          ],
+          "default": "ClickHouseInstallation"
+        },
+        "keeper": {
+          "type": "object",
+          "properties": {
+            "host": {
+              "type": "string",
+              "description": "Keeper host, if specified."
+            },
+            "port": {
+              "type": "integer",
+              "description": "Override the default Keeper port.",
+              "default": 2181
+            }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable storage for ClickHouse."
+            },
+            "size": {
+              "type": "string",
+              "description": "Volume size for ClickHouse storage."
+            },
+            "accessMode": {
+              "type": "string",
+              "description": "Access mode for ClickHouse storage."
+            },
+            "storageClass": {
+              "type": "string",
+              "description": "Storage class for the persistent volume."
+            },
+            "logs": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable PVC for logs."
+                },
+                "size": {
+                  "type": "string",
+                  "description": "Volume size for logs."
+                },
+                "accessMode": {
+                  "type": "string",
+                  "description": "Access mode for logs storage."
+                }
+              }
+            }
+          }
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "description": "Repository for the ClickHouse image."
+            },
+            "pullPolicy": {
+              "type": "string",
+              "description": "Image pull policy."
+            },
+            "tag": {
+              "type": "string",
+              "description": "Tag for the ClickHouse image."
+            }
+          }
+        },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Service type, e.g., LoadBalancer or ClusterIP."
+            },
+            "serviceAnnotations": {
+              "type": "object",
+              "description": "Annotations for ClickHouse service."
+            },
+            "serviceLabels": {
+              "type": "object",
+              "description": "Labels for ClickHouse service."
+            }
+          }
+        },
+        "lbService": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable LoadBalancer service for ClickHouse."
+            },
+            "loadBalancerSourceRanges": {
+              "type": "array",
+              "description": "Restricts traffic to specified client IPs.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "serviceAnnotations": {
+              "type": "object",
+              "description": "Annotations for LoadBalancer service."
+            },
+            "serviceLabels": {
+              "type": "object",
+              "description": "Labels for LoadBalancer service."
+            }
+          }
+        },
+        "imagePullSecrets": {
+          "type": "array",
+          "description": "Image pull secrets for ClickHouse pods.",
+          "items": {
+            "type": "object"
+          }
+        },
+        "podAnnotations": {
+          "type": "object",
+          "description": "Annotations for ClickHouse pods."
+        },
+        "podLabels": {
+          "type": "object",
+          "description": "Labels for ClickHouse pods."
+        },
+        "podSecurityContext": {
+          "type": "object",
+          "description": "Pod security context for ClickHouse pods."
+        },
+        "securityContext": {
+          "type": "object",
+          "description": "Security context for ClickHouse containers."
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Node selector for ClickHouse pods."
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Tolerations for ClickHouse pods.",
+          "items": {
+            "type": "object"
+          }
+        },
+        "affinity": {
+          "type": "object",
+          "description": "Affinity for ClickHouse pods."
+        },
+        "topologySpreadConstraints": {
+          "type": "array",
+          "description": "Topology spread constraints for ClickHouse pods.",
+          "items": {
+            "type": "object"
+          }
+        },
+        "extraConfig": {
+          "type": "string",
+          "description": "Miscellaneous config for ClickHouse in XML format."
+        },
+        "extraUsers": {
+          "type": "string",
+          "description": "Miscellaneous users config for ClickHouse in XML format."
+        },
+        "extraContainers": {
+          "type": "array",
+          "description": "Extra containers for Clickhouse pod.",
+          "items": {
+            "type": "object"
+          }
+        },
+        "extraVolumes": {
+          "type": "array",
+          "description": "Extra volumes for Clickhouse pod.",
+          "items": {
+            "type": "object"
+          }
+        },
+        "initScripts": {
+          "type": "object",
+          "description": "Configuration for init scripts via ConfigMap.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable init scripts feature.",
+              "default": false
+            },
+            "configMapName": {
+              "type": "string",
+              "description": "Name of an existing ConfigMap containing init scripts to be mounted at /docker-entrypoint-initdb.d/."
+            },
+            "alwaysRun": {
+              "type": "boolean",
+              "description": "Set to true to always run init scripts on container startup.",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    "keeper": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Keeper for ClickHouse replication."
+        },
+        "replicaCount": {
+          "type": "integer",
+          "description": "Number of Keeper replicas. Must be an odd number.",
+          "default": 3
+        },
+        "image": {
+          "type": "string",
+          "description": "Image repository for Keeper."
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag for Keeper."
+        },
+        "settings": {
+          "type": "object",
+          "description": "Configuration settings for ClickHouse Keeper."
+        },
+        "localStorage": {
+          "type": "object",
+          "properties": {
+            "size": {
+              "type": "string",
+              "description": "Volume size for Keeper storage."
+            },
+            "storageClass": {
+              "type": "string",
+              "description": "Storage class for Keeper persistent volume."
+            }
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Node selector for Keeper pods."
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Tolerations for Keeper pods.",
+          "items": {
+            "type": "object"
+          }
+        },
+        "podAnnotations": {
+          "type": "object",
+          "description": "Annotations for Keeper pods."
+        },
+        "volumeClaimAnnotations": {
+          "type": "object",
+          "description": "Annotations for Keeper volume claims."
+        },
+        "zoneSpread": {
+          "type": "boolean",
+          "description": "Enable topology spread constraints over zone for Keeper."
+        },
+        "metricsPort": {
+          "type": "string",
+          "description": "Port for Keeper metrics."
+        },
+        "resources": {
+          "type": "object",
+          "properties": {
+            "cpuRequestsMs": {
+              "type": "number",
+              "description": "CPU requests in millicores for Keeper."
+            },
+            "memoryRequestsMiB": {
+              "type": "string",
+              "description": "Memory requests for Keeper."
+            },
+            "cpuLimitsMs": {
+              "type": "number",
+              "description": "CPU limits in millicores for Keeper."
+            },
+            "memoryLimitsMiB": {
+              "type": "string",
+              "description": "Memory limits for Keeper."
+            }
+          }
+        }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Altinity Operator for ClickHouse."
+        }
+      }
+    }
+  }
+}

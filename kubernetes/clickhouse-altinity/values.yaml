@@ -1,6 +1,6 @@
 # https://github.com/Altinity/helm-charts/blob/main/charts/clickhouse/values.yaml
 
-clickhouse: 
+clickhouse: # Since we are using alias 'clickhouse' for the dependency
   clickhouse:
     replicasCount: 3 
     shardsCount: 1 
