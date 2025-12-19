@@ -53,6 +53,15 @@ data:
       {{- end }}
 
       prometheus-endpoint: /metrics
+      resolutions:
+        - interval: 0
+          ttl: {{ .Values.orchestrator.env.ttl_raw }}
+        - interval: 1m
+          ttl: {{ .Values.orchestrator.env.ttl_1m }}
+        - interval: 5m
+          ttl: {{ .Values.orchestrator.env.ttl_5m }}
+        - interval: 1h
+          ttl: {{ .Values.orchestrator.env.ttl_1h }}
       asns:
         64501: ACME Corporation
       networks:

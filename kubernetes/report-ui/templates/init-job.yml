@@ -40,9 +40,9 @@ spec:
         env:
           {{- if not (empty .Values.global.http_proxy) }}
           - name: HTTP_PROXY
-            value: http://{{ .Values.global.http_proxy }}
+            value: {{ .Values.global.http_proxy }}
           - name: HTTPS_PROXY
-            value: http://{{ .Values.global.http_proxy }}
+            value: {{ .Values.global.http_proxy }}
           {{- end }}
         name: init-report-fe
         volumeMounts:
