@@ -42,7 +42,7 @@ data:
           "Name": "default_in_ult_from_redis",
           "DatasourceID": 4,
           "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
-          "ResultMapper": "ffunction(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var inUltMatch = performanceData.match(/in_ult=(\\d+)%/);\n    var inUltInt = inUltMatch ? parseInt(inUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var inUltValue = inUltInt + \" %\";\n\n    emit(k, inUltValue);\n  })\n}",
+          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var inUltMatch = performanceData.match(/in_ult=(\\d+)%/);\n    var inUltInt = inUltMatch ? parseInt(inUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var inUltValue = inUltInt + \" %\";\n\n    emit(k, inUltValue);\n  })\n}",
           "Schedule": "@every 5m"
         },
         {

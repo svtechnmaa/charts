@@ -25,7 +25,7 @@ go_backend:
   configmap:
     data:
       BACKEND_URL: http://go-backend
-      DATABASE_URL: backend:backend@tcp(mariadb:3306)/svtech?parseTime=true
+      DATABASE_URL: backend:backend@tcp(mariadb.nmaa.svc.cluster.local:3306)/svtech?parseTime=true
       FRONTEND_URL: http://topology-frontend
       PORT: "4000"
       REDIS_ADDR: redis:6379
@@ -41,21 +41,21 @@ seed_file:
       username: ""
       password: ""
     arangodb: 
-      url: http://arangodb:8529
+      url: https://svtech-arangodb-ea.arango.svc.cluster.local:8529
       username: ""
       password: ""
-      topo_schema: unitel
+      topo_schema: topology
     grafana:
-      url: http://grafana:3000/grafana/  
-      username: "thrukadmin"
-      password: "thrukadmin"
+      url: http://grafana.nmaa.svc.cluster.local:3000/grafana/  
+      username: ""
+      password: ""
     icinga_redis:
-      url: redis://icinga2:6379
+      url: redis://icinga2.nmaa.svc.cluster.local:6379
       username: ""
       password: ""
       
-namespace: nms
-nmaa_namespace: ""
+namespace: new-fe
+nmaa_namespace: "nmaa"
 topology_frontend:
   deployment:
     image:
