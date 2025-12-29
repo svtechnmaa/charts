@@ -17,7 +17,7 @@ initRepo:
     tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
-  repo: "Convert-data:latest"
+  repo: "netops:latest"
 
 init:
   image:
@@ -28,8 +28,8 @@ init:
 
 image:
   registry: ghcr.io
-  repository: svtechnmaa/convert-data
-  tag: v1.0.2
+  repository: svtechnmaa/netops-data-chains
+  tag: v1.0.0
   pullPolicy: IfNotPresent
 
 commonAnnotations:
@@ -61,14 +61,14 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 ## ????
-ConvertConfig:
-  branch: "test_convert"
+NetopsConfig:
+  branch: "main"
 
 sharedVolume:
   enabled: true
-  volumeName: "convert-data"
-  path: "/opt/Convert-data" #require in /opt
-  pvcName: "convert-data-pvc"
+  volumeName: "netops-data"
+  path: "/opt/netops-data" #require in /opt
+  pvcName: "netops-data-pvc"
   storageSize: 2Gi
   accessModes: ReadWriteOnce
   storageClass: automation-repo-hostpath

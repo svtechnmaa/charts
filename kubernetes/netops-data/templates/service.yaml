@@ -9,9 +9,9 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-  - name: convert-data
+  - name: netops-data
     port: {{ .Values.service.port }}
-    targetPort: convert-data
+    targetPort: netops-data
     {{- if eq .Values.service.type "ClusterIP" }}
     nodePort: null
     {{- end }}
