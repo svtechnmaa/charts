@@ -67,7 +67,7 @@ NetopsConfig:
 sharedVolume:
   enabled: true
   volumeName: "netops-data"
-  path: "/opt/netops-data" #require in /opt
+  path: "/opt/netops-data-chains" #require in /opt
   pvcName: "netops-data-pvc"
   storageSize: 2Gi
   accessModes: ReadWriteOnce
