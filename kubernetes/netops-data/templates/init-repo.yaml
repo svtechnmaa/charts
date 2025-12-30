@@ -52,7 +52,7 @@ spec:
                 name: {{ .Chart.Name }}-secret
                 key: user
           - name: BRANCH
-            value: {{ .Values.ConvertConfig.branch | quote }}
+            value: {{ .Values.NetopsConfig.branch | quote }}
           - name: REPO
             value: {{ .Values.initRepo.repo | quote }}
           - name: REPO_PATH
