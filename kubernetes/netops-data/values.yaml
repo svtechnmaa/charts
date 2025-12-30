@@ -17,7 +17,7 @@ initRepo:
     tag: "v1.0.3"
     pullPolicy: IfNotPresent
 
-  repo: "netops:latest"
+  repo: "netops-data-chains"
 
 init:
   image:
@@ -29,7 +29,7 @@ init:
 image:
   registry: ghcr.io
   repository: svtechnmaa/netops-data-chains
-  tag: v1.0.0
+  tag: v1.0.3
   pullPolicy: IfNotPresent
 
 commonAnnotations:
