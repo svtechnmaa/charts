@@ -23,8 +23,8 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      # storageClass: seaweedfs-storage
-      storageClass: mageai-hostpath # for hostPath PV
+      #storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath-data # for hostPath PV
       folderName: mageai-data # for hostPath
 
     - volumeName: mageai-pipeline-volume
@@ -34,8 +34,8 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      # storageClass: seaweedfs-storage
-      storageClass: mageai-hostpath # for hostPath PV
+      #storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath-pipeline # for hostPath PV
       folderName: mageai-pipeline # for hostPath
 
     - volumeName: mageai-log-volume
@@ -45,8 +45,8 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      # storageClass: seaweedfs-storage
-      storageClass: mageai-hostpath # for hostPath PV
+      #storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath-log # for hostPath PV
       folderName: mageai-log # for hostPath
 
 initRepo:
@@ -151,6 +151,11 @@ redis:
     enabled: false
   # Your custom redis url (make sure redis.enabled is set to false)
   customRedisURL: ""
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/redis
+    tag: 7.2.1-debian-11-r0
+    pullPolicy: IfNotPresent
 
 image:
   repository: ghcr.io/svtechnmaa/svtech_netlogic_etl
