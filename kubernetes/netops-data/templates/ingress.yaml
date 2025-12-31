@@ -8,7 +8,7 @@ spec:
   rules:
   - http:
       paths:
-      - path: {{ .Values.ingress.path }}
+      - path: /{{ .Chart.Name }}
         pathType: Prefix
         backend:
           service:
