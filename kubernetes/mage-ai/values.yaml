@@ -124,7 +124,7 @@ webServer:
 
 # Enable Postgres as the DB
 postgresql:
-  enabled: false
+  enabled: true
   fullnameOverride: "postgresql-service"
   auth:
     username: postgres
@@ -132,7 +132,7 @@ postgresql:
     database: "mageai_nmaa"
 
 postgresqlExternal:
-  enabled: true
+  enabled: false
   postgresqlExternalHost: "postgresql-ha-pgpool" 
   auth:
     username: postgres
