@@ -35,7 +35,7 @@ spec:
           env:
             {{- if .Values.redis.enabled }}
             - name: REDIS_URL
-              value: redis://{{.Release.Name}}-redis-headless:6379/0
+              value: redis://{{ .Chart.Name }}-redis:6379/0
             {{- else if .Values.redis.customRedisURL }}
             - name: REDIS_URL
               value: {{ .Values.redis.customRedisURL }}
@@ -123,7 +123,7 @@ spec:
 
             {{- if .Values.redis.enabled }}
             - name: REDIS_URL
-              value: redis://{{ .Release.Name }}-redis-headless:6379/0
+              value: redis://{{ .Chart.Name }}-redis:6379/0
             {{- else if .Values.redis.customRedisURL }}
             - name: REDIS_URL
               value: {{ .Values.redis.customRedisURL }}
