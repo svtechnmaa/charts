@@ -54,10 +54,13 @@ dependencies:
     version: 15.5.15
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
-  - name: redis
-    version: 18.1.1
-    repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled
+  # - name: redis
+  #   version: 18.1.1
+  #   repository: https://charts.bitnami.com/bitnami
+  #   condition: redis.enabled
+  # - name: common
+  #   version: 1.x.x
+  #   repository: https://svtechnmaa.github.io/charts/artifacthub/
 
 
 sources:

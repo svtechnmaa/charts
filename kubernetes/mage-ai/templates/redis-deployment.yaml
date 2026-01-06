@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}-redis
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  name: {{ include "common.names.fullname" . }}-redis
+spec:
+  replicas: {{ .Values.redis.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}-redis
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}-redis
+    spec:
+      containers:
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image ) }}
+        {{- if .Values.redis.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+        {{- end}}
+        name: redis
+        env:
+          - name: TZ
+            value: {{ .Values.timezone }}
+          - name: ALLOW_EMPTY_PASSWORD
+            value: {{ .Values.redis.allowEmptyPass | quote }}
+        ports:
+        - containerPort: 6379
+          name: redis
+        livenessProbe:
+          exec:
+            command:
+              - redis-cli
+              - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 5
