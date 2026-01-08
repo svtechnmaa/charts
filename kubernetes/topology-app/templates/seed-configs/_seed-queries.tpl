@@ -1,0 +1,128 @@
+{{- define "seed-queries" -}}
+{
+  "Query": [
+    {
+      "ID": 1,
+      "Name": "icingadb_host_id",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "IcingaDB",
+      "Content": "SELECT name, address, LOWER(HEX(id)) FROM host;",
+      "ResultMapper": "//function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var host_id = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { host_id: host_id}) }) }\nfunction(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var host_id = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), host_id) })}",
+      "Schedule": "@every 5m"
+    },
+    {
+      "ID": 2,
+      "Name": "icingadb_service_id",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "IcingaDB",
+      "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS sericename, LOWER(HEX((t2.id))) as service_id FROM host t1 JOIN service t2 ON t1.id = t2.host_id",
+      "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var service_id = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), service_id) }) }",
+      "Schedule": "@every 5m"
+    },
+    {
+      "ID": 3,
+      "Name": "default_host_state_from_redis",
+      "DatasourceID": 4,
+      "Content": "local ks = redis.call('HKEYS', 'icinga:host:state')\nlocal ts = redis.call('HVALS', 'icinga:host:state')\nreturn {ks, ts}",
+      "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    emit(k, obj['hard_state'])\n  })\n}                                                                                  ",
+      "Schedule": "@every 5m"
+    },
+    {
+      "ID": 4,
+      "Name": "default_service_state_from_redis",
+      "DatasourceID": 4,
+      "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
+      "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    emit(k, obj['hard_state'])\n  })\n}                                                                            ",
+      "Schedule": "@every 5m"
+    },
+    {
+      "ID": 5,
+      "Name": "default_in_ult_from_redis",
+      "DatasourceID": 4,
+      "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
+      "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var inUltMatch = performanceData.match(/in_ult=(\\d+)%/);\n    var inUltInt = inUltMatch ? parseInt(inUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var inUltValue = inUltInt + \" %\";\n\n    emit(k, inUltValue);\n  })\n}",
+      "Schedule": "@every 5m"
+    },
+    {
+      "ID": 6,
+      "Name": "default_out_ult_from_redis",
+      "DatasourceID": 4,
+      "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
+      "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var outUltMatch = performanceData.match(/out_ult=(\\d+)%/);\n    var outUltInt = outUltMatch ? parseInt(outUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var outUltValue = outUltInt + \" %\";\n    emit(k, outUltValue);\n  })\n}",
+      "Schedule": "@every 5m"
+    },
+    {
+      "ID": 7,
+      "Name": "default_in_ult_from_influxdb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "influxdb_nms",
+      "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'in_ult' GROUP BY hostname, metric, service;",
+      "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+      "Schedule": "@every 15m"
+    },
+    {
+      "ID": 8,
+      "Name": "default_out_ult_from_influxdb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "influxdb_nms",
+      "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'out_ult' GROUP BY hostname, metric, service;",
+      "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+      "Schedule": "@every 15m"
+    },
+    {
+      "ID": 9,
+      "Name": "default_rx_from_influxdb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "influxdb_nms",
+      "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'OpticRX' GROUP BY hostname, metric, service;",
+      "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+      "Schedule": "@every 15m"
+    },
+    {
+      "ID": 10,
+      "Name": "default_tx_from_influxdb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "influxdb_nms",
+      "Content": "SELECT last(value) from \"Interface-check-command\" WHERE (time > now() - 5m) AND metric = 'OpticTX' GROUP BY hostname, metric, service;",
+      "ResultMapper": "function(result) { _.forEach(result.results[0].series, function(obj, index) { emit([obj.tags.hostname, obj.tags.service, obj.tags.metric].join('|'), obj.values[0][1]) })}",
+      "Schedule": "@every 15m"
+    },
+    {
+      "ID": 11,
+      "Name": "default_critical_service_count_from_icingadb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "IcingaDB",
+      "Content": "SELECT t1.name AS hostname,t1.address, t3.hard_state, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name NOT LIKE 'If%' GROUP BY t1.id, t1.name, t1.address, t3.hard_state;",
+      "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { number_service_critical: hard_state_count }) }) }",
+      "Schedule": "@every 15m"
+    },
+    {
+      "ID": 12,
+      "Name": "default_warning_service_count_from_icingadb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "IcingaDB",
+      "Content": "SELECT t1.name AS hostname,t1.address, t3.hard_state, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name NOT LIKE 'If%' GROUP BY t1.id, t1.name, t1.address, t3.hard_state;",
+      "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { number_service_warning: hard_state_count }) }) }",
+      "Schedule": "@every 15m"
+    },
+    {
+      "ID": 13,
+      "Name": "default_red_alarm_count_from_icingadb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "IcingaDB",
+      "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, t3.hard_state AS red_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_RedAlarm';",
+      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var red_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert to integer safely\n    var number_red_alarm = parseInt(red_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_red_alarm: number_red_alarm\n    });\n  });\n}\n",
+      "Schedule": "@every 15m"
+    },
+    {
+      "ID": 14,
+      "Name": "default_yellow_alarm_count_from_icingadb",
+      "ParentDatasourceName": "Grafana",
+      "DatasourceName": "IcingaDB",
+      "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS service_name, t3.hard_state AS yellow_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_YellowAlarm';",
+      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var yellow_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert safely to integer\n    var number_yellow_alarm = parseInt(yellow_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_yellow_alarm: number_yellow_alarm\n    });\n  });\n}\n",
+      "Schedule": "@every 15m"
+    }
+  ]
+}
+{{- end -}}

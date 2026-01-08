@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "common.names.fullname" . }}-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: init
+        image: curlimages/curl:8.5.0
+        env:
+        - name: ARANGO_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.auth.secretName }}
+              key: username
+        - name: ARANGO_PASS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.auth.secretName }}
+              key: password
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+
+          ARANGO_HOST="{{ include "common.names.fullname" . }}:8529"
+
+          until curl -sf -k -u "$ARANGO_USER:$ARANGO_PASS" \
+            https://$ARANGO_HOST/_admin/server/availability   ; do
+            echo "Waiting for ArangoDB..."
+            sleep 5
+          done
+          echo "ArangoDB is available, sleep 60s"
+          sleep 60
+          echo "Create database topology (if not exists)"
+          curl -sf -k -u "$ARANGO_USER:$ARANGO_PASS" \
+            -H "Content-Type: application/json" \
+            -X POST https://$ARANGO_HOST/_db/_system/_api/database \
+            -d '{"name":"topology"}' || true
+
+          echo "Create collection topo_list in _system"
+          curl -sf -k -u "$ARANGO_USER:$ARANGO_PASS" \
+            -H "Content-Type: application/json" \
+            -X POST https://$ARANGO_HOST/_db/_system/_api/collection \
+            -d '{"name":"topo_list"}' || true

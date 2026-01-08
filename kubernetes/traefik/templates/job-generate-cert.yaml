@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: generate-cert
+  labels:
+    job-name: generate-cert
+spec:
+  ttlSecondsAfterFinished: 120
+  template:
+    metadata:
+      labels:
+        job-name: generate-cert
+    spec:
+      serviceAccountName: tls-job-sa
+      containers:
+        - name: generate-cert
+          image: vyvuvivo/kubectl:1.0.1
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              set -e
+              if [ ! -f /tls.crt ] || [ ! -f /tls.key ]; then
+                echo "Generating TLS certificate..."
+                openssl req -x509 -nodes -days {{ .Values.tls.durationDays }} -newkey rsa:2048 -keyout /tls.key -out /tls.crt -subj "/CN={{ .Values.tls.commonName }}"
+              fi
+              kubectl create secret tls {{ .Values.tls.secretName }} --cert=/tls.crt --key=/tls.key --dry-run=client -o yaml | kubectl apply -f -
+      restartPolicy: Never

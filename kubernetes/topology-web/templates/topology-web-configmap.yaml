@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: topology-web-env
+data:
+  BACKEND_URL: "{{ .Values.topologyWebConfig.BACKEND_URL }}"
+  NODE_ENV: "{{ .Values.topologyWebConfig.NODE_ENV }}"
+  PORT: "{{ .Values.topologyWebConfig.PORT }}"

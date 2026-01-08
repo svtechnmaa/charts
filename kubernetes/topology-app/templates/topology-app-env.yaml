@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: topology-app-env
+data:
+  BACKEND_URL: "{{ .Values.topologyAppEnv.BACKEND_URL }}"
+  DATABASE_URL: "{{ .Values.topologyAppEnv.DATABASE_URL }}"
+  FRONTEND_URL: "{{ .Values.topologyAppEnv.FRONTEND_URL }}"
+  PORT: "{{ .Values.topologyAppEnv.PORT }}"
+  REDIS_ADDRESS: "{{ .Values.topologyAppEnv.REDIS_ADDRESS }}"
+  UPLOAD_DIR: "{{ .Values.topologyAppEnv.UPLOAD_DIR }}"
+  PERMISSIONS_ENABLED: "{{ .Values.topologyAppEnv.PERMISSIONS_ENABLED }}"
+  TRAEFIK_TEMPLATE: "{{ .Values.topologyAppEnv.TRAEFIK_TEMPLATE }}"

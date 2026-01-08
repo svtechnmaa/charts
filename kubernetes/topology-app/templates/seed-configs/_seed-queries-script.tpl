@@ -1,0 +1,162 @@
+{{- define "seed-queries-script" -}}
+#!/bin/sh
+# This script is used to get the datasourceID from MariaDB and Grafana and modify the queries seed file
+# to use the datasourceID from mariadb or Grafana
+
+#Step 0: Check if the required packages are installed. If not, install them
+echo -e "\n--- Step 0: Check if the required packages are installed. If not, install them"
+for pkg in curl jq mariadb-client; do
+  if ! command -v "$pkg" >/dev/null 2>&1; then
+    echo "Installing missing package: $pkg"
+    apk add --no-cache "$pkg"
+  fi
+done
+
+get_datasourceID_fromGrafana() {
+  # grafana_host="${INTERNAL_GRAFANA_HOST:-grafana}"
+  # grafana_port="${INTERNAL_GRAFANA_PORT:-3000}"
+  grafana_url="${INTERNAL_GRAFANA_URL:-http://grafana:3000/grafana/}"
+  grafana_user="${INTERNAL_GRAFANA_USER:-admin}"
+  grafana_password="${INTERNAL_GRAFANA_PASSWORD:-admin}"
+
+  local response=$(curl -s -u "${grafana_user}:${grafana_password}" \
+    -H "Content-Type: application/json" \
+    "${grafana_url}api/datasources")
+  echo "$response"
+}
+
+get_datasourceID_fromMariadb() {
+  local parent=$1
+  local name=$2
+  if [[ "$parent" != "Grafana" ]]; then
+    echo 9999
+    return
+  fi
+  grafana_datasource_ID=$(mariadb -u "$USER" -p"$PASS" -h "$MARIADB_HOST" -D "$DB" --skip-ssl -Nse "SELECT id FROM datasources WHERE type='Grafana' AND title='internal_grafana' LIMIT 1;")
+  local query="SELECT id FROM datasources WHERE parent_id='$grafana_datasource_ID' AND title='$name' LIMIT 1;"
+  local id=$(mariadb -u "$USER" -p"$PASS" -h "$MARIADB_HOST" -D "$DB" --skip-ssl -Nse "$query")
+  if [[ -n "$id" ]]; then
+    echo $((id))
+  else
+    echo 9999
+  fi
+}
+
+main () {
+  if [[ "$1" != "-seed" || -z "$2" ]]; then
+    echo "Usage: $0 -seed <INPUT_FILE.yml>"
+    exit 1
+  fi
+
+  INPUT_FILE="$2"
+  INPUT_FILE_NAME=$(basename "$INPUT_FILE")
+
+  if [[ ! -f "$INPUT_FILE" ]]; then
+    echo "❌ Input file '$INPUT_FILE' not found!"
+    exit 1
+  fi
+
+  # Automatically derive output filename
+  OUTPUT_FILE="/tmp/${INPUT_FILE_NAME%.*}_with_ids.json"
+
+  #Step 1: Get the datasourceID from Grafana
+  echo -e "\n--- Step 1: Get the datasourceID from Grafana"
+  response_from_grafana=$(get_datasourceID_fromGrafana)
+  echo "response_from_grafana: $response_from_grafana"
+
+  #Step 2: Check connection to the database mariadb
+  echo -e "\n--- Step 2: Check connection to the database mariadb"
+  # Parse DATABASE_URL if defined
+  if [ -n "$DATABASE_URL" ]; then
+    USER=$(echo "$DATABASE_URL" | cut -d':' -f1)
+    PASS=$(echo "$DATABASE_URL" | cut -d':' -f2 | cut -d'@' -f1)
+    MARIADB_HOST=$(echo "$DATABASE_URL" | sed -n 's/.*@tcp(\(.*\):.*/\1/p')
+    MARIADB_PORT=$(echo "$DATABASE_URL" | sed -n 's/.*@tcp(.*:\(.*\)).*/\1/p')
+    DB=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^/?]*\).*|\1|p')
+  fi
+
+  # Set defaults if individual values are still not set
+  USER="${USER:-backend}"
+  PASS="${PASS:-backend}"
+  MARIADB_HOST="${MARIADB_HOST:-mariadb}"
+  MARIADB_PORT="${MARIADB_PORT:-3306}"
+  DB="${DB:-svtech}"
+  row_count=$(mariadb -u "$USER" -p"$PASS" -h "$MARIADB_HOST" -D "$DB" --skip-ssl -Nse "SHOW DATABASES;")
+  if [ $? -ne 0 ]; then
+    echo "❌ Failed to connect database '$DB' from host 'MARIADB_HOST'. Exiting..."
+    exit 1
+  fi
+
+  query_count=$(mariadb -u "$USER" -p"$PASS" -h "$MARIADB_HOST" -P "$MARIADB_PORT" -D "$DB" --skip-ssl -Nse \
+    "SELECT COUNT(*) FROM queries;" 2>/dev/null)
+
+  if [ $? -ne 0 ]; then
+    echo "⚠️ Table 'queries' does not exist or cannot be queried. Proceeding with seeding..."
+  else
+    if [ "$query_count" -gt 0 ]; then
+      echo "✅ Table 'queries' already has data ($query_count rows). Do not init seed query!."
+      exit 0
+    fi
+  fi
+
+  #Step 3: Modify the datasource seed file to use datasourceID from mariadb or Grafana
+  echo -e "\n--- Step 3: Modify the datasource seed file to use datasourceID from mariadb or Grafana"
+  # INPUT_FILE="datasource_file.yml"
+  # OUTPUT_FILE="datasource_file_with_ids.json"
+
+  echo '{' > "$OUTPUT_FILE"
+  echo '  "Query": [' >> "$OUTPUT_FILE"
+  first=1
+
+  jq -c '.Query[]' "$INPUT_FILE" | while read -r block; do
+    parent=$(echo "$block" | jq -r '.ParentDatasourceName')
+    name=$(echo "$block" | jq -r '.DatasourceName')
+    raw_ds_id=$(echo "$block" | jq -r '.DatasourceID')
+    # Determine which DatasourceID to use
+    # We first check if the DatasourceID is already set in the block of datasource seed file
+    # If it is not set, we check if the datasource is Grafana
+    # If it is not Grafana, we get the DatasourceID from mariadb first
+    # If it is Grafana, we get the DatasourceID from Grafana API
+    # Finnally, if the DatasourceID is still not set, we set it to 9999
+    if [[ -z "$raw_ds_id" || "$raw_ds_id" == "null" ]]; then
+      ds_id=$(get_datasourceID_fromMariadb "$parent" "$name")
+      if [[ "$ds_id" -eq 9999 ]]; then
+        echo "❌ DatasourceID not found for $parent/$name in mariadb. Try grafana"
+        if [[ -z "$response_from_grafana" ]]; then
+          echo "❌ No response from Grafana API. Exiting..."
+          exit 1
+        fi
+        id=$(echo "$response_from_grafana" | jq -r --arg name "$name" '.[] | select(.name == $name) | .id')
+        if [[ -n "$id" && "$id" != "null" ]]; then
+          ds_id=$((id + 5)) #the datasourceID of Grafana Internal should be set to 5
+        else
+          ds_id=9999
+        fi
+      fi
+    else
+      ds_id=$raw_ds_id
+    fi
+
+    # Write the modified block to the output file
+    # Remove ParentDatasourceName and DatasourceName, and add DatasourceID
+    # If the block is empty, we set the DatasourceID to 9999
+    new_block=$(echo "$block" | jq --argjson id "$ds_id" 'del(.ParentDatasourceName, .DatasourceName) + {DatasourceID: $id}')
+    if [[ $first -eq 1 ]]; then
+      echo "  $new_block" >> "$OUTPUT_FILE"
+      first=0
+    else
+      echo "  ,$new_block" >> "$OUTPUT_FILE"
+    fi
+  done
+
+  echo "  ]" >> "$OUTPUT_FILE"
+  echo "}" >> "$OUTPUT_FILE"
+  echo "✅ New file written to: $OUTPUT_FILE"
+
+  #Step 4: Load the modified queries seed file into the database
+  echo -e "\n--- Step 4: Load the modified queries seed file into the database"
+  /server --seed "$OUTPUT_FILE"
+}
+
+main "$@"
+{{- end -}}
