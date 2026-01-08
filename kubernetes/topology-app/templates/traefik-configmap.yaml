@@ -1,0 +1,191 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traefik-config
+data:
+  traefik.yaml: |-
+    http:
+      middlewares:
+        cors:
+          headers:
+            frameDeny: false
+            browserXssFilter: false
+            stsSeconds: 15768000
+            contentSecurityPolicy: "style-src 'self' 'unsafe-inline';"
+            customResponseHeaders:
+              Access-Control-Allow-Credentials: "true"
+              Access-Control-Allow-Headers: "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+              Access-Control-Allow-Methods: "GET,POST,PUT,DELETE,OPTIONS"
+              Access-Control-Allow-Origin: "*"
+        # dashboard-auth:
+        #   basicAuth:
+        #     users:
+        #       - "<dummy-fill up when applying>"
+        # grafana-auth:
+        #   headers:
+        #     customRequestHeaders:
+        #       Authorization: "<dummy-fill up when applying>"
+
+      routers:
+        default:
+          middlewares: []
+          rule: "PathPrefix(`/`)"
+          service: ""
+        default-tls:
+          middlewares: []
+          rule: "PathPrefix(`/`)"
+          service: ""
+          tls: {}
+        backend:
+          middlewares:
+            - "cors"
+          priority: 100
+          rule: "PathPrefix(`/public`) || PathPrefix(`/api/v1`)"
+          service: "backend"
+        backend-tls:
+          middlewares:
+            - "cors"
+          priority: 100
+          rule: "PathPrefix(`/public`) || PathPrefix(`/api/v1`)"
+          service: "backend"
+          tls: {}
+        dashboard:
+          middlewares: []
+          rule: "(PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+          service: "api@internal"
+        dashboard-tls:
+          middlewares: []
+          rule: "PathPrefix(`/dashboard`)"
+          service: "dashboard"
+          tls: {}
+        frontend:
+          middlewares:
+            - "cors"
+          rule: >-
+            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) ||
+            PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) ||
+            PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) ||
+            PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) ||
+            PathPrefix(`/api/templates`)
+          service: "frontend"
+        frontend-tls:
+          middlewares:
+            - "cors"
+          rule: >-
+            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) ||
+            PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) ||
+            PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) ||
+            PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) ||
+            PathPrefix(`/api/templates`)
+          service: "frontend"
+          tls: {}
+
+      #   icingaweb:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/icingaweb`)"
+      #     service: "icingaweb"
+      #   icingaweb-tls:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/icingaweb`)"
+      #     service: "icingaweb"
+      #     tls: {}
+      #   grafana:
+      #     middlewares:
+      #       - "cors"
+      #       # - "grafana-auth"
+      #     rule: "PathPrefix(`/grafana`)"
+      #     service: "grafana"
+      #   grafana-tls:
+      #     middlewares:
+      #       - "cors"
+      #       # - "grafana-auth"
+      #     rule: "PathPrefix(`/grafana`)"
+      #     service: "grafana"
+      #     tls: {}
+      #   rundeck:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/rundeck`)"
+      #     service: "rundeck"
+      #   rundeck-tls:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/rundeck`)"
+      #     service: "rundeck"
+      #     tls: {}
+      #   topology:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/topology`)"
+      #     service: "topology"
+      #   topology-tls:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/topology`)"
+      #     service: "topology"
+      #     tls: {}
+      #   gitlist:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/gitlist`)"
+      #     service: "gitlist"
+      #   gitlist-tls:
+      #     middlewares:
+      #       - "cors"
+      #     rule: "PathPrefix(`/gitlist`)"
+      #     service: "gitlist"
+      #     tls: {}
+
+      serversTransports:
+        localssl:
+          insecureSkipVerify: true
+
+      services:
+        backend:
+          loadBalancer:
+            servers:
+              - url: "http://topology-app"
+        frontend:
+          loadBalancer:
+            servers:
+              - url: "http://topology-web"
+      #   icingaweb:
+      #     loadBalancer:
+      #       servers:
+      #         - url: "http://icingaweb:8080/icingaweb/"
+      #   grafana:
+      #     loadBalancer:
+      #       servers:
+      #         - url: "http://grafana:3000/grafana/"
+      #   rundeck:
+      #     loadBalancer:
+      #       servers:
+      #         - url: "http://rundeck:4440/rundeck"
+      #   topology:
+      #     loadBalancer:
+      #       servers:
+      #         - url: "http://nagvis:80/nagvis/"
+      #   gitlist:
+      #     loadBalancer:
+      #       servers:
+      #         - url: "http://gitlist:80/gitlist/"
+      #   csv:
+      #     loadBalancer:
+      #       servers:
+      #         - url: "http://proxy:80/csv/"
+      #   static_csv:
+      #     loadBalancer:
+      #       servers:
+      #         - url: "http://proxy:80/static_csv/"
+
+    tls:
+      stores:
+        default:
+          defaultCertificate:
+            certFile: /tls/tls.crt
+            keyFile: /tls/tls.key
+      certificates:
+        - certFile: /tls/tls.crt
+          keyFile: /tls/tls.key

@@ -1,0 +1,46 @@
+{{- define "seed-icons" -}}
+{
+  "Icon": [
+    {
+      "ID": 1,
+      "Name": "Critical",
+      "URL": "/public/router-big_critical.svg"
+    },
+    {
+      "ID": 2,
+      "Name": "Down",
+      "URL": "/public/router-big_down.svg"
+    },
+    {
+      "ID": 3,
+      "Name": "Error",
+      "URL": "/public/router-big_error.svg"
+    },
+    {
+      "ID": 4,
+      "Name": "Ok",
+      "URL": "/public/router-big_ok.svg"
+    },
+    {
+      "ID": 5,
+      "Name": "Pending",
+      "URL": "/public/router-big_pending.svg"
+    },
+    {
+      "ID": 6,
+      "Name": "Unknown",
+      "URL": "/public/router-big_unknown.svg"
+    },
+    {
+      "ID": 7,
+      "Name": "Unreachable",
+      "URL": "/public/router-big_unreachable.svg"
+    },
+    {
+      "ID": 8,
+      "Name": "Warning",
+      "URL": "/public/router-big_warning.svg",
+    }
+  ]
+}
+{{- end -}}

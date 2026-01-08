@@ -1,0 +1,25 @@
+apiVersion: database.arangodb.com/v1
+kind: ArangoDeployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+spec:
+  mode: {{ .Values.mode }}
+  image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+  # image: arangodb/arangodb:{{ .Values.image.tag }}
+  bootstrap:
+    passwordSecretNames:
+      root: {{ .Values.auth.secretName }}
+  externalAccess:
+  {{- if eq .Values.service.type "LoadBalancer" }}
+    type: {{ .Values.service.type }}
+    {{- if .Values.service.loadBalancerIP }}
+    loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+    {{- end }}
+  {{- else if eq .Values.service.type "NodePort" }}
+    type: {{ .Values.service.type }}
+  {{- else }}
+    type: None
+  {{- end }}
+  {{- if eq .Values.mode "Cluster"}}
+  {{ .Values.cluster | toYaml | nindent 2 }}
+  {{- end }}
