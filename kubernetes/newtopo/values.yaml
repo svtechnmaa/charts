@@ -17,9 +17,9 @@ initData:
 go_backend:
   deployment:
     image:
-      repository: ghcr.io/moophat/topology-app
+      repository: ghcr.io/svtechnmaa/svtech_topology_visualizer_be
       pullPolicy: Always
-      tag: lastest
+      tag: latest
   service:
     port: "80"
   configmap:
@@ -59,9 +59,9 @@ nmaa_namespace: "nmaa"
 topology_frontend:
   deployment:
     image:
-      repository: ghcr.io/moophat/topology-web
+      repository: ghcr.io/svtechnmaa/svtech_topology_visualizer_fe
       pullPolicy: Always
-      tag: lastest
+      tag: latest
   service:
     port: "80"
     targetPort: "3000"
