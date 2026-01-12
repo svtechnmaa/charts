@@ -5,7 +5,7 @@ kind: ConfigMap
 metadata:
   name: seed-configs
   labels:
-    app.kubernetes.io/instance: nmaa
+    app.kubernetes.io/instance: topo
     app.kubernetes.io/managed-by: Helm
 data:
   seed-groups.yaml: |-
@@ -25,28 +25,28 @@ data:
   seed-users.yaml: |-
     User:
       - ID: 1
-        Name: Admin
-        Email: 'admin@svtech.com.vn'
-        Password: 'P@ssw0rd1'
+        Name: admin
+        Email: admin@example.com
+        Password: adminpassword
         Groups:
           - ID: 1
       - ID: 2
-        Name: User
-        Email: user@svtech.com.vn
-        Password: P@ssw0rd2
+        Name: user
+        Email: user@example.com
+        Password: userpassword
         Groups:
           - ID: 2
           - ID: 3
       - ID: 3
-        Name: Readonly
-        Email: readonly@svtech.com.vn
-        Password: P@ssw0rd3
+        Name: readonly
+        Email: readonly@example.com
+        Password: readonlypassword
         Groups:
           - ID: 3
       - ID: 4
-        Name: Datasource manager
-        Email: dsmanager@svtech.com.vn
-        Password: P@ssw0rd4
+        Name: dsmanager
+        Email: dsmanager@example.com
+        Password: dsmgrpassword
         Groups:
           - ID: 4
   seed-resource-types.yaml: |-
@@ -329,102 +329,7 @@ data:
         {
           "ID": 1,
           "Name": "test",
-          "Payload": 
-          {
-            "layout": "2x2",
-            "A": {
-              "layout": "single",
-              "A": {
-                "url": "/opt/traefik.yaml",
-                "title": "Tinh te",
-                "external": true
-              },
-              "B": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "C": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "D": {
-                "url": "",
-                "title": "",
-                "external": false
-              }
-            },
-            "B": {
-              "layout": "single",
-              "A": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "B": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "C": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "D": {
-                "url": "",
-                "title": "",
-                "external": false
-              }
-            },
-            "C": {
-              "layout": "single",
-              "A": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "B": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "C": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "D": {
-                "url": "",
-                "title": "",
-                "external": false
-              }
-            },
-            "D": {
-              "layout": "single",
-              "A": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "B": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "C": {
-                "url": "",
-                "title": "",
-                "external": false
-              },
-              "D": {
-                "url": "",
-                "title": "",
-                "external": false
-              }
-            }
-          },
+          "Payload": "{\"layout\":\"2x2\",\"A[layout]\":\"single\",\"A[A][url]\":\"https://example.com\",\"A[A][title]\":\"Example\",\"A[A][external]\":\"true\",\"A[B][url]\":\"\",\"A[B][title]\":\"\",\"A[B][external]\":\"false\",\"A[C][url]\":\"\",\"A[C][title]\":\"\",\"A[C][external]\":\"false\",\"A[D][url]\":\"\",\"A[D][title]\":\"\",\"A[D][external]\":\"false\",\"B[layout]\":\"single\",\"B[A][url]\":\"\",\"B[A][title]\":\"\",\"B[A][external]\":\"false\",\"B[B][url]\":\"\",\"B[B][title]\":\"\",\"B[B][external]\":\"false\",\"B[C][url]\":\"\",\"B[C][title]\":\"\",\"B[C][external]\":\"false\",\"B[D][url]\":\"\",\"B[D][title]\":\"\",\"B[D][external]\":\"false\",\"C[layout]\":\"single\",\"C[A][url]\":\"\",\"C[A][title]\":\"\",\"C[A][external]\":\"false\",\"C[B][url]\":\"\",\"C[B][title]\":\"\",\"C[B][external]\":\"false\",\"C[C][url]\":\"\",\"C[C][title]\":\"\",\"C[C][external]\":\"false\",\"C[D][url]\":\"\",\"C[D][title]\":\"\",\"C[D][external]\":\"false\",\"D[layout]\":\"single\",\"D[A][url]\":\"\",\"D[A][title]\":\"\",\"D[A][external]\":\"false\",\"D[B][url]\":\"\",\"D[B][title]\":\"\",\"D[B][external]\":\"false\",\"D[C][url]\":\"\",\"D[C][title]\":\"\",\"D[C][external]\":\"false\",\"D[D][url]\":\"\",\"D[D][title]\":\"\",\"D[D][external]\":\"false\"}",
           "CreatedBy": 1
         }
       ]
@@ -459,7 +364,7 @@ data:
         {
           "ID": 6,
           "Title": "Gitlist",
-          "Permalink": "",
+          "Permalink": "gitlist",
           "Href": "http://gitlist:80/gitlist/",
           "Order": 5,
           "Username": "",
@@ -471,7 +376,7 @@ data:
         {
           "ID": 4,
           "Title": "Grafana",
-          "Permalink": "",
+          "Permalink": "grafana",
           "Href": "http://grafana:3000/grafana/",
           "Order": 3,
           "Username": "",
@@ -483,7 +388,7 @@ data:
         {
           "ID": 3,
           "Title": "Icingaweb",
-          "Permalink": "",
+          "Permalink": "icingaweb",
           "Href": "http://icingaweb:8080/icingaweb/",
           "Order": 2,
           "Username": "",
@@ -495,7 +400,7 @@ data:
         {
           "ID": 5,
           "Title": "Rundeck",
-          "Permalink": "",
+          "Permalink": "rundeck",
           "Href": "http://rundeck:4440/rundeck",
           "Order": 4,
           "Username": "",
@@ -515,7 +420,7 @@ data:
           "ExternalID": null,
           "Title": "Arango-Storage",
           "Type": "Arango",
-          "Url": "http://arangodb:8529",
+          "Url": "https://arangodb:8529",
           "Storage": true,
           "Username": "",
           "Password": "",
@@ -529,7 +434,7 @@ data:
           "ExternalID": null,
           "Title": "Arango-Topo",
           "Type": "Arango",
-          "Url": "http://arangodb:8529",
+          "Url": "https://arangodb:8529",
           "Storage": false,
           "Username": "",
           "Password": "",
@@ -932,207 +837,219 @@ data:
     }
   seed-templates.yaml: |-
     {
-      "graphLevelStyle": {
-        "node": {
-          "manualStyle": {
-            "size": [45, 30],
-            "style": {
-              "fillOpacity": 1,
-              "lineDash": [],
-              "strokeOpacity": 1,
-              "lineWidth": 1,
-              "opacity": 1
-            },
-            "type": "image",
-            "img": "/public/router-big_ok.svg"
-          },
-          "manualLabelCfg": {
-            "style": {
-              "fontSize": 14,
-              "fillOpacity": 1,
-              "fontStyle": "bold",
-              "opacity": 1,
-              "background": {
-                "padding": [3, 6, 3, 6]
-              }
-            },
-            "offset": 12
-          }
-        },
-        "edge": {
-          "manualStyle": {
-            "style": {
-              "lineWidth": 5,
-              "lineDash": [],
-              "stroke": "#00ff29",
-              "strokeOpacity": 1,
-              "startArrow": false,
-              "arrowOffset": 13,
-              "endArrow": {
-                "fill": "#00ff29",
-                "stroke": "#00ff29",
-                "path": "M 0,0 L 12,-4 L 12,4 Z"
-              }
+          "Template": [
+            {
+              "ID": 1,
+              "Name": "Default",
+              "Order": 0,
+              "Payload": '
+            {
+              "graphLevelStyle": {
+                "node": {
+                  "manualStyle": {
+                    "size": [45, 30],
+                    "style": {
+                      "fillOpacity": 1,
+                      "lineDash": [],
+                      "strokeOpacity": 1,
+                      "lineWidth": 1,
+                      "opacity": 1
+                    },
+                    "type": "image",
+                    "img": "/public/router-big_ok.svg"
+                  },
+                  "manualLabelCfg": {
+                    "style": {
+                      "fontSize": 14,
+                      "fillOpacity": 1,
+                      "fontStyle": "bold",
+                      "opacity": 1,
+                      "background": {
+                        "padding": [3, 6, 3, 6]
+                      }
+                    },
+                    "offset": 12
+                  }
+                },
+                "edge": {
+                  "manualStyle": {
+                    "style": {
+                      "lineWidth": 5,
+                      "lineDash": [],
+                      "stroke": "#00ff29",
+                      "strokeOpacity": 1,
+                      "startArrow": false,
+                      "arrowOffset": 13,
+                      "endArrow": {
+                        "fill": "#00ff29",
+                        "stroke": "#00ff29",
+                        "path": "M 0,0 L 12,-4 L 12,4 Z"
+                      }
+                    }
+                  },
+                  "manualLabelCfg": {
+                    "style": {
+                      "fontSize": 14,
+                      "fillOpacity": 1,
+                      "fontStyle": "bold",
+                      "opacity": 1,
+                      "background": {
+                        "padding": [3, 6, 3, 6]
+                      }
+                    },
+                    "position": "center",
+                    "autoRotate": true
+                  }
+                },
+                "subMap": {
+                  "type": "cCircle",
+                  "fixCollapseSize": 10,
+                  "padding": 30,
+                  "style": {
+                    "fillOpacity": 0.1,
+                    "lineDash": [],
+                    "stroke": "#1400ff",
+                    "strokeOpacity": 1,
+                    "lineWidth": 5
+                  },
+                  "labelCfg": {
+                    "style": {
+                      "fontSize": 14,
+                      "fillOpacity": 1,
+                      "fontStyle": "bold",
+                      "background": {
+                        "padding": [6, 14, 4, 14],
+                        "radius": 0
+                      }
+                    },
+                    "position": "top"
+                  }
+                }
+              },
+              "metaEdgeCfg": [
+                {
+                  "queryId": "2",
+                  "queryFormat": "${source_hostname}|${source_address}|IfCheck-${physical_interface}",
+                  "alias": "redis_ifcheck_id"
+                },
+                {
+                  "queryId": "4",
+                  "queryFormat": "${redis_ifcheck_id}",
+                  "alias": "redis_ifcheck_state"
+                },
+                {
+                  "queryId": "5",
+                  "queryFormat": "${source_hostname}|IfCheck-${physical_interface}",
+                  "alias": "in_ultilization"
+                },
+                {
+                  "queryId": "6",
+                  "queryFormat": "${source_hostname}|IfCheck-${physical_interface}",
+                  "alias": "out_ultilization"
+                },
+                {
+                  "queryId": "9",
+                  "queryFormat": "${source_hostname}|IfCheck-${physical_interface}|OpticRX",
+                  "alias": "RX"
+                },
+                {
+                  "queryId": "10",
+                  "queryFormat": "${source_hostname}|IfCheck-${physical_interface}|OpticTX",
+                  "alias": "TX"
+                }
+              ],
+              "nodeMetricConfigs": [
+                {
+                  "url": "https://192.168.1.1/grafana/d-solo/device-detail/device-detail?var-hostgroup=$__all&var-hostname={{hostname}}&orgId=1&from=now-24h&to=now&timezone=browser&var-interface=$__all&var-FPC=$__all&var-rp=six_months&var-service=$__all&panelId=2&__feature.dashboardSceneSolo",
+                  "{{hostname}}": "hostname"
+                }
+              ],
+              "edgeMetricConfigs": [
+                {
+                  "url": "https://192.168.1.1/grafana/d-solo/aeivihvpya8lce/interface-detail?orgId=1&from=now-24h&to=now&timezone=browser&var-hostgroup=$__all&var-hostname={{source_hostname}}&var-service={{interface_name}}&var-command=Interface-check-command&var-perf=OpticRX&var-rp=six_months&panelId=3&__feature.dashboardSceneSolo",
+                  "{{hostname}}": "hostname",
+                  "{{interface_name}}": "physical_interface",
+                  "{{source_hostname}}": "source_hostname"
+                }
+              ],
+              "metaNodeCfg": [
+                {
+                  "queryId": "1",
+                  "queryFormat": "${hostname}|${address}",
+                  "alias": "redis_host_id"
+                },
+                {
+                  "queryId": "3",
+                  "queryFormat": "${redis_host_id}",
+                  "alias": "redis_host_state"
+                },
+                {
+                  "queryId": "11",
+                  "queryFormat": "${hostname}|${address}",
+                  "alias": "critical_service_count"
+                },
+                {
+                  "queryId": "12",
+                  "queryFormat": "${hostname}|${address}",
+                  "alias": "warning_service_count"
+                },
+                {
+                  "queryId": "13",
+                  "queryFormat": "${hostname}|${address}",
+                  "alias": "red_alarm_count"
+                },
+                {
+                  "queryId": "14",
+                  "alias": "yellow_alarm_count",
+                  "queryFormat": "${hostname}|${address}"
+                }
+              ],
+              "nodeRuleCfg": [
+                {
+                  "expression": "redis_host_state=1",
+                  "state": 4
+                },
+                {
+                  "expression": "critical_service_count.number_service_critical > 0 || red_alarm_count.number_red_alarm > 0",
+                  "state": 3
+                },
+                {
+                  "expression": "warning_service_count.number_service_warning > 0 || yellow_alarm_count.number_yellow_alarm > 0",
+                  "state": 2
+                },
+                {
+                  "expression": "redis_host_state=0",
+                  "state": 1
+                },
+                {
+                  "expression": "id is defined",
+                  "state": 1
+                }
+              ],
+              "edgeRuleCfg": [
+                {
+                  "expression": "redis_ifcheck_state=2",
+                  "state": 3
+                },
+                {
+                  "expression": "redis_ifcheck_state=1",
+                  "state": 2
+                },
+                {
+                  "expression": "redis_ifcheck_state=0",
+                  "state": 1
+                },
+                {
+                  "expression": "id is defined",
+                  "state": 5
+                }
+              ]
+            }',
+              "IsGlobal": false,
+              "Default": false
             }
-          },
-          "manualLabelCfg": {
-            "style": {
-              "fontSize": 14,
-              "fillOpacity": 1,
-              "fontStyle": "bold",
-              "opacity": 1,
-              "background": {
-                "padding": [3, 6, 3, 6]
-              }
-            },
-            "position": "center",
-            "autoRotate": true
-          }
-        },
-        "subMap": {
-          "type": "cCircle",
-          "fixCollapseSize": 10,
-          "padding": 30,
-          "style": {
-            "fillOpacity": 0.1,
-            "lineDash": [],
-            "stroke": "#1400ff",
-            "strokeOpacity": 1,
-            "lineWidth": 5
-          },
-          "labelCfg": {
-            "style": {
-              "fontSize": 14,
-              "fillOpacity": 1,
-              "fontStyle": "bold",
-              "background": {
-                "padding": [6, 14, 4, 14],
-                "radius": 0
-              }
-            },
-            "position": "top"
-          }
+          ]
         }
-      },
-      "metaEdgeCfg": [
-        {
-          "queryId": "2",
-          "queryFormat": "${source_hostname}|${source_address}|IfCheck-${physical_interface}",
-          "alias": "redis_ifcheck_id"
-        },
-        {
-          "queryId": "4",
-          "queryFormat": "${redis_ifcheck_id}",
-          "alias": "redis_ifcheck_state"
-        },
-        {
-          "queryId": "5",
-          "queryFormat": "${source_hostname}|IfCheck-${physical_interface}",
-          "alias": "in_ultilization"
-        },
-        {
-          "queryId": "6",
-          "queryFormat": "${source_hostname}|IfCheck-${physical_interface}",
-          "alias": "out_ultilization"
-        },
-        {
-          "queryId": "9",
-          "queryFormat": "${source_hostname}|IfCheck-${physical_interface}|OpticRX",
-          "alias": "RX"
-        },
-        {
-          "queryId": "10",
-          "queryFormat": "${source_hostname}|IfCheck-${physical_interface}|OpticTX",
-          "alias": "TX"
-        }
-      ],
-      "nodeMetricConfigs": [
-        {
-          "url": "https://192.168.1.1/grafana/d-solo/device-detail/device-detail?var-hostgroup=$__all&var-hostname={{hostname}}&orgId=1&from=now-24h&to=now&timezone=browser&var-interface=$__all&var-FPC=$__all&var-rp=six_months&var-service=$__all&panelId=2&__feature.dashboardSceneSolo",
-          "{{hostname}}": "hostname"
-        }
-      ],
-      "edgeMetricConfigs": [
-        {
-          "url": "https://192.168.1.1/grafana/d-solo/aeivihvpya8lce/interface-detail?orgId=1&from=now-24h&to=now&timezone=browser&var-hostgroup=$__all&var-hostname={{source_hostname}}&var-service={{interface_name}}&var-command=Interface-check-command&var-perf=OpticRX&var-rp=six_months&panelId=3&__feature.dashboardSceneSolo",
-          "{{hostname}}": "hostname",
-          "{{interface_name}}": "physical_interface",
-          "{{source_hostname}}": "source_hostname"
-        }
-      ],
-      "metaNodeCfg": [
-        {
-          "queryId": "1",
-          "queryFormat": "${hostname}|${address}",
-          "alias": "redis_host_id"
-        },
-        {
-          "queryId": "3",
-          "queryFormat": "${redis_host_id}",
-          "alias": "redis_host_state"
-        },
-        {
-          "queryId": "11",
-          "queryFormat": "${hostname}|${address}",
-          "alias": "critical_service_count"
-        },
-        {
-          "queryId": "12",
-          "queryFormat": "${hostname}|${address}",
-          "alias": "warning_service_count"
-        },
-        {
-          "queryId": "13",
-          "queryFormat": "${hostname}|${address}",
-          "alias": "red_alarm_count"
-        },
-        {
-          "queryId": "14",
-          "alias": "yellow_alarm_count",
-          "queryFormat": "${hostname}|${address}"
-        }
-      ],
-      "nodeRuleCfg": [
-        {
-          "expression": "redis_host_state=1",
-          "state": 4
-        },
-        {
-          "expression": "critical_service_count.number_service_critical > 0 || red_alarm_count.number_red_alarm > 0",
-          "state": 3
-        },
-        {
-          "expression": "warning_service_count.number_service_warning > 0 || yellow_alarm_count.number_yellow_alarm > 0",
-          "state": 2
-        },
-        {
-          "expression": "redis_host_state=0",
-          "state": 1
-        },
-        {
-          "expression": "id is defined",
-          "state": 1
-        }
-      ],
-      "edgeRuleCfg": [
-        {
-          "expression": "redis_ifcheck_state=2",
-          "state": 3
-        },
-        {
-          "expression": "redis_ifcheck_state=1",
-          "state": 2
-        },
-        {
-          "expression": "redis_ifcheck_state=0",
-          "state": 1
-        },
-        {
-          "expression": "id is defined",
-          "state": 5
-        }
-      ]
-    }
   seed-icons.yaml: |-
     {
       "Icon": [
@@ -1195,7 +1112,7 @@ data:
           "Name": "icingadb_service_id",
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
-          "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS sericename, LOWER(HEX((t2.id))) as service_id FROM host t1 JOIN service t2 ON t1.id = t2.host_id",
+          "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, LOWER(HEX((t2.id))) as service_id FROM host t1 JOIN service t2 ON t1.id = t2.host_id",
           "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var service_id = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), service_id) }) }",
           "Schedule": "@every 5m"
         },
@@ -1220,7 +1137,7 @@ data:
           "Name": "default_in_ult_from_redis",
           "DatasourceID": 4,
           "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
-          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var inUltMatch = performanceData.match(/in_ult=(\\d+)%/);\n    var inUltValue = inUltMatch ? parseInt(inUltMatch[1], 10) : 0;\n\n    emit(k, inUltValue);\n  })\n}",
+          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var inUltMatch = performanceData.match(/in_ult=(\\d+)%/);\n    var inUltInt = inUltMatch ? parseInt(inUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var inUltValue = inUltInt + \" %\";\n\n    emit(k, inUltValue);\n  })\n}",
           "Schedule": "@every 5m"
         },
         {
@@ -1228,7 +1145,7 @@ data:
           "Name": "default_out_ult_from_redis",
           "DatasourceID": 4,
           "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
-          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var outUltMatch = performanceData.match(/out_ult=(\\d+)%/);\n    var outUltValue = outUltMatch ? parseInt(outUltMatch[1], 10) : 0;\n\n    emit(k, outUltValue);\n  })\n}",
+          "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    var performanceData = typeof obj['performance_data'] === 'string' ? obj['performance_data'] : '';\n\n    // Extract in_ult value using regex\n    var outUltMatch = performanceData.match(/out_ult=(\\d+)%/);\n    var outUltInt = outUltMatch ? parseInt(outUltMatch[1], 10) : 0;\n\n    // Convert to formatted string: \"0 %\"\n    var outUltValue = outUltInt + \" %\";\n    emit(k, outUltValue);\n  })\n}",
           "Schedule": "@every 5m"
         },
         {
@@ -1272,8 +1189,8 @@ data:
           "Name": "default_critical_service_count_from_icingadb",
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
-          "Content": "SELECT t1.name AS hostname, t1.address, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service_state t3 ON t1.id = t3.host_id WHERE t3.hard_state = 2 GROUP BY t1.id, t1.name;",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; var id_string = 'number_service_critical'; emit([hostname, address, id_string].join('|'), { number_service_critical: hard_state_count }) }) }",
+          "Content": "SELECT t1.name AS hostname,t1.address, t3.hard_state, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name NOT LIKE 'If%' GROUP BY t1.id, t1.name, t1.address, t3.hard_state;",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { number_service_critical: hard_state_count }) }) }",
           "Schedule": "@every 15m"
         },
         {
@@ -1281,8 +1198,8 @@ data:
           "Name": "default_warning_service_count_from_icingadb",
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
-          "Content": "SELECT t1.name AS hostname, t1.address, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service_state t3 ON t1.id = t3.host_id WHERE t3.hard_state = 1 GROUP BY t1.id, t1.name;",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; var id_string = 'number_service_warning'; emit([hostname, address, id_string].join('|'), { number_service_warning: hard_state_count }) }) }",
+          "Content": "SELECT t1.name AS hostname,t1.address, t3.hard_state, COUNT(t3.hard_state) AS hard_state_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name NOT LIKE 'If%' GROUP BY t1.id, t1.name, t1.address, t3.hard_state;",
+          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var hard_state_count = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { number_service_warning: hard_state_count }) }) }",
           "Schedule": "@every 15m"
         },
         {
@@ -1291,7 +1208,7 @@ data:
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
           "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, t3.hard_state AS red_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_RedAlarm';",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var red_alarm_count = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), { number_red_alarm: red_alarm_count }) }) }",
+          "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var red_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert to integer safely\n    var number_red_alarm = parseInt(red_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_red_alarm: number_red_alarm\n    });\n  });\n}\n",
           "Schedule": "@every 15m"
         },
         {
@@ -1300,7 +1217,7 @@ data:
           "ParentDatasourceName": "Grafana",
           "DatasourceName": "IcingaDB",
           "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS service_name, t3.hard_state AS yellow_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_YellowAlarm';",
-          "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var yellow_alarm_count = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), { number_yellow_alarm: yellow_alarm_count }) }) }",
+          "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var yellow_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert safely to integer\n    var number_yellow_alarm = parseInt(yellow_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_yellow_alarm: number_yellow_alarm\n    });\n  });\n}\n",
           "Schedule": "@every 15m"
         }
       ]
@@ -1356,6 +1273,7 @@ data:
       fi
     
       INPUT_FILE="$2"
+      INPUT_FILE_NAME=$(basename "$INPUT_FILE")
     
       if [[ ! -f "$INPUT_FILE" ]]; then
         echo "❌ Input file '$INPUT_FILE' not found!"
@@ -1363,7 +1281,7 @@ data:
       fi
     
       # Automatically derive output filename
-      OUTPUT_FILE="${INPUT_FILE%.*}_with_ids.json"
+      OUTPUT_FILE="/tmp/${INPUT_FILE_NAME%.*}_with_ids.json"
     
       #Step 1: Get the datasourceID from Grafana
       echo -e "\n--- Step 1: Get the datasourceID from Grafana"
@@ -1473,7 +1391,7 @@ metadata:
   name: topology-app-env
 data:
   BACKEND_URL: "http://topology-app/api/v1/traefik"
-  DATABASE_URL: "topo:juniper123@tcp(mariadb:3306)/topologyapp?parseTime=true"
+  DATABASE_URL: "user:password@tcp(mariadb:3306)/dbname?parseTime=true"
   FRONTEND_URL: "http://topology-web"
   PORT: "4000"
   REDIS_ADDRESS: "redis:6379"
@@ -1674,36 +1592,6 @@ data:
         - certFile: /tls/tls.crt
           keyFile: /tls/tls.key
 ---
-# Source: topology-app/templates/pv.yaml
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: "default-topology-app-pv" 
-  annotations:
-    helm.sh/resource-policy: keep
-spec:
-  accessModes:
-  - ReadWriteOnce
-  capacity:
-    storage: "1Gi"
-  hostPath:
-    path: /opt/default/topology-app
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: default-topology-app-storageclass
----
-# Source: topology-app/templates/pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: topology-app-pvc
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-  storageClassName: default-topology-app-storageclass
----
 # Source: topology-app/templates/service.yaml
 apiVersion: v1
 kind: Service
@@ -1712,13 +1600,13 @@ metadata:
   labels:
     app.kubernetes.io/name: topology-app
     helm.sh/chart: topology-app-0.1.0
-    app.kubernetes.io/instance: nmaa
+    app.kubernetes.io/instance: topo
     app.kubernetes.io/managed-by: Helm
 spec:
 
   selector:
     app.kubernetes.io/name: topology-app
-    app.kubernetes.io/instance: nmaa
+    app.kubernetes.io/instance: topo
 
   type: ClusterIP
 
@@ -1732,11 +1620,11 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nmaa-topology-app
+  name: topo-topology-app
   labels:
     app.kubernetes.io/name: topology-app
     helm.sh/chart: topology-app-0.1.0
-    app.kubernetes.io/instance: nmaa
+    app.kubernetes.io/instance: topo
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/component: topology-app # replace if needed
 spec:
@@ -1744,14 +1632,14 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: topology-app
-      app.kubernetes.io/instance: nmaa
+      app.kubernetes.io/instance: topo
       app.kubernetes.io/component: topology-app # replace if needed
   template:
     metadata:
       labels:
         app.kubernetes.io/name: topology-app
         helm.sh/chart: topology-app-0.1.0
-        app.kubernetes.io/instance: nmaa
+        app.kubernetes.io/instance: topo
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/component: topology-app # replace if needed
     spec:
@@ -1774,8 +1662,8 @@ spec:
         - name: init-seed
           securityContext:
             {}
-          # set to image: moophat/topology-app:lastest if using docker.io as registry
-          image: ghcr.io/moophat/topology-app:lastest
+          # set to image: moophat/topology-app:latest if using docker.io as registry
+          image: ghcr.io/moophat/topology-app:latest
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -1783,12 +1671,12 @@ spec:
             - |
               # init database with seed files
               ../server -migrate -seed /opt/seed-groups.yaml -seed /opt/seed-users.yaml -seed /opt/seed-resource-types.yaml -seed /opt/seed-permissions.yaml -seed /opt/seed-dashboards.yaml -seed /opt/seed-menu-items.yaml -seed /opt/seed-datasources.yaml -seed /opt/seed-states.yaml -seed /opt/seed-templates.yaml -seed /opt/seed-icons.yaml
-              # wait for grafana to be ready
-              until $(curl --output /dev/null -k --silent --head --fail https://192.168.1.1/grafana/api/health); do
-                  printf '.'
-                  sleep 5
-              done
-              echo "Grafana is up - get datasource from grafana and init seed-queries"
+              # # wait for grafana to be ready
+              # until $(curl --output /dev/null -k --silent --head --fail https://192.168.1.1/grafana/api/health); do
+              #     printf '.'
+              #     sleep 5
+              # done
+              # echo "Grafana is up - get datasource from grafana and init seed-queries"
               /opt/seed-queries-script.sh -seed /opt/seed-queries.yaml
           env:
             - name: TZ
@@ -1802,11 +1690,6 @@ spec:
             # unshareVolume(volumeMount): define in the chart's values.yaml
             - mountPath: /opt
               name: seed-configs
-            - mountPath: /data
-              name: topology-app-data
-            - mountPath: /opt/traefik.yaml
-              name: traefik-config
-              subPath: traefik.yaml
 
       # Containers config
       containers:
@@ -1814,8 +1697,8 @@ spec:
         - name: topology-app-server # replace if needed
           securityContext:
             {}
-          # set to image: moophat/topology-app:lastest if using docker.io as registry
-          image: ghcr.io/moophat/topology-app:lastest
+          # set to image: moophat/topology-app:latest if using docker.io as registry
+          image: ghcr.io/moophat/topology-app:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: topology-app
@@ -1839,18 +1722,13 @@ spec:
             # unshareVolume(volumeMount): define in the chart's values.yaml
             - mountPath: /opt
               name: seed-configs
-            - mountPath: /data
-              name: topology-app-data
-            - mountPath: /opt/traefik.yaml
-              name: traefik-config
-              subPath: traefik.yaml
 
         # Worker container
         - name: topology-app-worker # replace if needed
           securityContext:
             {}
-          # set to image: moophat/topology-app:lastest if using docker.io as registry
-          image: ghcr.io/moophat/topology-app:lastest
+          # set to image: moophat/topology-app:latest if using docker.io as registry
+          image: ghcr.io/moophat/topology-app:latest
           imagePullPolicy: IfNotPresent
           command:
             - /bin/sh
@@ -1870,21 +1748,15 @@ spec:
             # unshareVolume(volumeMount): define in the chart's values.yaml
             - mountPath: /opt
               name: seed-configs
-            - mountPath: /data
-              name: topology-app-data
-            - mountPath: /opt/traefik.yaml
-              name: traefik-config
-              subPath: traefik.yaml
 
       volumes:
       # shareVolume(volume): define in the global values
       # unshareVolume(volume): define in the chart's values.yaml
-        - configMap:
-            name: seed-configs
-          name: seed-configs
-        - name: topology-app-data
-          persistentVolumeClaim:
-            claimName: topology-app-pvc
-        - configMap:
-            name: traefik-config
-          name: traefik-config
+        - name: seed-configs
+          projected:
+            defaultMode: 493
+            sources:
+            - configMap:
+                name: seed-configs
+            - configMap:
+                name: traefik-config

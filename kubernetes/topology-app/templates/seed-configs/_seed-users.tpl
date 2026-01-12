@@ -1,28 +1,13 @@
 {{- define "seed-users" -}}
 User:
-  - ID: 1
-    Name: Admin
-    Email: 'admin@svtech.com.vn'
-    Password: 'P@ssw0rd1'
+{{- range $index, $user := .Values.config.users }}
+  - ID: {{ $user.id }}
+    Name: {{ $user.username }}
+    Email: {{ $user.email }}
+    Password: {{ $user.password }}
     Groups:
-      - ID: 1
-  - ID: 2
-    Name: User
-    Email: user@svtech.com.vn
-    Password: P@ssw0rd2
-    Groups:
-      - ID: 2
-      - ID: 3
-  - ID: 3
-    Name: Readonly
-    Email: readonly@svtech.com.vn
-    Password: P@ssw0rd3
-    Groups:
-      - ID: 3
-  - ID: 4
-    Name: Datasource manager
-    Email: dsmanager@svtech.com.vn
-    Password: P@ssw0rd4
-    Groups:
-      - ID: 4
+    {{- range $groupIndex, $groupID := $user.groups }}
+      - ID: {{ $groupID.ID }}
+    {{- end }}
+{{- end }}
 {{- end -}}

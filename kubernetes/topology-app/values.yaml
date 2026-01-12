@@ -156,7 +156,7 @@ env:
 
 topologyAppEnv:
   BACKEND_URL: "http://topology-app/api/v1/traefik"
-  DATABASE_URL: "topology:juniper123@tcp(mariadb:3306)/topology?parseTime=true"
+  DATABASE_URL: "user:password@tcp(mariadb:3306)/dbname?parseTime=true"
   FRONTEND_URL: "http://topology-web"
   PORT: "4000"
   REDIS_ADDRESS: "redis:6379"
@@ -165,34 +165,60 @@ topologyAppEnv:
   TRAEFIK_TEMPLATE: "/opt/traefik.yaml"
 
 config:
+  users:
+  - username: admin
+    password: adminpassword
+    email: admin@example.com
+    id: 1
+    groups:
+      - ID: 1
+  - username: user
+    password: userpassword
+    email: user@example.com
+    id: 2
+    groups:
+      - ID: 2
+      - ID: 3
+  - username: readonly
+    password: readonlypassword
+    email: readonly@example.com
+    id: 3
+    groups:
+      - ID: 3
+  - username: dsmanager
+    password: dsmgrpassword
+    email: dsmanager@example.com
+    id: 4
+    groups:
+      - ID: 4
   menuItems:
     icingaweb:
       enabled: true
       id: 3
       title: Icingaweb
       permalink: "icingaweb"
-      href: "http://icingaweb.nmaa.svc.cluster.local:8080/icingaweb/"
+      href: "http://icingaweb:8080/icingaweb/"
       order: 2
     grafana:
       enabled: true
       id: 4
       title: Grafana
       permalink: "grafana"
-      href: "http://grafana.nmaa.svc.cluster.local:3000/grafana/"
+      href: "http://grafana:3000/grafana/"
       order: 3
     rundeck:
       enabled: true
       id: 5
       title: Rundeck
       permalink: "rundeck"
-      href: "http://rundeck.nmaa.svc.cluster.local:4440/rundeck"
+      href: "http://rundeck:4440/rundeck"
       order: 4
     gitlist:
       enabled: true
       id: 6
       title: Gitlist
       permalink: "gitlist"
-      href: "http://gitlist.nmaa.svc.cluster.local:80/gitlist/"
+      href: "http://gitlist:80/gitlist/"
       order: 5
   datasources:
     redis:
@@ -242,6 +268,6 @@ config:
       type: Grafana
       storage: false
       url: "http://grafana:3000/grafana/"
-      username: "thrukadmin"
-      password: "thrukadmin"
+      username: ""
+      password: ""
       schema: "0"

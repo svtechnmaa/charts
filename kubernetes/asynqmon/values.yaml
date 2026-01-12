@@ -22,7 +22,7 @@ replicaCount: 1
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: webconnex/asynqmon # CHANGE THIS TO YOUR IMAGE
+  repository: hibiken/asynqmon # CHANGE THIS TO YOUR IMAGE
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.

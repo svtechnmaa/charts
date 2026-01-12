@@ -15,7 +15,7 @@
       "Name": "icingadb_service_id",
       "ParentDatasourceName": "Grafana",
       "DatasourceName": "IcingaDB",
-      "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS sericename, LOWER(HEX((t2.id))) as service_id FROM host t1 JOIN service t2 ON t1.id = t2.host_id",
+      "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, LOWER(HEX((t2.id))) as service_id FROM host t1 JOIN service t2 ON t1.id = t2.host_id",
       "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var service_id = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), service_id) }) }",
       "Schedule": "@every 5m"
     },
