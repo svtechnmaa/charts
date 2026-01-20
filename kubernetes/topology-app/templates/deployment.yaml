@@ -58,14 +58,16 @@ spec:
             - /bin/sh
             - -c
             - |
+              # copy default icons to /data/
+              cp -n /tmp/icons/* /data/
               # init database with seed files
               ../server -migrate -seed /opt/seed-groups.yaml -seed /opt/seed-users.yaml -seed /opt/seed-resource-types.yaml -seed /opt/seed-permissions.yaml -seed /opt/seed-dashboards.yaml -seed /opt/seed-menu-items.yaml -seed /opt/seed-datasources.yaml -seed /opt/seed-states.yaml -seed /opt/seed-templates.yaml -seed /opt/seed-icons.yaml
-              # # wait for grafana to be ready
-              # until $(curl --output /dev/null -k --silent --head --fail https://{{ .Values.global.frontendVip }}/grafana/api/health); do
-              #     printf '.'
-              #     sleep 5
-              # done
-              # echo "Grafana is up - get datasource from grafana and init seed-queries"
+              # wait for grafana to be ready
+              until $(curl --output /dev/null -k --silent --head --fail https://{{ .Values.global.frontendVip }}/grafana/api/health); do
+                  printf '.'
+                  sleep 5
+              done
+              echo "Grafana is up - get datasource from grafana and init seed-queries"
               /opt/seed-queries-script.sh -seed /opt/seed-queries.yaml
           env:
             {{- range $key, $value := .Values.env }}
