@@ -138,8 +138,8 @@ affinity:
   #         app.kubernetes.io/name: traefik
   #     topologyKey: kubernetes.io/hostname
 
-env:
-  TZ: Asia/Ho_Chi_Minh
+timezone: Asia/Ho_Chi_Minh
+env: {}
 
 topologyWebConfig:
   BACKEND_URL: http://topology-app:80

@@ -150,9 +150,8 @@ affinity:
   #       matchLabels:
   #         app.kubernetes.io/name: traefik
   #     topologyKey: kubernetes.io/hostname
-
-env:
-  TZ: Asia/Ho_Chi_Minh
+timezone: Asia/Ho_Chi_Minh
+env: {}
 
 topologyAppEnv:
   BACKEND_URL: "http://topology-app/api/v1/traefik"

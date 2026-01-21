@@ -168,8 +168,8 @@ args:
     traefik:
       address: ":8080"
 
-env:
-  TZ: Asia/Ho_Chi_Minh
+timezone: Asia/Ho_Chi_Minh
+env: {}
 
 tls:
   durationDays: 365
