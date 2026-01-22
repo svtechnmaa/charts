@@ -7,7 +7,7 @@ global:
     - volumeName: telegraf-config
       pvcName: telegraf-config-pvc
       storageSize: 10Mi
-      path: /etc/telegraf/
+      path: /home/telegraf/etc
       accessModes: ReadWriteMany
       shareFor:
         - telegraf
@@ -43,7 +43,7 @@ securityContext: {}
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
-  type: ClusterIP
+  type: LoadBalancer
   nodePortEnabled: false # set to true if using NodePort and you want to specify ports
 
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
@@ -125,3 +125,11 @@ affinity: {}
   #       matchLabels:
   #         app.kubernetes.io/name: traefik
   #     topologyKey: kubernetes.io/hostname
+
+config:
+  influxdb_host: influxdb-relay
+  influxdb_port: 9096
+  influxdb_database: influxdb_nms
+  influxdb_user: juniper
+  influxdb_password: juniper@123
+  influxdb_skip_database_creation: "true"
