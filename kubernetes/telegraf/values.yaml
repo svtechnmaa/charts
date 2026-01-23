@@ -25,6 +25,7 @@ init:
     pullPolicy: IfNotPresent
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/juniper-telemetry-sensors
   tag: v1.0.0
   pullPolicy: IfNotPresent
@@ -43,7 +44,7 @@ securityContext: {}
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
-  type: LoadBalancer
+  type: ClusterIP
   nodePortEnabled: false # set to true if using NodePort and you want to specify ports
 
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
