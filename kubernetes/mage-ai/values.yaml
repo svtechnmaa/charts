@@ -23,8 +23,8 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      #storageClass: seaweedfs-storage
-      storageClass: mageai-hostpath-data # for hostPath PV
+      storageClass: seaweedfs-storage
+      # storageClass: mageai-hostpath-data # for hostPath PV
       folderName: mageai-data # for hostPath
 
     - volumeName: mageai-pipeline-volume
@@ -34,8 +34,8 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      #storageClass: seaweedfs-storage
-      storageClass: mageai-hostpath-pipeline # for hostPath PV
+      storageClass: seaweedfs-storage
+      # storageClass: mageai-hostpath-pipeline # for hostPath PV
       folderName: mageai-pipeline # for hostPath
 
     - volumeName: mageai-log-volume
@@ -45,10 +45,11 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      #storageClass: seaweedfs-storage
-      storageClass: mageai-hostpath-log # for hostPath PV
+      storageClass: seaweedfs-storage
+      # storageClass: mageai-hostpath-log # for hostPath PV
       folderName: mageai-log # for hostPath
-      
+  security:
+    allowInsecureImages: true
 timezone: Asia/Ho_Chi_Minh
 
 initRepo:
@@ -132,7 +133,11 @@ postgresql:
     username: postgres
     password: "juniper@123"
     database: "mageai_nmaa"
-
+  image:
+    repository: bitnamilegacy/postgresql
+# A dependency conflict occurs with the `common` library chart in the PostgreSQL subchart when intergrated in nmaa stack.
+# As a workaround, Mage AI is configured to use an external PostgreSQL instance.
+# The external PostgreSQL must be provisioned prior to Helm installation.
 postgresqlExternal:
   enabled: false
   postgresqlExternalHost: "postgresql-ha-pgpool" 
@@ -140,6 +145,38 @@ postgresqlExternal:
     username: postgres
     password: "juniper@123"
     database: "etl_nmaa"
+
+#we deploy postgresql-ha when postgresqlExternal is enabled  
+postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
+  fullnameOverride: nmaa-postgresql-ha
+  postgresql:
+    username: postgres
+    password: "juniper@123"
+    database: "etl_nmaa"
+    repmgrUsername: repmgr
+    repmgrPassword: "juniper@123"
+    repmgrDatabase: "repmgr"
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/postgresql-repmgr
+      tag: 17.6.0-debian-12-r2
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
+      ## Set to true if you would like to see extra information on logs
+      ##
+      debug: false
+  pgpool:
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/pgpool
+      tag: 4.6.3-debian-12-r0
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
+      debug: false
 
 # logFolderExternal:
 #   enabled: true
