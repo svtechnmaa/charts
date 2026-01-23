@@ -5,6 +5,16 @@ global:
   hostPathPV:
     enabled: true # This will be ignored if using seaweedfs storage class
   sharedPersistenceVolume:
+    - volumeName: telegraf-config
+      pvcName: telegraf-config-pvc
+      storageSize: 10Mi
+      path: /home/telegraf/etc
+      accessModes: ReadWriteMany
+      shareFor:
+        - telegraf
+      storageClass: seaweedfs-storage
+      # folderName: telegraf_config # for hostPath PV
+
     - volumeName: reflex-frontend-index
       pvcName: reflex-frontend-pvc
       storageSize: 50Mi
