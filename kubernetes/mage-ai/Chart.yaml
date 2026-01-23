@@ -51,16 +51,22 @@ maintainers:
 name: mage-ai
 dependencies:
   - name: postgresql
-    version: 15.5.15
+    version: 16.3.2
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
   # - name: redis
   #   version: 18.1.1
   #   repository: https://charts.bitnami.com/bitnami
   #   condition: redis.enabled
-  # - name: common
-  #   version: 1.x.x
-  #   repository: https://svtechnmaa.github.io/charts/artifacthub/
+  - name: common
+    version: 1.x.x
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    condition: postgresqlExternal.enabled
+  - name: postgresql-ha
+    version: 9.4.6-svtech
+    #version: x.x.x
+    repository: file:///opt/test/charts/artifacthub/postgresql-ha
+    condition: postgresqlExternal.enabled
 
 
 sources:
