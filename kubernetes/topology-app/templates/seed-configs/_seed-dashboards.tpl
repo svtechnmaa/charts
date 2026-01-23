@@ -1,0 +1,14 @@
+{{- define "seed-dashboards" -}}
+{{- $raw := include "payload-dashboards" . -}}
+{{- $data := fromJson $raw -}}
+{
+  "Dashboard": [
+    {
+      "ID": 1,
+      "Name": "test",
+      "Payload": "{\"layout\":\"2x2\",\"A[layout]\":\"single\",\"A[A][url]\":\"https://example.com\",\"A[A][title]\":\"Example\",\"A[A][external]\":\"true\",\"A[B][url]\":\"\",\"A[B][title]\":\"\",\"A[B][external]\":\"false\",\"A[C][url]\":\"\",\"A[C][title]\":\"\",\"A[C][external]\":\"false\",\"A[D][url]\":\"\",\"A[D][title]\":\"\",\"A[D][external]\":\"false\",\"B[layout]\":\"single\",\"B[A][url]\":\"\",\"B[A][title]\":\"\",\"B[A][external]\":\"false\",\"B[B][url]\":\"\",\"B[B][title]\":\"\",\"B[B][external]\":\"false\",\"B[C][url]\":\"\",\"B[C][title]\":\"\",\"B[C][external]\":\"false\",\"B[D][url]\":\"\",\"B[D][title]\":\"\",\"B[D][external]\":\"false\",\"C[layout]\":\"single\",\"C[A][url]\":\"\",\"C[A][title]\":\"\",\"C[A][external]\":\"false\",\"C[B][url]\":\"\",\"C[B][title]\":\"\",\"C[B][external]\":\"false\",\"C[C][url]\":\"\",\"C[C][title]\":\"\",\"C[C][external]\":\"false\",\"C[D][url]\":\"\",\"C[D][title]\":\"\",\"C[D][external]\":\"false\",\"D[layout]\":\"single\",\"D[A][url]\":\"\",\"D[A][title]\":\"\",\"D[A][external]\":\"false\",\"D[B][url]\":\"\",\"D[B][title]\":\"\",\"D[B][external]\":\"false\",\"D[C][url]\":\"\",\"D[C][title]\":\"\",\"D[C][external]\":\"false\",\"D[D][url]\":\"\",\"D[D][title]\":\"\",\"D[D][external]\":\"false\"}",
+      "CreatedBy": 1
+    }
+  ]
+}
+{{- end -}}

@@ -1,0 +1,272 @@
+# Default values
+# Global values. Define shared volumes and persistence volumes. For example:
+global:
+  imageRegistry: ghcr.io
+  basePath: /opt
+  frontendVip: "192.168.1.1"
+  sharedVolume:
+    enabled: false
+  sharedPersistenceVolume: []
+#     # snmp-manager volume
+#     - volumeName: snmp-manager-volume
+#       pvcName: snmp-manager-pvc
+#       storageSize: 10Mi
+#       path: /etc/snmptt/
+#       accessModes: ReadWriteOnce #ReadWriteMany
+#       shareFor:
+#         - snmp-manager
+#       storageClass: snmp-manager-hostpath
+
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+clusterDomain: cluster.local
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 1
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  repository: svtechnmaa/svtech_topology_visualizer_be # CHANGE THIS TO YOUR IMAGE
+  # This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest" # CHANGE THIS TO YOUR IMAGE TAG. "LATEST" IS NOT RECOMMENDED. 
+
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  
+  nodePortEnabled: false # set to true if using NodePort and you want to specify ports
+
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  ports:
+    - name: topology-app
+      port: 80
+      targetPort: 4000
+      protocol: TCP
+      # nodePort: 30080
+  
+  
+  loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
+  loadBalancerSourceRanges: [] # list of IP CIDRs allowed access to load balancer (if supported)
+
+
+  # externalIPs: ["10.98.0.143"]
+
+  ## Set the Cluster IP to use
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+  ##
+  # clusterIP: None
+
+  annotations: {}
+  
+  externalTrafficPolicy: Cluster
+
+  # Set the service SessionAffinity for session stickiness
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
+  # sessionAffinity: None
+
+  # Customize the SessionAntiAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 7200
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# livenessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+# readinessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+
+#This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes:
+- name: seed-configs
+  projected:
+    defaultMode: 493
+    sources:
+    - configMap:
+        name: seed-configs
+    - configMap:
+        name: traefik-config
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts:
+- name: seed-configs
+  mountPath: /opt
+
+nodeSelector: {}
+
+tolerations: []
+
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+
+affinity:
+  # podAntiAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #   - labelSelector:
+  #       matchLabels:
+  #         app.kubernetes.io/name: traefik
+  #     topologyKey: kubernetes.io/hostname
+timezone: Asia/Ho_Chi_Minh
+env: {}
+
+topologyAppEnv:
+  BACKEND_URL: "http://topology-app/api/v1/traefik"
+  DATABASE_URL: "user:password@tcp(mariadb:3306)/dbname?parseTime=true"
+  FRONTEND_URL: "http://topology-web"
+  PORT: "4000"
+  REDIS_ADDRESS: "redis:6379"
+  UPLOAD_DIR: "/data"
+  PERMISSIONS_ENABLED: "true"
+  TRAEFIK_TEMPLATE: "/opt/traefik.yaml"
+
+config:
+  users:
+  - username: admin
+    password: adminpassword
+    email: admin@example.com
+    id: 1
+    groups:
+      - ID: 1
+  - username: user
+    password: userpassword
+    email: user@example.com
+    id: 2
+    groups:
+      - ID: 2
+      - ID: 3
+  - username: readonly
+    password: readonlypassword
+    email: readonly@example.com
+    id: 3
+    groups:
+      - ID: 3
+  - username: dsmanager
+    password: dsmgrpassword
+    email: dsmanager@example.com
+    id: 4
+    groups:
+      - ID: 4
+  menuItems:
+    icingaweb:
+      enabled: true
+      id: 3
+      title: Icingaweb
+      permalink: "icingaweb"
+      href: "http://icingaweb:8080/icingaweb/"
+      order: 2
+    grafana:
+      enabled: true
+      id: 4
+      title: Grafana
+      permalink: "grafana"
+      href: "http://grafana:3000/grafana/"
+      order: 3
+    rundeck:
+      enabled: true
+      id: 5
+      title: Rundeck
+      permalink: "rundeck"
+      href: "http://rundeck:4440/rundeck"
+      order: 4
+    gitlist:
+      enabled: true
+      id: 6
+      title: Gitlist
+      permalink: "gitlist"
+      href: "http://gitlist:80/gitlist/"
+      order: 5
+  datasources:
+    redis:
+      enabled: true
+      id: 1
+      title: Redis
+      type: Redis
+      storage: true
+      url: "redis://redis:6379"
+      username: ""
+      password: ""
+      schema: "0"
+    arango_storage:
+      enabled: true
+      id: 2
+      title: Arango-Storage
+      type: Arango
+      storage: true
+      url: "https://arangodb:8529"
+      username: ""
+      password: ""
+      schema: "_system"
+    arango_topo:
+      enabled: true
+      id: 3
+      title: Arango-Topo
+      type: Arango
+      storage: false
+      url: "https://arangodb:8529"
+      username: ""
+      password: ""
+      schema: "svtech"
+    icinga_redis:
+      enabled: true
+      id: 4
+      title: Icinga-Redis
+      type: Redis
+      storage: false
+      url: "redis://icinga2:6379"
+      username: ""
+      password: ""
+      schema: "0"
+    internal_grafana:
+      enabled: true
+      id: 5
+      title: Internal-Grafana
+      type: Grafana
+      storage: false
+      url: "http://grafana:3000/grafana/"
+      username: ""
+      password: ""
+      schema: "0"

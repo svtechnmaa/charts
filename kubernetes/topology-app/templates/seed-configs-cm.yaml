@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seed-configs
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: Helm
+data:
+  seed-groups.yaml: |-
+    {{- include "seed-groups" . | nindent 4 }}
+  seed-users.yaml: |-
+    {{- include "seed-users" . | nindent 4 }}
+  seed-resource-types.yaml: |-
+    {{- include "seed-resource-types" . | nindent 4 }}
+  seed-permissions.yaml: |-
+    {{- include "seed-permissions" . | nindent 4 }}
+  seed-dashboards.yaml: |-
+    {{- include "seed-dashboards" . | nindent 4 }}
+  seed-menu-items.yaml: |-
+    {{- include "seed-menu-items" . | nindent 4 }}
+  seed-datasources.yaml: |-
+    {{- include "seed-datasources" . | nindent 4 }}
+  seed-states.yaml: |-
+    {{- include "seed-states" . | nindent 4 }}
+  seed-templates.yaml: |-
+    {{- include "seed-templates" . | nindent 4 }}
+  seed-icons.yaml: |-
+    {{- include "seed-icons" . | nindent 4 }}
+  seed-queries.yaml: |-
+    {{- include "seed-queries" . | nindent 4 }}
+  seed-queries-script.sh: |-
+    {{- include "seed-queries-script" . | nindent 4 }}
