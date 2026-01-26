@@ -3,11 +3,7 @@ kind: ArangoDeployment
 metadata:
   name: {{ include "common.names.fullname" . }}
 spec:
-  {{- if .Values.global.ci  }}
-  mode: Single
-  {{- else }}
-  mode: {{ .Values.mode }}
-  {{- end }}
+  mode: {{ ternary "Single" .Values.mode .Values.global.ci }}
   image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
   # image: arangodb/arangodb:{{ .Values.image.tag }}
   bootstrap:
@@ -24,8 +20,6 @@ spec:
   {{- else }}
     type: None
   {{- end }}
-  {{- if not .Values.global.ci }}
-  {{- if eq .Values.mode "Cluster"}}
+  {{- if and (not .Values.global.ci) (eq .Values.mode "Cluster") }}
   {{ .Values.cluster | toYaml | nindent 2 }}
-  {{- end }}
   {{- end }}
