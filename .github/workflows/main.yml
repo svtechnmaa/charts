@@ -105,7 +105,7 @@ jobs:
         echo "Changed charts: ${{ steps.get_changed_charts.outputs.changed_charts}}"
         changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
         mappingFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/image_chart_mapping.yml"
-        dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/Chart.yml"
+        dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/Chart.yaml"
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
@@ -130,7 +130,7 @@ jobs:
         echo "Changed charts: ${{ steps.get_changed_charts.outputs.changed_charts}}"
         changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
         mappingFile="${{ github.workspace }}/stacked_charts//kubernetes/elk/image_chart_mapping.yml"
-        dependencyFile="${{ github.workspace }}/stacked_charts//kubernetes/elk/Chart.yml"
+        dependencyFile="${{ github.workspace }}/stacked_charts//kubernetes/elk/Chart.yaml"
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
@@ -154,7 +154,7 @@ jobs:
         echo "Changed charts: ${{ steps.get_changed_charts.outputs.changed_charts}}"
         changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
         mappingFile="${{ github.workspace }}/stacked_charts//kubernetes/radius/image_chart_mapping.yml"
-        dependencyFile="${{ github.workspace }}/stacked_charts//kubernetes/radius/Chart.yml"
+        dependencyFile="${{ github.workspace }}/stacked_charts//kubernetes/radius/Chart.yaml"
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
@@ -177,7 +177,7 @@ jobs:
         echo "Changed charts: ${{ steps.get_changed_charts.outputs.changed_charts}}"
         changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
         mappingFile="${{ github.workspace }}/stacked_charts//kubernetes/tacgui/image_chart_mapping.yml"
-        dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/tacgui/Chart.yml"
+        dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/tacgui/Chart.yaml"
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
