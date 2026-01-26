@@ -65,7 +65,6 @@ spec:
               {{- end }}
 
           volumeMounts:
-            # shareVolume: VolumeMount
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
             {{- if has $.Chart.Name .shareFor }}
@@ -89,7 +88,7 @@ spec:
             {{- range .Values.service.ports }}
             - name: {{ .name }}
               containerPort: {{ .targetPort }}
-              protocol: {{ .protocol | default "UDP" }}
+              protocol: {{ .protocol }}
             {{- end }}
           env:
             - name: TZ
