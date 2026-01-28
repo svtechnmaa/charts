@@ -167,6 +167,7 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       ## Set to true if you would like to see extra information on logs
       ##
       debug: false
+    replicaCount: 3
   pgpool:
     image:
       registry: ghcr.io
@@ -177,7 +178,21 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       pullSecrets:
         - ghcr-pull-secret
       debug: false
-
+  persistence:
+    storageClass: postgresql-ha-postgresql
+    accessModes:
+      - ReadWriteOnce
+    size: 3Gi
+  volumePermissions:
+    enabled: true
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/os-shell
+      tag: 11
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
 # logFolderExternal:
 #   enabled: true
 #   path: /home/src/logs_dir
@@ -327,13 +342,14 @@ extraVolumes: {}
 
 persistence:
   # enabled: true
-  # size: 5Gi
+  size: 3Gi
   # dynamicProvisioning: false
   # # storageClassName: storage-class-mageai
   # storageClassName: seaweedfs-storage
   # csi:
   #   driver: seaweedfs-csi-driver
   # pathFolder: mageai
+  hostPath: /data/postgresql-ha-postgresql
 
 # config: Default configuration for mageai as environment variables. These get injected directly in the container.
 config: {}
