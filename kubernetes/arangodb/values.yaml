@@ -1,3 +1,5 @@
+global:
+  ci: false
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: arangodb/arangodb # CHANGE THIS TO YOUR IMAGE
@@ -16,6 +18,19 @@ service:
 
 # Single or Cluster
 mode: Single
+single:
+  single:
+    resources: {}
+    volumeClaimTemplate:
+      spec:
+        storageClassName: local-path
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem
+      status: {}
 cluster:
   environment: Production
   agents:
@@ -31,6 +46,13 @@ cluster:
       #   cpu: 100m
       #   memory: 128Mi
       #   storage: 1Gi
+    volumeClaimTemplate:
+      spec:
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem
+        storageClassName: local-path
   coordinators:
     counts: 3
     resources: {}
@@ -42,6 +64,13 @@ cluster:
       #   cpu: 100m
       #   memory: 128Mi
       #   storage: 1Gi
+    volumeClaimTemplate:
+      spec:
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem
+        storageClassName: local-path
   dbservers:
     counts: 3
     resources: {}
@@ -53,6 +82,13 @@ cluster:
       #   cpu: 100m
       #   memory: 128Mi
       #   storage: 1Gi
+    volumeClaimTemplate:
+      spec:
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem
+        storageClassName: local-path
 auth:
   secretName: arango-root-pwd
   rootUser: root

@@ -1,3 +1,5 @@
+{{- $grafana_uri := ternary (printf "http://%s:3000" .Values.global.externalIP) (printf "https://%s" .Values.global.frontendVip) .Values.global.ci -}}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -63,7 +65,7 @@ spec:
               # init database with seed files
               ../server -migrate -seed /opt/seed-groups.yaml -seed /opt/seed-users.yaml -seed /opt/seed-resource-types.yaml -seed /opt/seed-permissions.yaml -seed /opt/seed-dashboards.yaml -seed /opt/seed-menu-items.yaml -seed /opt/seed-datasources.yaml -seed /opt/seed-states.yaml -seed /opt/seed-templates.yaml -seed /opt/seed-icons.yaml
               # wait for grafana to be ready
-              until $(curl --output /dev/null -k --silent --head --fail https://{{ .Values.global.frontendVip }}/grafana/api/health); do
+              until $(curl --output /dev/null -k --silent --head --fail {{ $grafana_uri }}/grafana/api/health); do
                   printf '.'
                   sleep 5
               done

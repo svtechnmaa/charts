@@ -1,6 +1,7 @@
 # Default values
 # Global values. Define shared volumes and persistence volumes. For example:
 global:
+  ci: false
   imageRegistry: ghcr.io
   basePath: /opt
   frontendVip: "192.168.1.1"

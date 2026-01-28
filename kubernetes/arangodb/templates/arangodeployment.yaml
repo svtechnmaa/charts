@@ -1,9 +1,10 @@
+{{- $effectiveMode := ternary "Single" .Values.mode .Values.global.ci -}}
 apiVersion: database.arangodb.com/v1
 kind: ArangoDeployment
 metadata:
   name: {{ include "common.names.fullname" . }}
 spec:
-  mode: {{ .Values.mode }}
+  mode: {{ $effectiveMode }}
   image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
   # image: arangodb/arangodb:{{ .Values.image.tag }}
   bootstrap:
@@ -20,6 +21,8 @@ spec:
   {{- else }}
     type: None
   {{- end }}
-  {{- if eq .Values.mode "Cluster"}}
-  {{ .Values.cluster | toYaml | nindent 2 }}
+  {{- /* Render mode-specific settings via tpl to avoid duplicate conditionals */}}
+  {{- $modes := dict "Cluster" .Values.cluster "Single" .Values.single -}}
+  {{- with index $modes $effectiveMode }}
+  {{ tpl (toYaml .) $ | nindent 2 }}
   {{- end }}
