@@ -11,3 +11,12 @@ data:
     - pipeline.id: offline
       pipeline.ecs_compatibility: disabled
       path.config: "/etc/logstash/conf.d/offline/offline-log.conf"
+    
+    - pipeline.id: juniper
+      path.config: "/etc/logstash/conf.d/juniper.conf"
+    - pipeline.id: h3c
+      path.config: "/etc/logstash/conf.d/h3c.conf"
+    - pipeline.id: huawei
+      path.config: "/etc/logstash/conf.d/huawei.conf"
+    - pipeline.id: tagging_customers
+      path.config: "/etc/logstash/conf.d/tagging_customers.conf"

@@ -1,0 +1,101 @@
+################### H3C device management pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: h3c
+data:
+  h3c.conf: |
+    input {
+        tcp {
+            port => 5513
+            type => syslog
+            tags => h3c_log
+        }
+        udp {
+            port => 5513
+            type => syslog
+            tags => h3c_log
+        }
+    }
+    filter {
+        mutate {
+            add_field => [ "received_at", "%{@timestamp}" ]
+            add_field => [ "received_from", "%{host}" ]
+        }
+        if ([message] =~ /nginx health check/) {
+            drop {}
+        }
+        if ([message] =~ /haproxy/) {
+            drop {}
+        }
+        if ([message] =~ /username=\"icinga\"/) {
+            drop {}
+        }
+        if [message] =~ "- - - - fpc" {
+            drop {}
+        }
+        grok {
+            match => { "message" => "<%{PRIORITYCODE:priocode}>%{H3C_TIMESTAMP:time} %{JUNHOSTNAME:hostname} %%%{NUMBER:moduleid}%{H3C_MODULENAME:modulename}/%{NUMBER}/%{EVENTNAME:eventname}: %{MESSAGE:message}" }
+            patterns_dir => ["/etc/logstash/patterns"]
+            patterns_files_glob => "structured_log"
+        }
+        mutate {
+            convert => { "priocode" => "integer" }
+            convert => { "moduleid" => "integer" }
+        }
+        ruby {
+            code => '
+                val = event.get("priocode")
+                if val
+                    val = val.to_i
+                    event.set("facilitycode", val / 8)
+                    event.set("severitycode", val % 8)
+                end
+            '
+        }
+        # ruby {
+        #     code => 'event.set("facilitycode", event.get("riocode")/8)'
+        # }
+        # ruby {
+        #     code => 'event.set("severitycode", event.get("priocode")%8)'
+        # }
+        translate {
+            field => "[severitycode]"
+            destination => "[severityname]"
+            dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+        }
+        translate {
+            field => "[facilitycode]"
+            destination => "[facilityname]"
+            dictionary_path => "/etc/logstash/dictionary/facilitycode.yml"
+        }
+        if "_grokparsefailure" not in [tags] {
+            mutate {
+                remove_field => [ "message" ]
+            }
+        }
+    }
+    output {
+        if "_grokparsefailure" in [tags] {
+            elasticsearch {
+                hosts => ["https://svtech-es-master"]
+                index => 'failed-log'
+                user => '{{.Values.global.elasticsearch.adminUser.name}}'
+                password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+                ssl_certificate_verification => false
+            }
+        }
+        else {
+            pipeline {
+              send_to => tagging_customers
+            }
+        }
+    }

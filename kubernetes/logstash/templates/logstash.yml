@@ -99,6 +99,18 @@ spec:
             mountPath: /etc/logstash/conf.d/svtech-lab-online/jun-svtechlab-onlinelog.conf
             subPath: jun-svtechlab-onlinelog.conf
 
+          - mountPath: /etc/logstash/conf.d/h3c.conf
+            name: h3c
+            subPath: h3c.conf
+          - mountPath: /etc/logstash/conf.d/huawei.conf
+            name: huawei
+            subPath: huawei.conf
+          - mountPath: /etc/logstash/conf.d/juniper.conf
+            name: juniper
+            subPath: juniper.conf
+          - mountPath: /etc/logstash/conf.d/tagging_customers.conf
+            name: tagging-customers
+            subPath: tagging_customers.conf
 
           # uploaded log from rundeck flow
           - name: offline-log
@@ -153,6 +165,23 @@ spec:
       - name: offline-log
         configMap:
           name: offline-log
+      - configMap:
+          defaultMode: 420
+          name: h3c
+        name: h3c
+      - configMap:
+          defaultMode: 420
+          name: huawei
+        name: huawei
+      - configMap:
+          defaultMode: 420
+          name: juniper
+        name: juniper
+      - configMap:
+          defaultMode: 420
+          name: tagging-customers
+        name: tagging-customers
+
       - name: var-log-file
         hostPath:
           path: /var/log/logstash

@@ -1,0 +1,55 @@
+################### tagging customer pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tagging-customers
+data:
+  tagging_customers.conf: |
+    input {
+        pipeline {
+            address => tagging_customers
+        }
+    }
+    filter {
+        translate {
+            field           => "hostname"
+            destination     => "customer"
+            dictionary_path => "/etc/logstash/dictionary/customer_name.yml"
+            regex           => true
+            fallback        => "unknown"
+        }
+        if [customer] == "unknown" {
+            mutate {
+                add_tag => ["_grokparsefailure"]
+                remove_field => [ "customer" ]
+            }
+        }
+    }
+    output {
+        if "_grokparsefailure" in [tags] {
+            elasticsearch {
+                hosts => ["https://svtech-es-master"]
+                index => 'failed-log0000'
+                user => '{{.Values.global.elasticsearch.adminUser.name}}'
+                password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+                ssl_certificate_verification => false
+            }
+        }
+        else {
+            elasticsearch {
+                hosts => ["https://svtech-es-master"]
+                index => "%{customer}"
+                user => '{{.Values.global.elasticsearch.adminUser.name}}'
+                password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+                ssl_certificate_verification => false
+            }
+        }
+    }

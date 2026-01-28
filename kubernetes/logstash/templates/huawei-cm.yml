@@ -1,0 +1,76 @@
+################### huawei device management pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: huawei
+data:
+  huawei.conf: |
+    input {
+        tcp {
+        port => 5514
+        type => syslog
+        tags => huawei_log
+        }
+        udp {
+        port => 5514
+        type => syslog
+        tags => huawei_log
+        }
+    }
+    filter {
+        if "huawei_log" in [tags] {
+        grok {
+            match => {
+            "message" => [
+                "^<%{NUMBER:priocode}>(?<time_raw>%{MONTH} +%{MONTHDAY} %{YEAR} %{TIME}) %{HOSTNAME:hostname} (?:%%)%{NUMBER:log_format_version}(?<module_name>[^/]+)/%{NUMBER:severitycode}/(?<brief_description>[^()]+)\((?<information_type>[a-z])\):(?:CID=%{NOTSPACE:CID}(?:-OID=%{NOTSPACE:alarm_ID})?;)?\s*(?<msg>.*)$"
+            ]
+            }
+            tag_on_failure => []
+        }
+        # Keep the original string so ES won't try to parse it
+
+        # Parse the time string into a separate field (NOT @timestamp)
+        date {
+            match    => [ "time_raw",
+                        "MMM  d yyyy HH:mm:ss",   # two spaces before single-digit day
+                        "MMM d yyyy HH:mm:ss" ]   # one space
+            timezone => "America/Lima"
+            target   => "time"
+        }
+        translate {
+            field => "[severitycode]"
+            destination => "[severityname]"
+            dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+        }
+
+        if "_grokparsefailure" not in [tags] {
+            mutate {
+                remove_field => [ "message" ]
+            }
+        }
+        }
+    }
+    output {
+        if "_grokparsefailure" in [tags] {
+            elasticsearch {
+                hosts => ["https://svtech-es-master"]
+                index => 'failed-log'
+                user => '{{.Values.global.elasticsearch.adminUser.name}}'
+                password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+                ssl_certificate_verification => false
+            }
+        }
+        else if "huawei_log" in [tags] and "alert_watermark" not in [tags] {
+            pipeline {
+              send_to => tagging_customers
+            }
+        }
+    }
