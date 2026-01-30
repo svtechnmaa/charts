@@ -1,0 +1,187 @@
+################### Juniper device management pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: juniper
+data:
+  juniper.conf: |
+    input {
+        tcp {
+        port => 5515
+        type => syslog
+        tags => junos_log
+        }
+        udp {
+        port => 5515
+        type => syslog
+        tags => junos_log
+        }
+    }
+    filter {
+        mutate {
+            add_field => [ "received_at", "%{@timestamp}" ]
+            add_field => [ "received_from", "%{host}" ]
+        }
+        if ([message] =~ /nginx health check/) {
+            drop {}
+        }
+        if ([message] =~ /haproxy/) {
+            drop {}
+        }
+        if ([message] =~ /username=\"icinga\"/) {
+            drop {}
+        }
+        if [message] =~ "- - - - fpc" {
+            drop {}
+        }
+        else {
+            grok {
+            match => { "message" => "<%{PRIORITYCODE:priocode}>1 %{TIMESTAMP_ISO8601:time} %{JUNHOSTNAME:hostname} (%{PROCESSNAME:procsname}|\-) (%{PROCESSID:procsid}|\-) (%{EVENTNAME:eventname}|\-) %{MESSAGE:msg}" }
+            patterns_dir => ["/etc/logstash/patterns"]
+            patterns_files_glob => "structured_log"
+            }
+        }
+
+        mutate {
+            convert => { "priocode" => "integer" }
+        }
+        ruby {
+            code => '
+                priocode = event.get("priocode")
+                if priocode
+                    event.set("facilitycode", priocode / 8)
+                    event.set("severitycode", priocode % 8)
+                end
+            '
+        }
+        # ruby {
+        #     code => 'event.set("facilitycode", event.get("priocode")/8)'
+        # }
+        # ruby {
+        #     code => 'event.set("severitycode", event.get("priocode")%8)'
+        # }
+        translate {
+            field => "[severitycode]"
+            destination => "[severityname]"
+            dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+        }
+        translate {
+            field => "[facilitycode]"
+            destination => "[facilityname]"
+            dictionary_path => "/etc/logstash/dictionary/facilitycode.yml"
+        }
+
+        if "AUTHORIZATION" in [facilityname] or "sshd|login" in [procsname] {
+            mutate {
+            add_tag => "access_log"
+            }
+        }
+
+        if "UI_LOGOUT_EVENT|UI_LOGIN_EVENT|UI_AUTH_EVENT|UI_CMDLINE_READ_LINE" in [eventname] or "INTERACTIVE-COMMANDS" in [facilityname] or "mgd" in [procsname] {
+            mutate {
+            add_tag => "access_log"
+            }
+        }
+
+        if "UI_JUNOSCRIPT_CMD" in [eventname] {
+            mutate { add_field => {"login_session" => "script"} }
+        }
+
+        if "access_log" in [tags] {
+            mutate { add_field => {"login_session" => "pending"} }
+            grok {
+                match => { "msg" =>
+                [
+                    "\[%{GREEDYDATA:} username=\"%{GREEDYDATA:login_user}\" source-address=\"%{IP:login_source}\"\] %{GREEDYDATA:}",
+                    "\[%{GREEDYDATA} username=\"%{GREEDYDATA:login_user}\" source-address=\"%{IP:login_source}\"\]"
+                ]
+                }
+                add_field => { "login_protocol" => "login failed" }
+                add_tag => "login_trigger"
+                tag_on_failure => []
+            }
+
+            grok {
+                match => { "msg" => "\[%{GREEDYDATA:} username=\"%{GREEDYDATA:login_user}\" hostname=\"%{IP:login_source}\" tty-name=\"%{GREEDYDATA:client_mode}\"\] %{GREEDYDATA:}" }
+                match => { "msg" =>
+                [
+                    "\[%{DATA} username=\"%{GREEDYDATA:login_user}\" class-name=\"%{GREEDYDATA:class}\" local-peer=\"%{DATA}\" ssh-connection=\"%{IP:login_source} %{DATA}\" client-mode=\"%{GREEDYDATA:client_mode}\"\] %{GREEDYDATA:}",
+                    "\[%{DATA} username=\"%{GREEDYDATA:login_user}\" class-name=\"%{GREEDYDATA:class}\" local-peer=\"%{DATA}\" ssh-connection=\"%{IP:login_source} %{DATA}\" client-mode=\"%{GREEDYDATA:client_mode}\"\]"
+                ]
+                }
+                match => { "msg" => "\[%{DATA} username=\"%{GREEDYDATA:login_user}\" class-name=\"%{GREEDYDATA:class}\" local-peer=\"%{DATA}\" %{GREEDYDATA:} client-mode=\"(?<client_mode>\junoscript)\"\] %{GREEDYDATA:}" }
+                add_tag => "login_trigger"
+                tag_on_failure => []
+            }
+
+            grok {
+                match => {
+                "msg" => [
+                    "\[%{GREEDYDATA:} username=\"%{GREEDYDATA:login_user}\" command=\"%{GREEDYDATA:command}\"\] %{GREEDYDATA:}",
+                    "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}', command '%{GREEDYDATA:command}'",
+                    "\[%{GREEDYDATA} username=\"%{GREEDYDATA:login_user}\" command=\"%{GREEDYDATA:command}\"\]"
+                    ]
+                }
+                add_tag => "interactive_user"
+                tag_on_failure => []
+            }
+
+            grok {
+                match => { "msg" => "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}' used NETCONF client to run command '%{GREEDYDATA:command}'" }
+                match => { "msg" => "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}', command 'xml-mode netconf need-trailer '" }
+                match => { "msg" => "\[%{GREEDYDATA:}\] User '%{GREEDYDATA:login_user}', command 'command rpc rpc command start shell command %{GREEDYDATA:}" }
+                add_tag => "netconf_user"
+                add_field => { "client_mode" => "netconf" }
+                tag_on_failure => []
+            }
+
+            translate {
+            exact => true
+            regex => true
+            field => "[client_mode]"
+            destination => "[login_protocol]"
+            dictionary_path => "/etc/logstash/dictionary/client_mode.yml"
+            }
+        }
+
+        date {
+            match => [ "time", "ISO8601" ]
+        }
+
+        if "USER" in [facilityname] and "smid" in [procsname] and "WARNING" in [severityname] {
+            if "watermark" in [msg] {
+            mutate {
+                add_tag => "alert_watermark"
+            }
+            }
+        }
+        if "_grokparsefailure" not in [tags] {
+            mutate {
+                remove_field => [ "message" ]
+            }
+        }
+    }
+        output {
+            if "_grokparsefailure" in [tags] {
+                elasticsearch {
+                    hosts => ["https://svtech-es-master"]
+                    index => 'failed-log'
+                    user => '{{.Values.global.elasticsearch.adminUser.name}}'
+                    password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+                    ssl_certificate_verification => false
+                }
+            }
+            else if "junos_log" in [tags] and "alert_watermark" not in [tags] {
+                pipeline {
+                send_to => tagging_customers
+                }
+            }
+        }

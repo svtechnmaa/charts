@@ -12,6 +12,13 @@ data:
     - "netconf": "netconf"
     - "junoscript*": "junoscript"
     - "pts*": "telnet"
+  
+  customer_name.yml: |
+    ---
+    "^SANICENTER_.*": "sanicenter"
+    "^CODESA_.*": "codesa"
+    "^GRSA0925_.*": "olivos_villacuri"
+
 
   facilitycode.yml: |
     ---
