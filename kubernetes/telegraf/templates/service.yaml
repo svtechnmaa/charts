@@ -14,7 +14,9 @@ spec:
   {{- end }}
   {{- end }}
 
-  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+  selector:
+    app.kubernetes.io/component: {{ .Chart.Name }}
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
 
   type: {{ .Values.service.type | default "ClusterIP" }}
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
