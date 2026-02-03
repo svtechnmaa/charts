@@ -148,7 +148,7 @@ postgresqlExternal:
 
 #we deploy postgresql-ha when postgresqlExternal is enabled  
 postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
-  fullnameOverride: nmaa-postgresql-ha
+  nameOverride: postgresql-ha
   postgresql:
     username: postgres
     password: "juniper@123"
