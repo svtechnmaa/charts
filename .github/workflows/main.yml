@@ -584,7 +584,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: ${{ env.COMMIT_FULL_ID }}
-        path: tacgui
+        path: charts
 
     - name: Checkout SVTECH_CICD_Utilities 
       uses: actions/checkout@v4
