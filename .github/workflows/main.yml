@@ -616,7 +616,7 @@ jobs:
         name: vm_vars
         path: ${{ github.workspace }}
 
-    - name: Create inventory file for ELK Stack
+    - name: Create inventory file for Tacgui Stack
       run: |
         export ANSIBLE_HOST_KEY_CHECKING=False
         cd ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook # To get the correct path for ansible config
