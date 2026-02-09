@@ -65,7 +65,7 @@ dependencies:
   - name: postgresql-ha
     version: 9.4.6-svtech
     #version: x.x.x
-    repository: file:///opt/test/charts/artifacthub/postgresql-ha
+    repository: https://svtechnmaa.github.io/charts/artifacthub/postgresql-ha
     condition: postgresqlExternal.enabled
 
 
