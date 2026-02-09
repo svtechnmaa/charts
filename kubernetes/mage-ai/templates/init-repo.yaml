@@ -69,8 +69,14 @@ spec:
               value: {{ .Values.initRepo.branch | quote }}
             - name: REPO
               value: {{ .Values.initRepo.repo | quote }}
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+              {{- range .Values.global.sharedPersistenceVolume }}
+                {{- if eq .volumeName "mageai-pipeline-volume" }}
             - name: REPO_PATH
               value: {{ .path }}/NMAA-piplines-source
+                {{- end }}
+              {{- end }}
+            {{- end }}
           volumeMounts:
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
               {{- range .Values.global.sharedPersistenceVolume }}
