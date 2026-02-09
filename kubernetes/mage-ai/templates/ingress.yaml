@@ -23,7 +23,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  ingressClassName: {{ .Release.Name }}
+  ingressClassName: {{ .Values.ingress.className | default .Release.Name }}
   {{- if .Values.ingress.tls }}
   tls:
     {{- range .Values.ingress.tls }}

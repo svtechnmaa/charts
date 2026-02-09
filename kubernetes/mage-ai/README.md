@@ -67,7 +67,7 @@ postgresqlExternal:
   postgresqlExternalHost: "postgresql-ha-pgpool" 
   auth:
     username: postgres
-    password: "juniper@123"
+    password: ""
     database: "etl_nmaa"
 ```
 

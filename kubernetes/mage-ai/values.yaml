@@ -331,14 +331,9 @@ affinity: {}
 
 volumeEnabled: true
 
-extraVolumeMounts: {}
-  # - name: mage-log
-  #   mountPath: /home/src/logs_dir
+extraVolumeMounts: []
 
-extraVolumes: {}
-  # - name: mage-log
-  #   persistentVolumeClaim:
-  #     claimName: pvc-mageai-logs
+extraVolumes: []
 
 persistence:
   # enabled: true
