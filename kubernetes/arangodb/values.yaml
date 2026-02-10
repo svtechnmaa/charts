@@ -53,6 +53,8 @@ cluster:
             storage: 8Gi
         volumeMode: Filesystem
         storageClassName: local-path
+        accessModes:
+        - ReadWriteOnce
   coordinators:
     counts: 3
     resources: {}
@@ -71,6 +73,8 @@ cluster:
             storage: 8Gi
         volumeMode: Filesystem
         storageClassName: local-path
+        accessModes:
+        - ReadWriteOnce
   dbservers:
     counts: 3
     resources: {}
@@ -89,6 +93,8 @@ cluster:
             storage: 8Gi
         volumeMode: Filesystem
         storageClassName: local-path
+        accessModes:
+        - ReadWriteOnce
 auth:
   secretName: arango-root-pwd
   rootUser: root
