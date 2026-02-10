@@ -272,9 +272,6 @@ spec:
               vars.agent_endpoint = name
               vars.device_type = ""
               vars.os = "Linux"
-              vars.http_vhosts["http"] = {
-              http_uri = "/thruk"
-              }
               vars.disks["disk"] = {
               /* No parameters. */
               }
