@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+  {{- if .Values.service.annotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.service.annotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+  ports:
+    - name: filebeat-syslog
+      protocol: UDP
+      port: 5066
+      targetPort: 5066
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+      nodePort: 30901
+  {{- end }}
+  #   - name: upload-offline-log
+  #     protocol: TCP
+  #     port: 5555
+  #     targetPort: 5555
+  # {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+  #     nodePort: 30551
+  # {{- end }}
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+  externalTrafficPolicy: Local
+  {{- if .Values.global.externalIP }}
+  externalIPs: 
+    - {{ .Values.global.externalIP }}
+  {{- end }}
+  loadBalancerIP: {{ .Values.global.logstash.loadBalancerIP }}
+  {{- end }}
