@@ -3,12 +3,7 @@
 # Declare variables to be passed into your templates.
 global:
   mageai:
-    pullCode: true
     projectName: "NMAA_pipelines"
-  github:
-    user: ""
-    token: ""
-    fg_token: ""  
   basePath: /opt/shared/
   sharedVolume:
     enabled: true
@@ -135,6 +130,27 @@ postgresql:
     database: "mageai_nmaa"
   image:
     repository: bitnamilegacy/postgresql
+  persistence:
+    storageClass: postgresql-standalone-postgresql
+    accessModes:
+      - ReadWriteOnce
+    size: 3Gi
+  primary:
+    persistence:
+      storageClass: postgresql-standalone-postgresql
+      accessModes:
+        - ReadWriteOnce
+      size: 3Gi
+  volumePermissions:
+    enabled: true
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/os-shell
+      tag: 11
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
 # A dependency conflict occurs with the `common` library chart in the PostgreSQL subchart when intergrated in nmaa stack.
 # As a workaround, Mage AI is configured to use an external PostgreSQL instance.
 # The external PostgreSQL must be provisioned prior to Helm installation.
@@ -145,7 +161,6 @@ postgresqlExternal:
     username: postgres
     password: "juniper@123"
     database: "etl_nmaa"
-
 #we deploy postgresql-ha when postgresqlExternal is enabled  
 postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
   nameOverride: postgresql-ha

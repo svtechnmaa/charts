@@ -27,7 +27,7 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
 
-      {{- if or .Values.redis.enabled .Values.redis.customRedisURL .Values.postgresql.enabled .Values.global.mageai.pullCode }}
+      {{- if or .Values.redis.enabled .Values.redis.customRedisURL .Values.postgresql.enabled }}
       initContainers:
         {{- if or .Values.redis.enabled .Values.redis.customRedisURL }}
         - name: wait-for-redis
