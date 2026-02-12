@@ -20,6 +20,10 @@ spec:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ .Chart.Name }}-{{ .Values.redis.name }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image ) }}
         {{- if .Values.redis.image.pullPolicy }}

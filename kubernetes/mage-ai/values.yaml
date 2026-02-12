@@ -48,14 +48,6 @@ global:
     allowInsecureImages: true
 timezone: Asia/Ho_Chi_Minh
 
-initRepo:
-  image:
-    repository: svtechnmaa/svtech_debuger
-    tag: v1.0.3
-    pullPolicy: IfNotPresent
-
-  repo: "netlogic_ETL_pipelines:latest"
-  branch: "main"
 updateStrategy: RollingUpdate
 podManagementPolicy: OrderedReady
 podAffinityPreset: ""
@@ -130,7 +122,10 @@ postgresql:
     password: "juniper@123"
     database: "mageai_nmaa"
   image:
+    registry: docker.io
     repository: bitnamilegacy/postgresql
+    tag: 17.2.0-debian-12-r3
+    digest: ""
   persistence:
     storageClass: postgresql-standalone-postgresql
     accessModes:
@@ -223,9 +218,9 @@ redis:
   # Your custom redis url (make sure redis.enabled is set to false)
   customRedisURL: ""
   image:
-    registry: docker.io
-    repository: bitnamilegacy/redis
-    tag: 7.2.1-debian-11-r0
+    registry: ghcr.io
+    repository: svtechnmaa/redis
+    tag: 7.2.3
     pullPolicy: IfNotPresent
   #we try to use our manifest to deploy redis not from bitnami as original
   replicaCount: 1
@@ -235,9 +230,10 @@ redis:
   allowEmptyPass: yes
 
 image:
-  repository: ghcr.io/svtechnmaa/svtech_netlogic_etl
+  registry: ghcr.io
+  repository: svtechnmaa/svtech_netlogic_etl
   tag: v1.6
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 imagePullSecrets:
   - name: "ghcr-pull-secret"
