@@ -53,7 +53,7 @@ spec:
             - -c
             - |
               # Wait for influxdb
-              until nc -zvw5 influxdb.{{ .Release.Namespace }} 8086; do echo "Waiting for influxdb..."; sleep 2; done
+              until nc -zvw5 {{ .Values.config.influxdb_host }}.{{ .Release.Namespace }} {{ .Values.config.influxdb_port }}; do echo "Waiting for influxdb..."; sleep 2; done
               addgroup -S -g {{ .Values.securityContext.runAsGroup }} telegraf
               adduser -S -u {{ .Values.securityContext.runAsUser }} -G telegraf telegraf
               {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
