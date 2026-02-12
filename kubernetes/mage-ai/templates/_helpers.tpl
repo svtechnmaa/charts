@@ -50,6 +50,13 @@ app.kubernetes.io/name: {{ include "mageai.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{/*
+Webserver Selector labels
+*/}}
+{{- define "mageai.webServerSelectorLabels" -}}
+app.kubernetes.io/name: {{ .Values.webServer.name }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
 
 {{/*
 Scheduler Selector labels
