@@ -113,6 +113,20 @@ webServer:
   #   maxReplicas: 10
   #   targetCPUUtilizationPercentage: 50
 
+initContainer:
+  waitForRedis:
+    image:
+      registry: docker.io
+      repository: alpine
+      tag: 3.22.1
+      digest: ""
+  waitForPostgres:
+    image:
+      registry: docker.io
+      repository: busybox
+      tag: 1.37.0
+      digest: ""
+
 # Enable Postgres as the DB
 postgresql:
   enabled: true

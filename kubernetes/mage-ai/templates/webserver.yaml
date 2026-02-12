@@ -31,7 +31,7 @@ spec:
       initContainers:
         {{- if or .Values.redis.enabled .Values.redis.customRedisURL }}
         - name: wait-for-redis
-          image: alpine:3.22.1
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.initContainer.waitForRedis.image "global" .Values.global ) }}
           env:
             {{- if .Values.redis.enabled }}
             - name: REDIS_URL
@@ -45,7 +45,7 @@ spec:
 
         {{- if .Values.postgresql.enabled }}
         - name: wait-for-postgres
-          image: busybox:1.37.0
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.initContainer.waitForPostgres.image "global" .Values.global ) }}
           command: ['sh', '-c', 'until nc -z {{ .Values.postgresql.fullnameOverride }} 5432; do echo waiting for postgres; sleep 2; done;']
         {{- end }}
       {{- end }}
