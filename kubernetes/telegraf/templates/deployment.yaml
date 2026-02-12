@@ -54,8 +54,8 @@ spec:
             - |
               # Wait for influxdb
               until nc -zvw5 influxdb.{{ .Release.Namespace }} 8086; do echo "Waiting for influxdb..."; sleep 2; done
-              addgroup -S -g 101 telegraf
-              adduser -S -u 101 -G telegraf telegraf
+              addgroup -S -g {{ .Values.securityContext.runAsGroup }} telegraf
+              adduser -S -u {{ .Values.securityContext.runAsUser }} -G telegraf telegraf
               {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
               {{- range .Values.global.sharedPersistenceVolume }}
               {{- if has $.Chart.Name .shareFor }}

@@ -37,9 +37,9 @@ fullnameOverride: ""
 podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: {}
-  # runAsGroup: 33
-  # runAsUser: 33
+securityContext:
+  runAsGroup: 101 # Must equal GroupID in dockerfile
+  runAsUser: 101  # Must equal UserID in dockerfile
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
