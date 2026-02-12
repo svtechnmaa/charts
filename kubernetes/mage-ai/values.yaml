@@ -19,19 +19,19 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      storageClass: seaweedfs-storage
-      # storageClass: mageai-hostpath-data # for hostPath PV
+      # storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath-data # for hostPath PV
       folderName: mageai-data # for hostPath
 
     - volumeName: mageai-pipeline-volume
       pvcName: mageai-pipeline-pvc
       storageSize: 2G
-      path: /home/src
+      path: /home/src/NMAA_pipelines
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      storageClass: seaweedfs-storage
-      # storageClass: mageai-hostpath-pipeline # for hostPath PV
+      # storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath-pipeline # for hostPath PV
       folderName: mageai-pipeline # for hostPath
 
     - volumeName: mageai-log-volume
@@ -41,8 +41,8 @@ global:
       accessModes: ReadWriteMany
       shareFor:
         - mage-ai
-      storageClass: seaweedfs-storage
-      # storageClass: mageai-hostpath-log # for hostPath PV
+      # storageClass: seaweedfs-storage
+      storageClass: mageai-hostpath-log # for hostPath PV
       folderName: mageai-log # for hostPath
   security:
     allowInsecureImages: true
@@ -118,8 +118,8 @@ postgresql:
   enabled: true
   fullnameOverride: "postgresql-service"
   auth:
-    username: postgres
-    password: "juniper@123"
+    username: dummy
+    password: "dummy@123"
     database: "mageai_nmaa"
   image:
     registry: docker.io
@@ -154,18 +154,18 @@ postgresqlExternal:
   enabled: false
   postgresqlExternalHost: "postgresql-ha-pgpool" 
   auth:
-    username: postgres
-    password: "juniper@123"
+    username: dummy
+    password: "dummy@123"
     database: "etl_nmaa"
 #we deploy postgresql-ha when postgresqlExternal is enabled  
 postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
   nameOverride: postgresql-ha
   postgresql:
-    username: postgres
-    password: "juniper@123"
+    username: dummy
+    password: "dummy@123"
     database: "etl_nmaa"
-    repmgrUsername: repmgr
-    repmgrPassword: "juniper@123"
+    repmgrUsername: dummy
+    repmgrPassword: "dummy@123"
     repmgrDatabase: "repmgr"
     image:
       registry: ghcr.io
