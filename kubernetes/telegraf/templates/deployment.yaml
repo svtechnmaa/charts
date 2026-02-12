@@ -93,8 +93,6 @@ spec:
           env:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-            - name: INFLUX_SKIP_DATABASE_CREATION
-              value: {{ .Values.config.influxdb_skip_database_creation | quote }}
           envFrom:
             - secretRef:
                 name: {{ include "common.names.fullname" . }}
