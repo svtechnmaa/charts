@@ -3,22 +3,22 @@ kind: Deployment
 metadata:
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: {{ .Chart.Name }}-redis
+    app.kubernetes.io/component: {{ .Chart.Name }}-{{ .Values.redis.name }}
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
-  name: {{ .Release.Name }}-mageai-redis
+  name: {{ include "common.names.fullname" . }}-{{ .Values.redis.name }}
 spec:
   replicas: {{ .Values.redis.replicaCount }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: {{ .Chart.Name }}-redis
+      app.kubernetes.io/component: {{ .Chart.Name }}-{{ .Values.redis.name }}
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: {{ .Chart.Name }}-redis
+        app.kubernetes.io/component: {{ .Chart.Name }}-{{ .Values.redis.name }}
     spec:
       containers:
       - image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image ) }}
