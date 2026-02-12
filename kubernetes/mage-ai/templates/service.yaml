@@ -9,7 +9,11 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ .Values.service.type | default "ClusterIP" }}
+  {{- if .Values.global.externalIP }}
+  externalIPs:
+  - {{ .Values.global.externalIP }}
+  {{- end }}
   ports:
     - port: {{ .Values.service.port }}
       targetPort: http
