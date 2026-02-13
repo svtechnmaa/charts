@@ -1,0 +1,135 @@
+# Default values
+# Global values. Define shared volumes and persistence volumes. For example:
+global:
+  sharedVolume:
+    enabled: true
+  sharedPersistenceVolume:
+    - volumeName: telegraf-config
+      pvcName: telegraf-config-pvc
+      storageSize: 10Mi
+      path: /home/telegraf/etc
+      accessModes: ReadWriteMany
+      shareFor:
+        - telegraf
+      storageClass: seaweedfs-storage
+
+timezone: Asia/Ho_Chi_Minh
+replicaCount: 1
+
+# init image
+init:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: 1.33
+    pullPolicy: IfNotPresent
+
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/juniper-telemetry-sensors
+  tag: v1.0.0
+  pullPolicy: IfNotPresent
+
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext:
+  runAsGroup: 101 # Must equal GroupID in dockerfile
+  runAsUser: 101  # Must equal UserID in dockerfile
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  nodePortEnabled: false # set to true if using NodePort and you want to specify ports
+
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  ports:
+    - name: telegraf
+      port: 8094
+      targetPort: 8094
+      protocol: UDP
+  loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
+  loadBalancerSourceRanges: [] # list of IP CIDRs allowed access to load balancer (if supported)
+
+
+
+  ## Set the Cluster IP to use
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+  ##
+  # clusterIP: None
+
+  annotations: {}
+  
+  externalTrafficPolicy: Cluster
+
+  # Set the service SessionAffinity for session stickiness
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
+  sessionAffinity: ClientIP
+
+  # Customize the SessionAntiAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
+  sessionAffinityConfig:
+    # clientIP:
+    #   timeoutSeconds: 7200
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# livenessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+# readinessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+  # - name: telegraf-conf
+  #   configMap:
+  #     name: telegraf-config
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+  # - name: telegraf-config
+  #   mountPath: /etc/telegraf/telegraf.conf
+  #   subPath: telegraf.conf
+
+nodeSelector: {}
+
+tolerations: []
+
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+
+affinity: {}
+  # podAntiAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #   - labelSelector:
+  #       matchLabels:
+  #         app.kubernetes.io/name: traefik
+  #     topologyKey: kubernetes.io/hostname
+
+config:
+  influxdb_host: influxdb-relay
+  influxdb_port: 9096
+  influxdb_database: influxdb_nms
+  influxdb_user: xxx
+  influxdb_password: xxx
+  influxdb_skip_database_creation: "true"
