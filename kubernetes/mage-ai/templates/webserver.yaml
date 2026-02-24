@@ -109,9 +109,7 @@ spec:
             {{- end }}
 
           env:
-            {{- if .Values.env }}
-              {{- toYaml .Values.env | nindent 12 }}
-            {{- else if .Values.extraEnvs }}
+            {{- if .Values.extraEnvs }}
               {{- toYaml .Values.extraEnvs | nindent 12 }}
             {{- end }}
 
