@@ -61,7 +61,7 @@ dependencies:
   - name: common
     version: 1.x.x
     repository: https://svtechnmaa.github.io/charts/artifacthub/
-  #  condition: postgresqlExternal.enabled
+    condition: postgresqlExternal.enabled
   - name: postgresql-ha
     version: 9.4.6-svtech
     #version: x.x.x
