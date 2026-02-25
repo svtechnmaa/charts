@@ -211,9 +211,3 @@ chromedp:
     repository: chromedp/headless-shell
     tag: 138.0.7204.101
     pullPolicy: IfNotPresent
-  env:
-    IGNORE_HTTPS_ERRORS: "1"
-    RENDERING_MODE: "0"
-    RENDERING_CLUSTERING_MODE: browser
-    RENDERING_CLUSTERING_MAX_CONCURRENCY: "15"
-    RENDERING_CLUSTERING_TIMEOUT: "120"
