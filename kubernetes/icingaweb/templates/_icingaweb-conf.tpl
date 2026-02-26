@@ -95,4 +95,11 @@
 - name: icingaweb.modules.grafana.graphs.hostalive.dashboarduid
   value: "icinga2-hostalive"
 {{- end }}
+{{/* pdfexport module */}}
+{{- if .Values.modules.pdfexport.enabled }}
+- name: icingaweb.modules.pdfexport.config.chrome.host
+  value: {{ .Values.modules.pdfexport.host | default "localhost" | quote }}
+- name: icingaweb.modules.pdfexport.config.chrome.force_temp_storage
+  value: {{ .Values.modules.pdfexport.force_temp_storage | default "0" | quote }}
+{{- end }}
 {{- end }}
