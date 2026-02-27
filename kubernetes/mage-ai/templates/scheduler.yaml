@@ -1,0 +1,156 @@
+{{- if .Values.standaloneScheduler }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}-{{ .Values.scheduler.name }}
+  labels:
+    {{- include "mageai.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.scheduler.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mageai.schedulerSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "mageai.schedulerSelectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mageai.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      {{- if or .Values.redis.enabled .Values.redis.customRedisURL .Values.postgresql.enabled }}
+      initContainers:
+        {{- if or .Values.redis.enabled .Values.redis.customRedisURL }}
+        - name: wait-for-redis
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.initContainer.waitForRedis.image "global" .Values.global ) }}
+          env:
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_URL
+              value: redis://{{ .Chart.Name }}-redis:6379/0
+            {{- else if .Values.redis.customRedisURL }}
+            - name: REDIS_URL
+              value: {{ .Values.redis.customRedisURL }}
+            {{- end }}
+          command: ["sh", "-c", "until nc -z -v $(echo $REDIS_URL | cut -d'/' -f3 | cut -d':' -f1) $(echo $REDIS_URL | cut -d'/' -f3 | cut -d':' -f2); do sleep 1; done"]
+        {{- end }}
+
+        {{- if .Values.postgresql.enabled }}
+        - name: wait-for-postgres
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.initContainer.waitForPostgres.image "global" .Values.global ) }}
+          command: ['sh', '-c', 'until nc -z {{ .Values.postgresql.fullnameOverride }} 5432; do echo waiting for postgres; sleep 2; done;']
+        {{- end }}
+      {{- end }}
+
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          resources:
+            {{- if .Values.scheduler.resources }}
+              {{- toYaml .Values.scheduler.resources | nindent 12 }}
+            {{- else }}
+              {{- toYaml .Values.resources | nindent 12 }}
+            {{- end }}
+
+          envFrom:
+            {{- if .Values.config }}
+            - configMapRef:
+                name: {{ include "mageai.fullname" . }}-env
+            {{- end }}
+            {{- if or (.Values.existingSecret) (.Values.secrets) }}
+            - secretRef:
+                name: {{ include "mageai.secretName" . }}
+            {{- end }}
+
+          env:
+            {{- if .Values.extraEnvs }}
+              {{- toYaml .Values.extraEnvs | nindent 12 }}
+            {{- end }}
+
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_URL
+              value: redis://{{ .Chart.Name }}-redis:6379/0
+            {{- else if .Values.redis.customRedisURL }}
+            - name: REDIS_URL
+              value: {{ .Values.redis.customRedisURL }}
+            {{- end }}
+
+            {{- if .Values.postgresql.enabled }}
+            - name: MAGE_DATABASE_CONNECTION_URL
+              value: postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Values.postgresql.fullnameOverride }}:5432/{{ .Values.postgresql.auth.database }}
+            {{- end }}
+
+            {{- if .Values.postgresqlExternal.enabled }}
+            - name: MAGE_DATABASE_CONNECTION_URL
+              value: postgresql://{{ .Values.postgresqlExternal.auth.username }}:{{ .Values.postgresqlExternal.auth.password }}@{{ .Release.Name }}-{{ .Values.postgresqlExternal.postgresqlExternalHost }}:5432/{{ .Values.postgresqlExternal.auth.database }}
+            {{- end }}
+
+            {{- if .Values.global.sharedVolume.enabled }}
+              {{- range .Values.global.sharedPersistenceVolume }}
+                {{- if eq .volumeName "mage-log-volume" }}
+            - name: LOGS_DIR_PATH
+              value: {{ .path }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
+
+            - name: INSTANCE_TYPE
+              value: scheduler
+
+          {{- if .Values.volumeEnabled }}
+          volumeMounts:
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+              {{- range .Values.global.sharedPersistenceVolume }}
+                {{- if has "mage-ai" .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+                  {{- if .subPath }}
+              subPath: {{ .subPath }}
+                  {{- end }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- if .Values.volumeEnabled }}
+      volumes:
+        {{- range .Values.global.sharedPersistenceVolume }}
+          {{- if has "mage-ai" .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,29 @@
+{{- if .Values.postgresql.enabled }}
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   name: postgresql-standalone-postgresql
+# provisioner: kubernetes.io/no-provisioner
+# volumeBindingMode: WaitForFirstConsumer
+# allowVolumeExpansion: true
+
+{{- $namespace := .Release.Namespace }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-data-postgresql-standalone-postgresql"
+  labels:
+    app.kubernetes.io/name: postgresql-standalone-postgresql
+    statefulset.kubernetes.io/pod-name: "{{ $.Release.Name }}-postgresql-standalone-postgresql"
+spec:
+  storageClassName: postgresql-standalone-postgresql
+  capacity:
+    storage: {{ $.Values.persistence.size | quote }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: {{ $.Values.persistence.hostPath }}/{{ $namespace }}-data-postgresql-standalone-postgresql/
+
+{{- end }}
