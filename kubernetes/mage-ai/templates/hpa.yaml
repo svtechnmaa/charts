@@ -24,7 +24,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Values.scheduler.name }}
+    name: {{ include "common.names.fullname" . }}-{{ .Values.scheduler.name }}
   {{- toYaml .Values.scheduler.hpa | nindent 2 }}
 {{- end }}
 
@@ -39,7 +39,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ .Values.webServer.name }}
+    name: {{ include "common.names.fullname" . }}-{{ .Values.webServer.name }}
   {{- toYaml .Values.webServer.hpa | nindent 2 }}
 {{- end }}
 

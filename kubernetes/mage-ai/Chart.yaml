@@ -3,7 +3,7 @@ annotations:
   artifacthub.io/category: integration-delivery
   artifacthub.io/images: |
     - name: mageai
-      image: mageai/mageai:0.9.44
+      image: mageai/mageai:0.9.72
       platforms:
         - linux/amd64
         - linux/arm64
@@ -54,17 +54,22 @@ dependencies:
     version: 16.3.2
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
-  # - name: redis
-  #   version: 18.1.1
-  #   repository: https://charts.bitnami.com/bitnami
-  #   condition: redis.enabled
+
+  # common 2.x.x — loaded alongside bitnami postgresql (matches its bundled version, avoids conflict)
+  - name: common
+    version: 2.x.x
+    repository: https://charts.bitnami.com/bitnami
+    alias: common-standalone
+    condition: postgresql.enabled
+
+  # common 1.x.x — loaded alongside postgresql-ha
   - name: common
     version: 1.x.x
     repository: https://svtechnmaa.github.io/charts/artifacthub/
     condition: postgresqlExternal.enabled
+
   - name: postgresql-ha
     version: 9.4.6-svtech
-    #version: x.x.x
     repository: https://svtechnmaa.github.io/charts/artifacthub/postgresql-ha
     condition: postgresqlExternal.enabled
 
