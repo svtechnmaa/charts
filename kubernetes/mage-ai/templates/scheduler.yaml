@@ -91,19 +91,15 @@ spec:
               value: {{ .Values.redis.customRedisURL }}
             {{- end }}
 
-            {{- if .Values.postgresql.enabled }}
             - name: MAGE_DATABASE_CONNECTION_URL
-              value: postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Values.postgresql.fullnameOverride }}:5432/{{ .Values.postgresql.auth.database }}
-            {{- end }}
-
-            {{- if .Values.postgresqlExternal.enabled }}
-            - name: MAGE_DATABASE_CONNECTION_URL
-              value: postgresql://{{ .Values.postgresqlExternal.auth.username }}:{{ .Values.postgresqlExternal.auth.password }}@{{ .Release.Name }}-{{ .Values.postgresqlExternal.postgresqlExternalHost }}:5432/{{ .Values.postgresqlExternal.auth.database }}
-            {{- end }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-db
+                  key: MAGE_DATABASE_CONNECTION_URL
 
             {{- if .Values.global.sharedVolume.enabled }}
               {{- range .Values.global.sharedPersistenceVolume }}
-                {{- if eq .volumeName "mage-log-volume" }}
+                {{- if eq .volumeName "mageai-log-volume" }}
             - name: LOGS_DIR_PATH
               value: {{ .path }}
                 {{- end }}

@@ -1,6 +1,6 @@
 {{- if not .Values.standaloneScheduler }}
 
-{{- if .Values.hpa -}}
+  {{- if .Values.hpa }}
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
@@ -11,11 +11,11 @@ spec:
     kind: Deployment
     name: {{ include "mageai.fullname" . }}
   {{- toYaml .Values.hpa | nindent 2 }}
-{{- end }}
+  {{- end }}
 
 {{- else }}
 
-{{- if .Values.scheduler.hpa -}}
+  {{- if .Values.scheduler.hpa }}
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
@@ -26,11 +26,13 @@ spec:
     kind: Deployment
     name: {{ include "common.names.fullname" . }}-{{ .Values.scheduler.name }}
   {{- toYaml .Values.scheduler.hpa | nindent 2 }}
-{{- end }}
+  {{- end }}
 
+  {{- if and .Values.scheduler.hpa .Values.webServer.hpa }}
 ---
+  {{- end }}
 
-{{- if .Values.webServer.hpa -}}
+  {{- if .Values.webServer.hpa }}
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
@@ -41,6 +43,6 @@ spec:
     kind: Deployment
     name: {{ include "common.names.fullname" . }}-{{ .Values.webServer.name }}
   {{- toYaml .Values.webServer.hpa | nindent 2 }}
-{{- end }}
+  {{- end }}
 
 {{- end }}
