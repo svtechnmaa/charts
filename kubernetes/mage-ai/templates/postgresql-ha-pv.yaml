@@ -1,0 +1,42 @@
+{{- if .Values.postgresqlExternal.enabled }}
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   name: postgresql-ha-postgresql
+# provisioner: kubernetes.io/no-provisioner
+# volumeBindingMode: WaitForFirstConsumer
+# allowVolumeExpansion: true
+
+{{- $namespace := .Release.Namespace }}
+
+{{- range $index, $_ := until (int (index .Values "postgresql-ha").postgresql.replicaCount) }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: "{{ $namespace }}-data-postgresql-ha-postgresql-{{ $index }}"
+  labels:
+    app.kubernetes.io/name: postgresql-ha-postgresql
+    statefulset.kubernetes.io/pod-name: "{{ $.Release.Name }}-postgresql-ha-postgresql-{{ $index }}"
+spec:
+  # storageClassName: {{ $namespace }}-postgresql-ha-postgresql
+  storageClassName: postgresql-ha-postgresql
+  capacity:
+    storage: {{ $.Values.persistence.size | quote }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    # path: {{ $.Values.persistence.hostPath | quote }}
+    path: {{ $.Values.persistence.hostPath }}/{{ $namespace }}-data-postgresql-ha-postgresql-{{ $index }}/
+  # nodeAffinity:
+  #   required:
+  #     nodeSelectorTerms:
+  #     - matchExpressions:
+  #       - key: node_id
+  #         operator: In
+  #         values:
+  #         - "{{ $index }}"
+
+{{- end }}
+{{- end }}
