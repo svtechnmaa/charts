@@ -73,8 +73,8 @@ service:
 
   # Customize the SessionAntiAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
   sessionAffinityConfig:
-    # clientIP:
-    #   timeoutSeconds: 7200
+    clientIP:
+      timeoutSeconds: 7200
 
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -130,6 +130,6 @@ config:
   influxdb_host: influxdb-relay
   influxdb_port: 9096
   influxdb_database: influxdb_nms
-  influxdb_user: xxx
-  influxdb_password: xxx
+  influxdb_user: ""
+  influxdb_password: ""
   influxdb_skip_database_creation: "true"
