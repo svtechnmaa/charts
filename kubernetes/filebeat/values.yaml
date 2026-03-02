@@ -1,7 +1,12 @@
 global:
+  externalIP: ""
   elasticsearch:
     clusterName: mbf
     version: 8.9.1
+    adminUser:
+      name: elastic
+      pass: juniper@123
+      role: superuser
   rundeck:
     offlineLogFolder: /data/offlineLogFolder/
   logstash:
@@ -23,7 +28,8 @@ nodeAffinityPreset:
   ##
   values: []
 
-
+service:
+  type: LoadBalancer
 ## Affinity for pod assignment
 ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
 ##
