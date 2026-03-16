@@ -1,0 +1,33 @@
+global:
+  imageRegistry: ""
+
+image:
+  registry: docker.io
+  repository: registry
+  tag: 2
+  pullPolicy: IfNotPresent
+
+registryConfig: |-
+  version: 0.1
+
+  log:
+    level: info
+
+  storage:
+    s3:
+      bucket: registry
+      region: default
+      regionendpoint: http://seaweedfs-s3.seaweedfs:8333
+      secure: false
+      v4auth: true
+      accesskey: registry # corresponding to your s3 key
+      secretkey: registry@123 # corresponding to your s3 key
+      skipverify: true
+      rootdirectory: "/"
+    delete:
+      enabled: true
+    redirect:
+      disable: true
+
+  http:
+    addr: :5000
