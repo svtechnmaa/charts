@@ -20,8 +20,8 @@ registryConfig: |-
       regionendpoint: http://seaweedfs-s3.seaweedfs:8333
       secure: false
       v4auth: true
-      accesskey: registry
-      secretkey: registry@123
+      accesskey: registry # corresponding to your s3 key
+      secretkey: registry@123 # corresponding to your s3 key
       skipverify: true
       rootdirectory: "/"
     delete:
