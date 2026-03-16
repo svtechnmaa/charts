@@ -1,0 +1,33 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: docker-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: docker-registry
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: docker-registry
+    spec:
+      containers:
+      - name: registry
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - name: config
+          mountPath: /etc/docker/registry
+      volumes:
+      - name: config
+        configMap:
+          name: {{ printf "%s-configuration" (include "common.names.fullname" .) }}
+
