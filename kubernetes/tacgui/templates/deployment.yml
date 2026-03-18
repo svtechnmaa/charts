@@ -64,7 +64,7 @@ spec:
       initContainers:
       {{- if and .Values.initConfigs (.Values.persistentVolumeClaim.enabled) }}
         - name: check-configuration
-          image: busybox
+          image: busybox:1.33
           command: 
           - "/bin/sh"
           - "-c"
