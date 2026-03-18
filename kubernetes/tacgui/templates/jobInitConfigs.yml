@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: copy-files
-          image: busybox
+          image: busybox:1.33
           command:
             - "/bin/sh"
             - "-c"
