@@ -2,7 +2,6 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-metadata:
   name: {{ include "common.names.fullname" . }}-pv
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     {{- if .Values.commonLabels }}
