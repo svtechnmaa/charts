@@ -1,33 +1,33 @@
-annotations:
-  artifacthub.io/alternativeName: Mage
-  artifacthub.io/category: integration-delivery
-  artifacthub.io/images: |
-    - name: mageai
-      image: mageai/mageai:0.9.72
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    - name: busybox
-      image: busybox
-      whitelisted: true
-  artifacthub.io/license: Apache-2.0
-  artifacthub.io/links: |
-    - name: Homepage
-      url: https://www.mage.ai/
-    - name: Source
-      url: https://github.com/mage-ai/helm-charts
-    - name: Documentation
-      url: https://mage-ai.github.io/helm-charts/
-  artifacthub.io/maintainers: |
-    - name: Mage
-      email: eng@mage.ai
-  artifacthub.io/screenshots: |
-    - title: Build Pipeline
-      url: https://www.mage.ai/images/pages/home/screenshots/v5/Build@2x.png
-    - title: Preview Pipeline
-      url: https://www.mage.ai/images/pages/home/screenshots/v5/Preview@2x.png
-    - title: Launch Pipeline
-      url: https://www.mage.ai/images/pages/home/screenshots/v5/Launch@2x.webp
+# annotations:
+#   artifacthub.io/alternativeName: Mage
+#   artifacthub.io/category: integration-delivery
+#   artifacthub.io/images: |
+#     - name: mageai
+#       image: mageai/mageai:0.9.72
+#       platforms:
+#         - linux/amd64
+#         - linux/arm64
+#     - name: busybox
+#       image: busybox
+#       whitelisted: true
+#   artifacthub.io/license: Apache-2.0
+#   artifacthub.io/links: |
+#     - name: Homepage
+#       url: https://www.mage.ai/
+#     - name: Source
+#       url: https://github.com/mage-ai/helm-charts
+#     - name: Documentation
+#       url: https://mage-ai.github.io/helm-charts/
+#   artifacthub.io/maintainers: |
+#     - name: Mage
+#       email: eng@mage.ai
+#   artifacthub.io/screenshots: |
+#     - title: Build Pipeline
+#       url: https://www.mage.ai/images/pages/home/screenshots/v5/Build@2x.png
+#     - title: Preview Pipeline
+#       url: https://www.mage.ai/images/pages/home/screenshots/v5/Preview@2x.png
+#     - title: Launch Pipeline
+#       url: https://www.mage.ai/images/pages/home/screenshots/v5/Launch@2x.webp
 
 apiVersion: v2
 
@@ -39,14 +39,14 @@ appVersion: "0.9.72"
 
 description: A Helm chart for Mage AI
 
-home: https://www.mage.ai
+# home: https://www.mage.ai
 
-icon: https://avatars.githubusercontent.com/u/69371472
+# icon: https://avatars.githubusercontent.com/u/69371472
 
-maintainers:
-  - name: mage-ai
-    url: https://www.mage.ai
-    email: eng@mage.ai
+# maintainers:
+#   - name: mage-ai
+#     url: https://www.mage.ai
+#     email: eng@mage.ai
 
 name: mage-ai
 dependencies:
