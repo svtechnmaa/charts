@@ -20,4 +20,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "mageai.selectorLabels" . | nindent 4 }}
+    {{- include "mageai.webServerSelectorLabels" . | nindent 4 }}
