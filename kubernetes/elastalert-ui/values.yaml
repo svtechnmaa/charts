@@ -52,6 +52,7 @@ writebackIndex: elastalert
 
 image:
   # docker image ghcr.io/svtechnmaa/svtech_elastalert_ui:latest
+  registry: ghcr.io
   repository: svtechnmaa/svtech_elastalert_ui
   tag: v1.11
   pullPolicy: IfNotPresent
@@ -114,7 +115,7 @@ extraContainers: []
 ## /opt/elastalert/alerts <=> using value of alerts
 extraInitContainers:
   - name: fix-permissions
-    image: busybox
+    image: "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/busybox:1.33"
     imagePullPolicy: IfNotPresent
     command: [ "sh", "-c", "chown -R 1000:1000 /opt/elastalert/rules /opt/elastalert/alerts" ]
     securityContext:

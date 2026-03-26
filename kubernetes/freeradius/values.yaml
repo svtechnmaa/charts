@@ -18,7 +18,8 @@ global:
 
 init:
   image:
-    repository: mysql
+    registry: ghcr.io
+    repository: svtechnmaa/mysql
     tag: 8.2.0
 ## @section Common parameters
 
@@ -474,14 +475,14 @@ initContainers: []
 ##
 sidecars:
   - name: auth-log
-    image: alpine:3.14
+    image: "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/alpine:3.14"
     args: [/bin/sh, -c, 'tail -n+1 -F /var/log/freeradius/linelog-auth']
     volumeMounts:
       - mountPath: /var/log/freeradius
         name: logging
         readOnly: true
   - name: acct-log
-    image: alpine:3.14
+    image: "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/alpine:3.14"
     args: [/bin/sh, -c, 'tail -n+1 -F /var/log/freeradius/linelog-acct']
     volumeMounts:
       - mountPath: /var/log/freeradius

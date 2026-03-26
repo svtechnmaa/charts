@@ -60,8 +60,8 @@ global:
 timezone: Asia/Ho_Chi_Minh
 
 image:
-  registry: docker.io
-  repository: bitnamilegacy/influxdb
+  registry: ghcr.io
+  repository: svtechnmaa/influxdb
   tag: 1.7.9
 
   ## Specify a imagePullPolicy. Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -423,8 +423,8 @@ relay:
   ## ref: https://hub.docker.com/r/bitnami/influxdb-relay/tags/
   ##
   image:
-    registry: docker.io
-    repository: bitnamilegacy/influxdb-relay-archived
+    registry: ghcr.io
+    repository: svtechnmaa/influxdb-relay-archived
     tag: 0.20200717.0-scratch-r7
     ## Specify a imagePullPolicy. Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -811,8 +811,8 @@ persistence:
 volumePermissions:
   enabled: true
   image:
-    registry: docker.io
-    repository: bitnamilegacy/os-shell
+    registry: ghcr.io
+    repository: svtechnmaa/os-shell
     tag: 11
     ## Specify a imagePullPolicy. Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
@@ -882,8 +882,8 @@ backup:
       ## ref: https://hub.docker.com/r/bitnami/google-cloud-sdk/tags/
       ##
       image:
-        registry: docker.io
-        repository: bitnami/google-cloud-sdk
+        registry: ghcr.io
+        repository: svtechnmaa/google-cloud-sdk
         tag: 0.338.0-debian-10-r1
 
         ## Specify a imagePullPolicy. Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
@@ -907,9 +907,9 @@ backup:
       ## ref: https://hub.docker.com/r/bitnami/azure-cli/tags/
       ##
       image:
-        registry: docker.io
-        repository: bitnami/azure-cli
-        tag: 2.22.1-debian-10-r7
+        registry: ghcr.io
+        repository: svtechnmaa/azure-cli
+        tag: 2.221
 
         ## Specify a imagePullPolicy. Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
         ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
