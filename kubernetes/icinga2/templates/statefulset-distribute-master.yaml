@@ -53,7 +53,7 @@ spec:
       containers:
         # icinga2 container
         - name: icinga2
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global "global" .Values.global) }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.master.securityContext.enabled }}
           securityContext:
@@ -438,7 +438,7 @@ spec:
         # redis container
         {{- if .Values.global.redis.enabled }}
         - name: redis
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.redis.image ) }} # {{ .Values.master.redis.image.repository }}:{{ .Values.master.redis.image.tag }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.redis.image "global" .Values.global) }} # {{ .Values.master.redis.image.repository }}:{{ .Values.master.redis.image.tag }}
           {{- if .Values.master.redis.image.pullPolicy }}
           imagePullPolicy: {{ .Values.master.redis.image.pullPolicy }}
           {{- end}}
@@ -457,7 +457,7 @@ spec:
         # icingadb container
         {{- if .Values.global.icingadb.enabled }}
         - name: icingadb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.icingadb.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.icingadb.image "global" .Values.global) }}
           {{- if .Values.master.icingadb.pullPolicy }}
           imagePullPolicy: {{ .Values.master.icingadb.pullPolicy }}
           {{- end}}
@@ -517,7 +517,7 @@ spec:
       # init containers
       initContainers:
         - name: wait-for-init-repo
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -541,7 +541,7 @@ spec:
           {{- end  }}
       {{- if .Values.master.influxdb_connection.enable }}
         - name: wait-for-influxdb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -556,7 +556,7 @@ spec:
 
       {{- if .Values.master.ido_connection.enable }}
         - name: wait-for-mariadb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh

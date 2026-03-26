@@ -51,7 +51,7 @@ spec:
           containers:
             - name: clickhouse-keeper
               imagePullPolicy: {{ .Values.clickhouseKeeper.image.pullPolicy }}
-              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouseKeeper.image) }}
+              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouseKeeper.image "global" .Values.global) }}
               resources: {{ toYaml .Values.clickhouseKeeper.resources | nindent 16 }}
               env:
                 - name: TZ

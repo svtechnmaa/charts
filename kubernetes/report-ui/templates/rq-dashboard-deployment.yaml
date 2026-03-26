@@ -22,7 +22,7 @@ spec:
         {{- include "common.labels.standard" . | nindent 8 }}
     spec:
       containers:
-      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.dashboard.image ) }}
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.dashboard.image "global" .Values.global) }}
         {{- if .Values.dashboard.image.pullPolicy }}
         imagePullPolicy: {{ .Values.dashboard.image.pullPolicy }}
         {{- end }}

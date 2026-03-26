@@ -5,7 +5,7 @@ metadata:
   name: {{ include "common.names.fullname" . }}
 spec:
   mode: {{ $effectiveMode }}
-  image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+  image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
   # image: arangodb/arangodb:{{ .Values.image.tag }}
   bootstrap:
     passwordSecretNames:
