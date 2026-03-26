@@ -13,6 +13,7 @@ revisionHistoryLimit: 0
 
 initRepo:
   image:
+    registry: ghcr.io
     repository: svtechnmaa/svtech_debuger
     tag: "v1.0.3"
     pullPolicy: IfNotPresent
@@ -21,9 +22,9 @@ initRepo:
 
 init:
   image:
-    registry: docker.io
-    repository: busybox
-    tag: "1.33"
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
+    tag: 1.33
     pullPolicy: IfNotPresent
 
 image:

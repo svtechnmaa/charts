@@ -552,7 +552,7 @@ workers:
   # extraInitContainers: []
   extraInitContainers:
     - name: fix-volume-logs-permissions
-      image: busybox
+      image:  "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/busybox:1.33"
       imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
@@ -684,7 +684,7 @@ scheduler:
   # extraInitContainers: []
   extraInitContainers:
     - name: fix-volume-logs-permissions
-      image: busybox
+      image:  "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/busybox:1.33"
       imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:
@@ -1098,7 +1098,7 @@ triggerer:
   # extraInitContainers: []
   extraInitContainers:
     - name: fix-volume-logs-permissions
-      image: busybox
+      image:  "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/busybox:1.33"
       imagePullPolicy: IfNotPresent
       command: [ "sh", "-c", "chown -R 50000:0 /opt/airflow/logs/" ]
       securityContext:

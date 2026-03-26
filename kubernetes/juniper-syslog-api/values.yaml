@@ -2,6 +2,7 @@ global:
   externalIP: "" # externalIP for CICD
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech_juniper_syslog_api
   tag: v1.0.4
   pullPolicy: IfNotPresent

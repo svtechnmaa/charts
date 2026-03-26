@@ -8,18 +8,19 @@ frontend:
   replicaCount: 1
   initJob:
     image:
+      registry: ghcr.io
       repository: svtechnmaa/svtech_report
       tag: v1.1.1
       pullPolicy: IfNotPresent
   init:
     image:
-      registry: docker.io
-      repository: busybox
+      registry: ghcr.io
+      repository: svtechnmaa/busybox
       tag: 1.33
       pullPolicy: IfNotPresent
   image:
-    registry: docker.io
-    repository: bitnamilegacy/nginx
+    registry: ghcr.io
+    repository: svtechnmaa/nginx
     tag: 1.22.0
     pullPolicy: IfNotPresent
   service:
@@ -35,11 +36,12 @@ backend:
   replicaCount: 2
   init:
     image:
-      registry: docker.io
-      repository: busybox
+      registry: ghcr.io
+      repository: svtechnmaa/busybox
       tag: 1.33
       pullPolicy: IfNotPresent
   image:
+    registry: ghcr.io
     repository: svtechnmaa/svtech_report
     tag: v1.1.1
     pullPolicy: IfNotPresent
@@ -81,6 +83,7 @@ backend:
 scheduler:
   replicaCount: 1
   image:
+    registry: ghcr.io
     repository: svtechnmaa/svtech_report
     tag: v1.1.1
     pullPolicy: IfNotPresent
@@ -88,6 +91,7 @@ scheduler:
 worker:
   replicaCount: 2
   image:
+    registry: ghcr.io
     repository: svtechnmaa/svtech_report
     tag: v1.1.1
     pullPolicy: IfNotPresent
@@ -95,9 +99,9 @@ worker:
 redis:
   replicaCount: 1
   image:
-    registry: docker.io
-    repository: redis
-    tag: 7-alpine
+    registry: ghcr.io
+    repository: svtechnmaa/redis
+    tag: 7.2.3
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -111,8 +115,9 @@ dashboard:
   enabled: true
   replicaCount: 1
   image:
-    repository: cjlapao/rq-dashboard
-    tag: latest
+    registry: ghcr.io
+    repository: svtechnmaa/rq-dashboard
+    tag: 0.8.5
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
