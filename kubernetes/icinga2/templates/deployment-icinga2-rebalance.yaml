@@ -64,7 +64,7 @@ spec:
       {{- if .Values.init }}
       initContainers:
         - name: wait-icinga2-master
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh

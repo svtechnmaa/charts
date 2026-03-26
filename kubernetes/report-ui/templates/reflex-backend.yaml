@@ -22,7 +22,7 @@ spec:
     spec:
       initContainers:
         - name: wait-for-mariadb
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.backend.init.image) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.backend.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.backend.init.image.pullPolicy | quote }}
           command:
             - /bin/sh

@@ -23,7 +23,7 @@ spec:
     spec:
       initContainers:
         - name: wait-for-kafka
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -35,7 +35,7 @@ spec:
         - args:
             - orchestrator
             - /etc/akvorado/akvorado.yaml
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.orchestrator.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.orchestrator.image "global" .Values.global) }}
           env:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
@@ -47,7 +47,7 @@ spec:
             - mountPath: {{ .Values.geoip.sharedPersistenceVolume.path }}
               name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
         - name: geoip-sidecar
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.geoip.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.geoip.image "global" .Values.global) }}
           env:
             - name: IPINFO_TOKEN
               value: {{ .Values.geoip.env.ipinfo_token | quote }}

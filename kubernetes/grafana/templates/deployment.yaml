@@ -50,7 +50,7 @@ spec:
       {{- if .Values.init }}
       initContainers:
         - name: wait-for-mariadb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -131,7 +131,7 @@ spec:
         - args:
           - --ignore-certificate-errors
           - --disable-gpu
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chrome.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chrome.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.chrome.image.pullPolicy | quote }}
           name: chrome
           ports:
@@ -152,7 +152,7 @@ spec:
             value: "15"
           - name: RENDERING_CLUSTERING_TIMEOUT
             value: "120"
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.renderer.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.renderer.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.renderer.image.pullPolicy | quote }}
           name: renderer
           ports:

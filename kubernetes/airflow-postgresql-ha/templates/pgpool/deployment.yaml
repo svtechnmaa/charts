@@ -76,7 +76,7 @@ spec:
       {{- if .Values.pgpool.tls.enabled }}
         - name: init-chmod-data
           # image: {{ template "postgresql-ha.volumePermissions.image" . }}
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -111,7 +111,7 @@ spec:
       containers:
         - name: pgpool
           # image: {{ include "postgresql-ha.pgpool.image" . }}
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.pgpool.image "global" ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.pgpool.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.pgpool.image.pullPolicy | quote }}
           {{- if .Values.pgpool.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.pgpool.containerSecurityContext "enabled" | toYaml | nindent 12 }}

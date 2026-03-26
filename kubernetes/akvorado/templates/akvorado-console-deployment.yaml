@@ -23,7 +23,7 @@ spec:
     spec:
       initContainers:
         - name: wait-for-orchestrator
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -40,7 +40,7 @@ spec:
               value: /run/akvorado/console.sqlite
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.console.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.console.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.console.image.pullPolicy | quote }}
           name: console
           volumeMounts:
