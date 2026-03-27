@@ -50,7 +50,7 @@ global:
     password: icingaAdmin
 
 clusterDomain: cluster.local
-
+timezone: Asia/Ho_Chi_Minh
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -180,9 +180,7 @@ affinity:
   #         app.kubernetes.io/name: traefik
   #     topologyKey: kubernetes.io/hostname
 
-env:
-  TZ: Asia/Ho_Chi_Minh
-
+env: {}
 # Icingaweb authentication variables
 auth:
   type: db
@@ -202,3 +200,14 @@ modules:
     default_dashboard: icinga2-default
     default_dashboard_uid: icinga2-default
     default_dashboard_panelid: "1"
+  pdfexport:
+    enabled: true
+    force_temp_storage: "0"
+    host: localhost
+
+# Chromedp container for pdf export module
+chromedp:
+  image:
+    repository: chromedp/headless-shell
+    tag: 138.0.7204.101
+    pullPolicy: IfNotPresent

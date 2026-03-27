@@ -71,6 +71,7 @@ spec:
               mkdir -p /data/etc/icingaweb2/enabledModules
               mkdir -p /data/var/lib/icingaweb2
               mkdir -p /data/etc/icingaweb2/modules/grafana
+              mkdir -p /data/etc/icingaweb2/modules/pdfexport
 
               # Create default navigations
               if [ ! -d /data/etc/icingaweb2/navigation ]; then
@@ -103,6 +104,8 @@ spec:
               # Wait for icinga master
               until nc -zvw5 {{ .Release.Name }}-icinga2-master-0.icinga2-headless 5665; do echo "Waiting for icinga master..."; sleep 2; done
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
@@ -133,6 +136,8 @@ spec:
               protocol: {{ .protocol | default "TCP" }}
             {{- end }}
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
@@ -197,6 +202,24 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+        {{- end }}
+
+        # chromedp container for pdf export module
+        {{- if .Values.modules.pdfexport.enabled }}
+        - name: chromedp # replace if needed
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chromedp.image ) }}
+          imagePullPolicy: {{ .Values.chromedp.image.pullPolicy }}
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+            {{- range $key, $value := .Values.chromedp.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          args:
+            - --ignore-certificate-errors
+            - --disable-gpu
+            - --disable-dev-shm-usage
         {{- end }}
 
       volumes:
