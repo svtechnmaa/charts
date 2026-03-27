@@ -42,6 +42,10 @@ service:
       port: 162
       targetPort: 162
       protocol: UDP
+    - name: telegraf
+      port: 8094
+      targetPort: 8094
+      protocol: UDP
   loadBalancerSourceRanges: []
   annotations: {}
 
