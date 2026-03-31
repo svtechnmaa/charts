@@ -26,14 +26,14 @@ data:
           type: junos_offlog
         close_inactive: 3000m
 
-    filebeat.config.modules:
-      path: ${path.config}/modules.d/*.yml
-      reload.enabled: true
-      reload.period: 30s
-    logging.metrics.enabled: false
-    setup:
-      filebeat.modules:
-        module: cisco
+    # filebeat.config.modules:
+    #   path: ${path.config}/modules.d/*.yml
+    #   reload.enabled: true
+    #   reload.period: 30s
+    # logging.metrics.enabled: false
+    # setup:
+    #   filebeat.modules:
+    #     module: cisco
 
     filebeat.modules:
     - module: cisco
@@ -43,12 +43,6 @@ data:
         var.syslog_host: 0.0.0.0
         var.syslog_port: 9001
         var.syslog_protocol: udp
-    - module: juniper
-      junos:
-        enabled: true
-        var.input: udp
-        var.syslog_host: 0.0.0.0
-        var.syslog_port: 9006
 
     # output.elasticsearch:
     #   hosts: ["https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"]
