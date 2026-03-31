@@ -1,0 +1,20 @@
+apiVersion: v2
+annotations:
+  category: telegraf
+name: telegraf
+description: >
+  A Helm chart for deploying Telegraf on Kubernetes to collect, process,
+  and forward system, application, and infrastructure metrics to
+  monitoring backends such as InfluxDB, Prometheus, or OpenTelemetry
+engine: gotpl
+maintainers:
+  - name: SVTECH
+    url: https://github.com/svtechnmaa/charts
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: 1.x.x
+
+version: 1.0.0
+appVersion: "v1.0.0"
