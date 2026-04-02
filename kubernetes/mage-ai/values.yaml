@@ -200,8 +200,6 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       tag: 4.6.3-debian-12-r0
       digest: ""
       pullPolicy: IfNotPresent
-      pullSecrets:
-        - ghcr-pull-secret
       debug: false
   persistence:
     storageClass: postgresql-ha-postgresql
@@ -216,8 +214,6 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       tag: 11
       digest: ""
       pullPolicy: IfNotPresent
-      pullSecrets:
-        - ghcr-pull-secret
 # logFolderExternal:
 #   enabled: true
 #   path: /home/src/logs_dir
