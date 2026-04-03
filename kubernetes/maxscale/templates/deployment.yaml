@@ -17,7 +17,7 @@ spec:
     spec:
       initContainers:
         - name: wait-for-mariadb
-          image: {{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           env:
             {{- if index (index .Values.global "mariadb-galera") "enabled" }}
             - name: SERVER

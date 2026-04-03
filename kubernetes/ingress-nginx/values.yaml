@@ -11,7 +11,8 @@ ingress_nginx_configmap_udp_services: {}
 ingress_nginx_probe_initial_delay_seconds: 10
 
 image:
-  repository: registry.k8s.io/ingress-nginx/controller
+  registry: ghcr.io
+  repository: svtechnmaa/controller
   tag: v1.9.4
   pullPolicy: IfNotPresent
 

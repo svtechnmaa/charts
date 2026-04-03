@@ -50,7 +50,7 @@ spec:
       {{- end }}
       containers:
         - name: relay
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.relay.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.relay.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.relay.image.pullPolicy | quote }}
           {{- if .Values.relay.securityContext.enabled }}
           securityContext:

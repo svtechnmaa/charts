@@ -17,9 +17,18 @@ global:
   storageClass: ""
 
 init:
-  image:
-    repository: mysql
-    tag: 8.2.0
+  waitForDB:
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/busybox
+      tag: 1.33
+      pullPolicy: IfNotPresent
+  db:
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/mysql
+      tag: 8.2.0
+      pullPolicy: IfNotPresent
 ## @section Common parameters
 
 ## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
@@ -474,14 +483,14 @@ initContainers: []
 ##
 sidecars:
   - name: auth-log
-    image: alpine:3.14
+    image: "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/alpine:3.14"
     args: [/bin/sh, -c, 'tail -n+1 -F /var/log/freeradius/linelog-auth']
     volumeMounts:
       - mountPath: /var/log/freeradius
         name: logging
         readOnly: true
   - name: acct-log
-    image: alpine:3.14
+    image: "{{ .Values.global.imageRegistry | default \"ghcr.io\" }}/svtechnmaa/alpine:3.14"
     args: [/bin/sh, -c, 'tail -n+1 -F /var/log/freeradius/linelog-acct']
     volumeMounts:
       - mountPath: /var/log/freeradius

@@ -82,7 +82,7 @@ spec:
       {{- if .Values.postgresql.tls.enabled }}
         - name: init-chmod-tls
           # image: {{ template "postgresql-ha.volumePermissions.image" . }}
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -109,7 +109,7 @@ spec:
       {{- if and .Values.volumePermissions.enabled (or (or (not (empty .Values.postgresql.extendedConf)) (not (empty .Values.postgresql.extendedConfCM))) .Values.persistence.enabled) }}
         - name: init-chmod-data
           # image: {{ include "postgresql-ha.volumePermissions.image" . }}
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
           command:
             - sh
@@ -134,7 +134,7 @@ spec:
       containers:
         - name: postgresql
           # image: {{ include "postgresql-ha.postgresql.image" . }}
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.postgresql.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.postgresql.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.postgresql.image.pullPolicy | quote }}
           {{- if .Values.postgresql.containerSecurityContext.enabled }}
           securityContext: {{- omit .Values.postgresql.containerSecurityContext "enabled" | toYaml | nindent 12 }}
@@ -439,7 +439,7 @@ spec:
         {{- if .Values.metrics.enabled }}
         - name: metrics
           # image: {{ include "postgresql-ha.metrics.image" . }}
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.metrics.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.metrics.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
           {{- if .Values.metrics.podSecurityContext.enabled }}
           securityContext: {{- omit .Values.metrics.podSecurityContext "enabled" | toYaml | nindent 12 }}
