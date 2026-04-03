@@ -17,10 +17,18 @@ global:
   storageClass: ""
 
 init:
-  image:
-    registry: ghcr.io
-    repository: svtechnmaa/mysql
-    tag: 8.2.0
+  waitForDB:
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/busybox
+      tag: 1.33
+      pullPolicy: IfNotPresent
+  db:
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/mysql
+      tag: 8.2.0
+      pullPolicy: IfNotPresent
 ## @section Common parameters
 
 ## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)

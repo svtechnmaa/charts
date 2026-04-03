@@ -42,7 +42,7 @@ spec:
       # Ingress-nginx-controller container
       containers:
       - name: ingress-nginx-controller
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global) }}
         imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
         {{- if .Values.securityContext.enabled }}
         securityContext:
