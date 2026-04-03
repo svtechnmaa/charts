@@ -53,7 +53,7 @@ spec:
       containers:
         # icinga2 container
         - name: icinga2
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global "global" .Values.global) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.master.securityContext.enabled }}
           securityContext:
