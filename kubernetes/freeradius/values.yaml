@@ -15,6 +15,9 @@ global:
   ##
   imagePullSecrets: []
   storageClass: ""
+  github:
+    user: ""
+    token: ""
 
 init:
   image:
@@ -424,11 +427,11 @@ extraEnvVarsSecret: ""
 persistence:
   ## @param persistence.enabled Enable persistence on FreeRADIUS secondary replicas using a `PersistentVolumeClaim`
   ##
-  enabled: false
+  enabled: true
     ## @param persistence.existingClaim Name of an existing `PersistentVolumeClaim` for FreeRADIUS primary replicas
     ## NOTE: When it's set the rest of persistence parameters are ignored
     ##
-  existingClaim: ""
+  existingClaim: "freeradius-dictionary-pvc"
   ## @param persistence.subPath Subdirectory of the volume to mount at
   ##
   subPath: ""
@@ -439,7 +442,7 @@ persistence:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: ""
+  storageClass: "freeradius-dictionary-hostpath"
   ## @param persistence.annotations FreeRADIUS secondary persistent volume claim annotations
   ##
   annotations: {}
@@ -449,24 +452,29 @@ persistence:
     - ReadWriteOnce
   ## @param persistence.size FreeRADIUS secondary persistent volume size
   ##
-  size: 8Gi
+  size: 1Gi
   ## @param persistence.selector Selector to match an existing Persistent Volume
   ## selector:
   ##   matchLabels:
   ##     app: my-app
   ##
   selector: {}
+  hostPath: /opt/shared
 ## @param extraVolumes Optionally specify extra list of additional volumes to the FreeRADIUS secondary pod(s)
 ##
 extraVolumes:
   - name: logging
     emptyDir: {}
+  - name: freeradius-dictionary
+    persistentVolumeClaim:
+      claimName: freeradius-dictionary-pvc
 ## @param extraVolumeMounts Optionally specify extra list of additional volumeMounts for the FreeRADIUS secondary container(s)
 ##
 extraVolumeMounts:
   - mountPath: /var/log/freeradius
     name: logging
-
+  - mountPath: /usr/share/freeradius/
+    name: freeradius-dictionary
 ## @param initContainers Add additional init containers for the FreeRADIUS secondary pod(s)
 ##
 initContainers: []
@@ -609,7 +617,7 @@ mariadb:
 ##
 externalDatabase:
   host: ""
-  port: 3306
+  port: 
   user: ""
   database: ""
   password: ""
