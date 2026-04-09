@@ -233,13 +233,6 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-            - name: data
-              mountPath: /etc/raddb
-              {{- if .Values.persistence.subPath }}
-              subPath: {{ .Values.persistence.subPath }}
-              {{- end }}
-            {{- end }}
             {{- if .Values.tls.enabled }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/tls
@@ -307,11 +300,6 @@ spec:
         - name: freeradius-sites
           configMap:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
-        {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-        - name: data
-          persistentVolumeClaim:
-            claimName: {{ tpl .Values.persistence.existingClaim . }}
-        {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
