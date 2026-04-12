@@ -1,11 +1,12 @@
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "common.names.fullname" . }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: docker-registry
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -26,8 +27,13 @@ spec:
         volumeMounts:
         - name: config
           mountPath: /etc/docker/registry
+        - name: storage
+          mountPath: /var/lib/registry
       volumes:
       - name: config
         configMap:
           name: {{ printf "%s-configuration" (include "common.names.fullname" .) }}
+      - name: storage
+        persistentVolumeClaim:
+          claimName: {{ printf "%s-storage" (include "common.names.fullname" .) }}
 
