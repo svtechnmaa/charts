@@ -2,8 +2,8 @@ global:
   imageRegistry: ""
 
 image:
-  registry: docker.io
-  repository: registry
+  registry: ghcr.io
+  repository: svtechnmaa/registry
   tag: 2
   pullPolicy: IfNotPresent
 
@@ -17,11 +17,11 @@ registryConfig: |-
     s3:
       bucket: registry
       region: default
-      regionendpoint: http://seaweedfs-s3.seaweedfs:8333
+      regionendpoint: http://seaweedfs-s3.seaweedfs.svc.cluster.local:8333
       secure: false
       v4auth: true
-      accesskey: registry # corresponding to your s3 key
-      secretkey: registry@123 # corresponding to your s3 key
+      accesskey: s3adminkey # corresponding to your s3 key
+      secretkey: s3adminkey@123 # corresponding to your s3 key
       skipverify: true
       rootdirectory: "/"
     delete:
