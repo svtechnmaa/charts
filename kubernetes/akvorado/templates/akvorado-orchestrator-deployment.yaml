@@ -65,6 +65,8 @@ spec:
             - mountPath: /data
               name: {{ .Values.geoip.sharedPersistenceVolume.volumeName }}
       restartPolicy: Always
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       volumes:
         - configMap:
             name: {{ .Chart.Name }}-orchestrator-configmap

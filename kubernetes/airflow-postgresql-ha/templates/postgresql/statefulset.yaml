@@ -528,6 +528,10 @@ spec:
         {{- if .Values.postgresql.sidecars }}
         {{- include "common.tplvalues.render" (dict "value" .Values.postgresql.sidecars "context" $) | nindent 8 }}
         {{- end }}
+      
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+        
       volumes:
         {{- if .Values.postgresql.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.postgresql.extraVolumes "context" $) | nindent 8 }}

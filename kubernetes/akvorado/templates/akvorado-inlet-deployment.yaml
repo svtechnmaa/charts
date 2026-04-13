@@ -54,6 +54,8 @@ spec:
             - mountPath: {{ .Values.inlet.sharedPersistenceVolume.path }}
               name: {{ .Values.inlet.sharedPersistenceVolume.volumeName }}
       restartPolicy: Always
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       volumes:
         - name: {{ .Values.inlet.sharedPersistenceVolume.volumeName }}
           persistentVolumeClaim:

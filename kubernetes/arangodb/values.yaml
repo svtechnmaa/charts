@@ -1,6 +1,14 @@
 global:
   ci: false
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+
+init:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/curl # CHANGE THIS TO YOUR IMAGE
+    tag: 8.5.0
+    pullPolicy: IfNotPresent
+
 image:
   registry: ghcr.io
   repository: svtechnmaa/arangodb # CHANGE THIS TO YOUR IMAGE
@@ -16,6 +24,8 @@ service:
   type: ClusterIP
   loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
 
+
+  
 # Single or Cluster
 mode: Single
 single:
@@ -99,3 +109,8 @@ auth:
   secretName: arango-root-pwd
   rootUser: root
   rootPassword: ""
+
+kube-arangodb:
+  operator:
+    imagePullSecrets:
+      - ghcr-pull-secret

@@ -8,8 +8,8 @@ global:
   mariadb-galera:
     replicaCount: 3
 #   imageRegistry: myRegistryName
-#   imagePullSecrets:
-#     - myRegistryKeySecretName
+  imagePullSecrets:
+    - ghcr-pull-secret
 #   storageClass: myStorageClass
 
 ## Bitnami MariaDB Galera image

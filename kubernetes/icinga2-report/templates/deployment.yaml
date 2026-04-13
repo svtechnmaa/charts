@@ -122,3 +122,6 @@ spec:
           configMap:
             name: {{ include "common.names.fullname" . }}-report-template
         {{- end }}
+
+      imagePullSecrets:
+      - name: ghcr-pull-secret

@@ -42,3 +42,5 @@ spec:
           timeoutSeconds: 3
           successThreshold: 1
           failureThreshold: 5
+      imagePullSecrets:
+        - name: ghcr-pull-secret

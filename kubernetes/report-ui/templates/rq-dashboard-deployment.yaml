@@ -43,4 +43,6 @@ spec:
         ports:
         - containerPort: 9181
           name: dashboard
+      imagePullSecrets:
+        - name: ghcr-pull-secret
 {{- end }}

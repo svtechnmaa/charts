@@ -88,6 +88,10 @@ spec:
           # - name: index-syslog
           #   mountPath: /var/tmp/index_syslog/
           #   readOnly: true
+
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+
       volumes:
       - name: config
         configMap:

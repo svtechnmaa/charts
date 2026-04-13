@@ -363,6 +363,10 @@ spec:
         {{- if .Values.pgpool.sidecars }}
         {{- include "common.tplvalues.render" (dict "value" .Values.pgpool.sidecars "context" $) | nindent 8 }}
         {{- end }}
+        
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+
       volumes:
         {{- if or .Values.pgpool.configuration .Values.pgpool.configurationCM }}
         - name: pgpool-config
