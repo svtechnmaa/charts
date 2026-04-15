@@ -4,6 +4,20 @@ global:
 
 timezone: Asia/Ho_Chi_Minh
 
+init:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
+    tag: 1.33
+  pullPolicy: IfNotPresent
+
+sidecar:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
+    tag: 1.33
+    pullPolicy: IfNotPresent
+
 image:
   registry: ghcr.io
   repository: svtechnmaa/svtech_syncthing
