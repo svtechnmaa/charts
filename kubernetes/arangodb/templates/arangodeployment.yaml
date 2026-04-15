@@ -6,8 +6,9 @@ metadata:
 spec:
   mode: {{ $effectiveMode }}
   image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+  imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
   imagePullSecrets:
-    - name: ghcr-pull-secret
+    - ghcr-pull-secret
   bootstrap:
     passwordSecretNames:
       root: {{ .Values.auth.secretName }}
