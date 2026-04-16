@@ -112,10 +112,7 @@ auth:
 
 kube-arangodb:
   operator:
-    image:
-      registry: ghcr.io
-      repository: svtechnmaa/kube-arangodb
-      tag: 1.3.4
+    image: svtechnmaa/kube-arangodb:1.3.4
     imagePullPolicy: IfNotPresent
     imagePullSecrets:
       - ghcr-pull-secret
