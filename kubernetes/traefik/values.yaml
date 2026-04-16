@@ -20,6 +20,14 @@ global:
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
+init:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/kubectl
+    tag: "1.0.1"
+    pullPolicy: IfNotPresent
+
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   registry: ghcr.io

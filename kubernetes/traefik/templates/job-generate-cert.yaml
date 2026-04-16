@@ -14,8 +14,8 @@ spec:
       serviceAccountName: tls-job-sa
       containers:
         - name: generate-cert
-          image: vyvuvivo/kubectl:1.0.1
-          imagePullPolicy: IfNotPresent
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - "/bin/sh"
             - "-c"
