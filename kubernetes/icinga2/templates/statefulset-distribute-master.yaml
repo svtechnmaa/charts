@@ -438,7 +438,7 @@ spec:
         # redis container
         {{- if .Values.global.redis.enabled }}
         - name: redis
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.redis.image "global" .Values.global) }} # {{ .Values.master.redis.image.repository }}:{{ .Values.master.redis.image.tag }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.redis.image "global" .Values.global) }}
           {{- if .Values.master.redis.image.pullPolicy }}
           imagePullPolicy: {{ .Values.master.redis.image.pullPolicy }}
           {{- end}}
