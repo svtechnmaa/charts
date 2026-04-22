@@ -23,10 +23,10 @@ Three distinct services involved — each has a different role:
   +-----------------------------------------------------------------------+
   |  Kubernetes Cluster                                                   |
   |                                                                       |
-  |  [ skopeo ]          : CLI tool — copies images between registries   |
-  |  [ containerd ]      : Container runtime — pulls images for pods     |
-  |  [ Docker Registry ] : Service — exposes image API on port 5000      |
-  |  [ SeaweedFS S3 ]    : Service — stores actual image data (blobs)    |
+  |  [ skopeo ]          : CLI tool — copies images between registries    |
+  |  [ containerd ]      : Container runtime — pulls images for pods      |
+  |  [ Docker Registry ] : Service — exposes image API on port 5000       |
+  |  [ SeaweedFS S3 ]    : Service — stores actual image data (blobs)     |
   |                                                                       |
   +-----------------------------------------------------------------------+
 
@@ -42,17 +42,32 @@ Three distinct services involved — each has a different role:
                                   | :5000           |            |             |
                                   +-----------------+            +-------------+
 
-                              PULL (containerd / crictl)
-   +--------------+  1. get manifest  +-----------------+            +-------------+
-   | containerd   |──────────────────►| Docker Registry |──S3 API───►|             |
-   | runs on each |◄──────────────────| ns: registry    |            |  SeaweedFS  |
-   | K8s node     |   manifest JSON   | :5000           |            |  S3         |
-   |              |                   +-----------------+            |  :8333      |
-   |              |  2. get blob → Registry replies: 307 Redirect    |             |
-   |              |──────────────────────────────────────────────────►  bucket:    |
-   |              |◄──────────────────────────────────────────────────  registry   |
-   |              |  blob content (downloaded directly from SeaweedFS)|             |
-   +--------------+                                                   +-------------+
+                              PULL (containerd — triggered via crictl)
+
+   +--------------+                                                +-------------+
+   | crictl       |                                                |             |
+   | pull image   |                                                |  SeaweedFS  |
+   +--------------+                                                |  S3 :8333   |
+          |                                                        |             |
+          ▼                                                        |  bucket:    |
+   +--------------+   Step 1. GET manifest   +-----------------+   |  registry   |
+   |              |─────────────────────────►| Docker Registry |──►|             |
+   | containerd   |◄─────────────────────────| ns: registry    |◄─ |             |
+   | (each node)  |   manifest JSON          | :5000           |   |             |
+   |              |                          |                 |   |             |
+   |              |   Step 2. GET blob       |                 |   |             |
+   |              |─────────────────────────►|                 |   |             |
+   |              |◄─────────────────────────|                 |   |             |
+   |              |   307 Redirect           +-----------------+   |             |
+   |              |   Location: http://seaweedfs-s3:8333/...       |             |
+   |              |                                                |             |
+   |              |   Step 3. download blob directly (bypass Registry)           |
+   |              |───────────────────────────────────────────────►|             |
+   |              |◄───────────────────────────────────────────────|             |
+   |              |   blob content (raw stream)                    |             |
+   |              |                                                |             |
+   |              |   (repeat Step 2→3 for each layer in manifest) |             |
+   +--------------+                                                +-------------+
 
   -----------------------------------------------------------------------
   Docker Registry : registry-docker-registry-service.registry.svc.cluster.local:5000
@@ -110,6 +125,7 @@ Three distinct services involved — each has a different role:
       │               │─────────────────►│──────────────────► │
       │               │◄─────────────────│◄────── 200 ────────│
       │               │  201 created     │  (manifest saved)  │
+  ───────────────────────────────────────────────────────────────────────────    
 ```
 
 #### PULL — containerd pulls image from private registry
@@ -143,6 +159,7 @@ Three distinct services involved — each has a different role:
        │  blob content (raw stream)            │
        │                  │                    │
        │  (repeat Step 2→4 for each layer)     │
+  ────────────────────────────────────────────────────────────
 ```
 
 ---
@@ -170,20 +187,20 @@ skopeo                       Registry                        SeaweedFS S3
   │  ② Check each blob exists    │                                │
   │─── HEAD /v2/.../blobs/sha256:111
   │         ← 404 (not found)   ─┼──► HEAD s3://registry/.../sha256:111
-  │                              │         ← 404 (not found)     │
+  │                              │         ← 404 (not found)      │
   │                              │                                │
   │  ③ Init upload session       │                                │
   │─── POST /v2/.../blobs/uploads/
   │                             ─┼──► PUT s3://_uploads/<uuid>/data (empty)
-  │         ← 202 + uuid        ─┼◄── 200 OK                     │
+  │         ← 202 + uuid        ─┼◄── 200 OK                      │
   │                              │                                │
   │  ④ Upload blob in chunks     │                                │
   │─── PATCH /uploads/<uuid>     │                                │
   │    [chunk 1: 0→128MB]       ─┼──► PUT s3://_uploads/<uuid>/data
-  │         ← 202               ─┼◄── 200 OK                     │
+  │         ← 202               ─┼◄── 200 OK                      │
   │─── PATCH /uploads/<uuid>     │                                │
   │    [chunk 2: 128→256MB]     ─┼──► PUT s3://_uploads/<uuid>/data
-  │         ← 202               ─┼◄── 200 OK                     │
+  │         ← 202               ─┼◄── 200 OK                      │
   │                              │                                │
   │  ⑤ Finalize upload           │                                │
   │─── PUT /uploads/<uuid>       │                                │
@@ -197,6 +214,7 @@ skopeo                       Registry                        SeaweedFS S3
   │─── PUT /v2/.../manifests/tag │                                │
   │                             ─┼──► PUT s3://.../manifests/tag  │
   │         ← 201 Created        │                                │
+  ───────────────────────────────────────────────────────────────────────────
 ```
 
 ---
@@ -213,25 +231,26 @@ containerd                   Registry                        SeaweedFS S3
   │  ① Fetch manifest            │                                │
   │─── GET /v2/.../manifests/3.12.2
   │                             ─┼──► GET s3://.../manifests/3.12.2
-  │         ← manifest JSON     ─┼◄── blob content               │
+  │         ← manifest JSON     ─┼◄── blob content                │ 
   │                              │                                │
   │  ② Check each layer          │                                │
   │─── HEAD /v2/.../blobs/sha256:111
   │                             ─┼──► HEAD s3://.../blobs/sha256:111
-  │         ← 200 + size        ─┼◄── 200 OK                     │
+  │         ← 200 + size        ─┼◄── 200 OK                      │
   │                              │                                │
   │  ③ Download blob             │                                │
   │─── GET /v2/.../blobs/sha256:111
   │                              │                                │
-  │         ← 307 Redirect       │  (redirect: disable: false)   │
-  │    Location: http://seaweedfs-s3:8333/registry/...           │
+  │         ← 307 Redirect       │  (redirect: disable: false)    │
+  │    Location: http://seaweedfs-s3:8333/registry/...            │
   │                              │                                │
-  │─────────────────────────────────────────────────────────────►│
-  │  GET http://seaweedfs-s3:8333/registry/.../blobs/sha256:111  │
-  │         ← blob content (streamed directly from SeaweedFS)    │
-  │◄─────────────────────────────────────────────────────────────│
+  │─────────────────────────────────────────────────────────────► │
+  │  GET http://seaweedfs-s3:8333/registry/.../blobs/sha256:111   │
+  │         ← blob content (streamed directly from SeaweedFS)     │
+  │◄───────────────────────────────────────────────────────────── │
   │                              │                                │
   │  ④ Repeat for each layer     │                                │
+  ───────────────────────────────────────────────────────────────────────────
 ```
 
 > **Note:** `redirect: disable: false` → containerd downloads blobs **directly from SeaweedFS** instead of going through the Registry. The Registry only returns a redirect URL and does not proxy the blob data — this significantly reduces CPU and memory usage on the Registry pod.
@@ -358,19 +377,29 @@ curl -sI http://registry-docker-registry-service.registry.svc.cluster.local:5000
 
 ## Inspect Registry via SeaweedFS GUI
 
-1. Expose the SeaweedFS filer port via port-forward:
+1. Expose the SeaweedFS filer as a NodePort service:
 ```bash
-kubectl -n seaweedfs port-forward svc/seaweedfs-filer 8888:8888
+kubectl -n seaweedfs expose svc/seaweedfs-filer \
+  --name=seaweedfs-filer-nodeport \
+  --type=NodePort \
+  --port=8888 \
+  --target-port=8888
+
+# Get the assigned NodePort
+kubectl -n seaweedfs get svc seaweedfs-filer-nodeport
+# Example output:
+# NAME                       TYPE       CLUSTER-IP   PORT(S)          
+# seaweedfs-filer-nodeport   NodePort   10.96.x.x    8888:3XXXX/TCP   
 ```
 
 2. Open in browser:
 ```
-http://localhost:8888/buckets/registry/registry-data/docker/registry/v2/repositories/
+http://<node_ip>:<node_port>/buckets/registry/docker/registry/v2/repositories/
 ```
 
 Data layout on SeaweedFS:
 ```
-buckets/registry/registry-data/docker/registry/v2/
+buckets/registry/docker/registry/v2/
 ├── blobs/
 │   └── sha256/
 │       ├── 11/sha256:111...   ← layer blob (tar.gz compressed filesystem)
