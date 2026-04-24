@@ -84,7 +84,7 @@ spec:
       {{- end }}
       containers:
         - name: create-user
-          image: {{ template "airflow_image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.airflow "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.images.airflow.pullPolicy }}
           {{- if .Values.createUserJob.command }}
           command: {{ tpl (toYaml .Values.createUserJob.command) . | nindent 12 }}

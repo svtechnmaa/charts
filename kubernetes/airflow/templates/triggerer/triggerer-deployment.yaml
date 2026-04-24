@@ -128,11 +128,11 @@ spec:
         {{- include "git_sync_container" (dict "Values" .Values "is_init" "true") | nindent 8 }}
         {{- end }}
         {{- if .Values.triggerer.extraInitContainers }}
-        {{- toYaml .Values.triggerer.extraInitContainers | nindent 8 }}
+        {{- tpl (toYaml .Values.triggerer.extraInitContainers) . | nindent 8 }}
         {{- end }}
       containers:
         - name: triggerer
-          image: {{ template "airflow_image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.airflow "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.images.airflow.pullPolicy }}
           {{- if .Values.triggerer.command }}
           command: {{ tpl (toYaml .Values.triggerer.command) . | nindent 12 }}

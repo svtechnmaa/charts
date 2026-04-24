@@ -80,8 +80,9 @@ airflowVersion: "2.3.0"
 # Images
 images:
   airflow:
-    repository: ~
-    tag: ~
+    registry: ghcr.io
+    repository: svtechnmaa/svtech_airflow
+    tag: v1.0.0
     pullPolicy: IfNotPresent
   # To avoid images with user code, you can turn this to 'true' and
   # all the 'run-airflow-migrations' and 'wait-for-airflow-migrations' containers/jobs
@@ -99,11 +100,13 @@ images:
     tag: ~
     pullPolicy: IfNotPresent
   statsd:
-    repository: apache/airflow
+    registry: ghcr.io
+    repository: svtechnmaa/airflow
     tag: airflow-statsd-exporter-2021.04.28-v0.17.0
     pullPolicy: IfNotPresent
   redis:
-    repository: redis
+    registry: ghcr.io
+    repository: svtechnmaa/redis'
     tag: 6-bullseye
     pullPolicy: IfNotPresent
   pgbouncer:
