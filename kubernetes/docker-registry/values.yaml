@@ -2,135 +2,25 @@ global:
   imageRegistry: ""
 
 image:
-  registry: ghcr.io
-  repository: svtechnmaa/registry
-  tag: 2
+  registry: docker.io
+  repository: registry
+  tag: 2.6
   pullPolicy: IfNotPresent
 
-registryConfig: |-
-  # Docker Distribution Registry configuration
-  # Docs: https://distribution.github.io/distribution/about/configuration/
-  version: 0.1
-
+registry:
   log:
-    # Log level: error | warn | info | debug
     level: info
-
+  s3:
+    bucket: registry
+    region: us-east-1
+    secure: false
+    rootdirectory: /
+    accesskey: ""
+    secretkey: ""
   storage:
-    cache:
-      # Cache blob metadata (digest, size, mediatype) in memory
-      # → Reduces HEAD requests to SeaweedFS S3 when skopeo checks if blob already exists
-      # → Does NOT cache blob content, only metadata
-      # ⚠ If running multiple registry replicas, cache is NOT shared between them
-      blobdescriptor: inmemory
-
-    s3:
-      # Name of the bucket on SeaweedFS where all registry data is stored
-      # Bucket must exist before registry starts
-      bucket: registry
-
-      # AWS region — required by AWS SDK even when not using real AWS
-      # SeaweedFS ignores this value, any string is accepted
-      region: us-east-1
-
-      # Override default AWS S3 endpoint to point at SeaweedFS S3
-      # Required when using any S3-compatible service instead of real AWS
-      regionendpoint: http://seaweedfs-s3.seaweedfs.svc.cluster.local:8333
-
-      # Use HTTP instead of HTTPS when talking to SeaweedFS
-      # Set to true if SeaweedFS is configured with TLS
-      secure: false
-
-      # Use AWS Signature Version 4 to sign all S3 requests
-      # SeaweedFS requires v4 — setting this to false will cause auth errors
-      v4auth: true
-
-      # S3 access key configured in SeaweedFS s3 identity config
-      accesskey: s3adminkey
-
-      # S3 secret key configured in SeaweedFS s3 identity config
-      secretkey: s3adminkey@123
-
-      # Skip TLS certificate verification
-      # Only applies when secure: true
-      # Safe to set true for internal cluster communication
-      skipverify: true
-
-      # Root path prefix inside the bucket where all registry files are stored
-      # All data will be written to: s3://registry/<rootdirectory>/docker/registry/v2/...
-      # ⚠ Changing this after data exists will make existing images invisible to registry
-      rootdirectory: /
-      
-      # Force path-style S3 URLs instead of virtual-hosted-style
-      #
-      # Virtual-hosted-style (forcepathstyle: false — default):
-      #   http://registry.seaweedfs:8333/docker/registry/v2/...
-      #   ↑ bucket name embedded in hostname → SeaweedFS cannot resolve
-      #
-      # Path-style (forcepathstyle: true):
-      #   http://seaweedfs:8333/registry/docker/registry/v2/...
-      #   ↑ bucket name in URL path → SeaweedFS resolves correctly
-      #
-      # ⚠ REQUIRED when using regionendpoint with SeaweedFS
-      # Without this → error: "Copy Source must mention the source bucket and key"
-      forcepathstyle: true
-
-      # Size of each chunk when uploading a blob to S3 via multipart upload
-      # Default is 10MB → too many PATCH requests → increases chance of session loss
-      # 128MB → fewer PATCH requests per blob → more stable with SeaweedFS
-      # Minimum allowed by S3 spec: 5MB
-      # Formula: blob 256MB / chunksize 128MB = 2 PATCH requests total
-      chunksize: 134217728        # 128MB = 128 * 1024 * 1024
-
-      # Blobs SMALLER than this value use a single S3 CopyObject call to finalize
-      # Blobs LARGER than this value use S3 Multipart Copy (multiple CopyObject calls)
-      # Default is 32MB → almost all blobs trigger Multipart Copy → hits SeaweedFS CopyObject bug
-      # 1GB → most image layers (which are typically < 1GB) use single copy → avoids the bug
-      # Error prevented: "NoSuchUpload" and "Copy Source must mention source bucket and key"
-      multipartcopythresholdsize: 1073741824  # 1GB = 1024 * 1024 * 1024
-
-      # Size of each part when performing a Multipart Copy on SeaweedFS
-      # Only applies to blobs larger than multipartcopythresholdsize (> 1GB)
-      # Set equal to chunksize for consistency
-      multipartcopyChunksize: 134217728       # 128MB
-
-      # Maximum number of concurrent Multipart Copy operations
-      # Default is 100 → 100 parallel CopyObject calls → SeaweedFS race condition
-      # 1 → serial execution → slower but stable with SeaweedFS
-      # Only affects blobs larger than multipartcopythresholdsize (> 1GB)
-      multipartcopyMaxConcurrency: 1
-
-    delete:
-      # Allow blobs and manifests to be deleted via DELETE API
-      # Required for garbage collection to work correctly
-      enabled: true
-
     redirect:
-      # Disable S3 pre-signed URL redirect for blob downloads
-      # When false (redirect enabled): registry returns a pre-signed S3 URL
-      #   → client downloads blob directly from SeaweedFS
-      #   → works only if the client can reach the S3 endpoint
-      # When true (redirect disabled): registry proxies the blob content itself
-      #   → required when SeaweedFS is only accessible inside the cluster
-      disable: false   # ⚠ set true if SeaweedFS is not reachable from outside cluster
+      disable: false
 
-  http:
-    # Address and port the registry listens on
-    # ":5000" = 0.0.0.0:5000 → all network interfaces
-    # Use "127.0.0.1:5000" to restrict to localhost only
-    addr: :5000
+seaweedfs:
+  serviceName: seaweedfs-s3
 
-    # Secret key used to encrypt and decrypt upload session state (_state parameter)
-    # The _state token encodes: { UUID, Offset, StartedAt } for each active upload
-    # ⚠ Must be identical across all registry replicas in HA setup
-    #   → if replicas have different secrets, PATCH/PUT from one replica
-    #      cannot decrypt _state created by another → upload fails
-    # ⚠ Do not change while uploads are in progress
-    #   → existing _state tokens cannot be decrypted → active uploads fail
-    secret: "registry_key_2026"
-
-    headers:
-      # Security header returned in every HTTP response
-      # Prevents browsers from guessing (sniffing) the content-type of a response
-      # Best practice: always set this regardless of registry usage
-      X-Content-Type-Options: [nosniff]
