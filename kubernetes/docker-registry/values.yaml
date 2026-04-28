@@ -1,26 +1,118 @@
 global:
   imageRegistry: ""
 
+imagePullSecret:
+  enabled: true
+  registry: ghcr.io
+  username: ""
+  password: ""
+
 image:
-  registry: docker.io
-  repository: registry
+  registry: ghcr.io
+  repository: svtechnmaa/registry
   tag: 2.6
   pullPolicy: IfNotPresent
 
+# ---------------------------------------------------------------------------
+# Registry Configuration
+# ---------------------------------------------------------------------------
 registry:
   log:
     level: info
+
   s3:
     bucket: registry
     region: us-east-1
     secure: false
     rootdirectory: /
+    endpointOverride: ""
     accesskey: ""
     secretkey: ""
+    v4auth: true
+    forcepathstyle: true
+    chunksize: 134217728
+    multipartcopythresholdsize: 1073741824
+    multipartcopyChunksize: 134217728
+    multipartcopyMaxConcurrency: 1
+
   storage:
     redirect:
       disable: false
 
+  http:
+    addr: ":5000"
+    secret: "registry_key_2026"
+    headers:
+      X-Content-Type-Options: "[nosniff]"
+
+  # Liveness / Readiness
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  # Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Node scheduling
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # Extra annotations/labels cho pods
+  podAnnotations: {}
+  podLabels: {}
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 5000
+  nodePort: ""
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Job: Create Bucket
+# ---------------------------------------------------------------------------
+createBucket:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/minio-client
+    tag: "2025-08-13"
+    pullPolicy: IfNotPresent
+
+  # Timeout job (seconds)
+  activeDeadlineSeconds: 120
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# ---------------------------------------------------------------------------
+# SeaweedFS (reference)
+# ---------------------------------------------------------------------------
 seaweedfs:
   serviceName: seaweedfs-s3
-
+  namespace: seaweedfs
+  port: 8333
+  protocol: http
