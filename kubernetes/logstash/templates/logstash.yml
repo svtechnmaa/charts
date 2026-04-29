@@ -41,7 +41,7 @@ spec:
       {{- end }}
       initContainers:
       - name: init-chown-data
-        image: busybox
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
         command: ["sh", "-c", "mkdir -p /var/log/logstash && chown -R 1000:1000 /var/log/logstash"]
         volumeMounts:
         - name: host-var-log
@@ -61,7 +61,7 @@ spec:
                   key: password
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-          image: docker.elastic.co/logstash/logstash:{{.Values.global.elasticsearch.version}}
+          image: '{{ .Values.global.imageRegistry | default "ghcr.io" }}/svtechnmaa/logstash:{{.Values.global.elasticsearch.version}}'
           ports:
           - name: health-check
             containerPort: 9600
@@ -106,7 +106,9 @@ spec:
           - name: var-log-file
             mountPath: /var/log/logstash
 
-
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+       
       volumes:
       # - name: tz-config
       #   hostPath:

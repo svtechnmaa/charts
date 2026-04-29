@@ -63,13 +63,14 @@ replicaCount: 1
 # init image
 init:
   image:
-    registry: docker.io
-    repository: busybox
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
     tag: 1.33
     pullPolicy: IfNotPresent
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech_icingaweb2
   tag: v1.1.0
   pullPolicy: IfNotPresent
@@ -208,6 +209,7 @@ modules:
 # Chromedp container for pdf export module
 chromedp:
   image:
-    repository: chromedp/headless-shell
-    tag: 138.0.7204.101
+    registry: ghcr.io
+    repository: svtechnmaa/headless-shell
+    tag: 146.0.7680.80
     pullPolicy: IfNotPresent

@@ -71,7 +71,7 @@ spec:
       {{- end }}
       initContainers:
         - name: wait-for-mariadb
-          image: {{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.db.image "global" .Values.global) }}
           env:
           - name: SERVER_HOST
             value: {{ .Values.externalDatabase.host | quote }}

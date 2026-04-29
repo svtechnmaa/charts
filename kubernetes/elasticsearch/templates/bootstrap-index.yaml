@@ -5,7 +5,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "bootstrep-es-index"
+  name: "bootstrap-es-index"
 
 spec:
   ttlSecondsAfterFinished: 120
@@ -13,8 +13,9 @@ spec:
     spec:
       restartPolicy: Never
       containers:
-      - name: bootstrep-es-index
-        image: svtechnmaa/svtech_debuger:v1.0.0
+      - name: bootstrap-es-index
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.bootstrap.image "global" .Values.global ) }}
+        imagePullPolicy: {{ .Values.bootstrap.image.pullPolicy }}
         command:
           - bash
           - -c

@@ -53,5 +53,9 @@ global:
 timezone: Asia/Ho_Chi_Minh
 
 
-
-
+bootstrap:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/svtech_debuger
+    tag: v1.0.3
+    pullPolicy: IfNotPresent

@@ -41,12 +41,13 @@ timezone: Asia/Ho_Chi_Minh
 
 init:
   image:
-    registry: docker.io
-    repository: busybox
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
     tag: 1.33
     pullPolicy: IfNotPresent
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech_icinga2
   tag: v1.2.2
   pullPolicy: IfNotPresent
@@ -54,6 +55,7 @@ image:
 
 cronjob:
   image:
+    registry: ghcr.io
     repository: svtechnmaa/svtech_debuger
     tag: v1.0.3
     pullPolicy: IfNotPresent
@@ -204,8 +206,8 @@ master:
   # redis container
   redis:
     image:
-      registry: docker.io
-      repository: redis
+      registry: ghcr.io
+      repository: svtechnmaa/redis
       tag: 7.2.3
       pullPolicy: IfNotPresent
       debug: false

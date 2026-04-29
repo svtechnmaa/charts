@@ -64,7 +64,7 @@ spec:
           {{- end }}
           containers:
             - name: clickhouse
-              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouse.image) }}
+              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouse.image "global" .Values.global) }}
               imagePullPolicy: {{ .Values.clickhouse.image.pullPolicy }}
               env:
                 - name: TZ

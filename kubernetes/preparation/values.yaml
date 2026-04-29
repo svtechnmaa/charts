@@ -11,6 +11,7 @@ commonAnnotations:
   helm.sh/hook-weight: "10"
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech-junos-automation
   tag: v1.5.1
   pullPolicy: IfNotPresent

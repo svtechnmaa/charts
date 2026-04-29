@@ -4,7 +4,7 @@ metadata:
   name: {{ .Values.global.elasticsearch.clusterName }}
 spec:
   version: {{ .Values.global.elasticsearch.version }}
-    # volumeClaimDeletePolicy: DeleteOnScaledownOnly # https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-volume-claim-templates.html
+  image: '{{ .Values.global.imageRegistry | default "ghcr.io" }}/svtechnmaa/elasticsearch:{{.Values.global.elasticsearch.version}}'
   auth:
     fileRealm:
     - secretName: es-basic-auth

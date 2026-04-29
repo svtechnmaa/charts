@@ -70,7 +70,7 @@ spec:
       {{- end }}
       containers:
         - name: "mariadb-galera"
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.image) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           command:
             - bash
@@ -293,7 +293,7 @@ spec:
             {{- end }}
         {{- if .Values.metrics.enabled }}
         - name: metrics
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.metrics.image) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.metrics.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.metrics.image.pullPolicy | quote }}
           env:
             - name: MARIADB_METRICS_EXTRA_FLAGS
