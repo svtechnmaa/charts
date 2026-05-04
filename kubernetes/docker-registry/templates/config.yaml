@@ -8,31 +8,111 @@ metadata:
     app.kubernetes.io/component: docker-registry
 data:
   config.yml: |
+    # Docker Distribution Registry configuration
+    # Docs: https://distribution.github.io/distribution/about/configuration/
     version: 0.1
     log:
+      # Log level: error | warn | info | debug
       level: {{ .Values.registry.log.level | default "info" }}
     storage:
       cache:
+        # Cache blob metadata (digest, size, mediatype) in memory
+        # → Reduces HEAD requests to SeaweedFS S3 when skopeo checks if blob already exists
+        # → Does NOT cache blob content, only metadata
+        # ⚠ If running multiple registry replicas, cache is NOT shared between them
         blobdescriptor: inmemory
       {{- $endpoint := .Values.registry.s3.endpointOverride | default (include "registry.s3.endpoint" .) }}
       s3:
+        # Name of the bucket on SeaweedFS where all registry data is stored
+        # Bucket must exist before registry starts
         bucket: {{ .Values.registry.s3.bucket | required "registry.s3.bucket is required" }}
+
+        # S3 access key configured in SeaweedFS s3 identity config
         accesskey: {{ .Values.registry.s3.accesskey | required "registry.s3.accesskey is required" }}
+
+        # S3 secret key configured in SeaweedFS s3 identity config
         secretkey: {{ .Values.registry.s3.secretkey | required "registry.s3.secretkey is required" }}
+
+        # AWS region — required by AWS SDK even when not using real AWS
+        # SeaweedFS ignores this value, any string is accepted
         region: {{ .Values.registry.s3.region | default "us-east-1" }}
+
+        # Override default AWS S3 endpoint to point at SeaweedFS S3
+        # Required when using any S3-compatible service instead of real AWS
         regionendpoint: {{ $endpoint }}
+
+        # Use HTTP instead of HTTPS when talking to SeaweedFS
+        # Set to true if SeaweedFS is configured with TLS
         secure: {{ .Values.registry.s3.secure | default false }}
+
+        # Use AWS Signature Version 4 to sign all S3 requests
+        # SeaweedFS requires v4 — setting this to false will cause auth errors
         v4auth: {{ .Values.registry.s3.v4auth | default true }}
+
+        # Root path prefix inside the bucket where all registry files are stored
+        # All data will be written to: s3://registry/<rootdirectory>/docker/registry/v2/...
+        # ⚠ Changing this after data exists will make existing images invisible to registry
         rootdirectory: {{ .Values.registry.s3.rootdirectory | default "/" }}
+
+        # Force path-style S3 URLs instead of virtual-hosted-style
+        # Virtual-hosted-style (forcepathstyle: false — default):
+        #   http://registry.seaweedfs:8333/docker/registry/v2/...
+        #   ↑ bucket name embedded in hostname → SeaweedFS cannot resolve
+        #
+        # Path-style (forcepathstyle: true):
+        #   http://seaweedfs:8333/registry/docker/registry/v2/...
+        #   ↑ bucket name in URL path → SeaweedFS resolves correctly
+        #
+        # ⚠ REQUIRED when using regionendpoint with SeaweedFS
+        # Without this → error: "Copy Source must mention the source bucket and key"
         forcepathstyle: {{ .Values.registry.s3.forcepathstyle | default true }}
+
+        # Size of each chunk when uploading a blob to S3 via multipart upload
+        # Default is 10MB → too many PATCH requests → increases chance of session loss
+        # 128MB → fewer PATCH requests per blob → more stable with SeaweedFS
+        # Minimum allowed by S3 spec: 5MB
+        # Formula: blob 256MB / chunksize 128MB = 2 PATCH requests total
         chunksize: {{ .Values.registry.s3.chunksize | default 134217728 | int64 }}
+
+        # Blobs SMALLER than this value use a single S3 CopyObject call to finalize
+        # Blobs LARGER than this value use S3 Multipart Copy (multiple CopyObject calls)
+        # Default is 32MB → almost all blobs trigger Multipart Copy → hits SeaweedFS CopyObject bug
+        # 1GB → most image layers (which are typically < 1GB) use single copy → avoids the bug
+        # Error prevented: "NoSuchUpload" and "Copy Source must mention source bucket and key"
         multipartcopythresholdsize: {{ .Values.registry.s3.multipartcopythresholdsize | default 1073741824 | int64 }}
+
+        # Size of each part when performing a Multipart Copy on SeaweedFS
+        # Only applies to blobs larger than multipartcopythresholdsize (> 1GB)
+        # Set equal to chunksize for consistency
         multipartcopyChunksize: {{ .Values.registry.s3.multipartcopyChunksize | default 134217728 | int64 }}
+
+        # Maximum number of concurrent Multipart Copy operations
+        # Default is 100 → 100 parallel CopyObject calls → SeaweedFS race condition
+        # 1 → serial execution → slower but stable with SeaweedFS
+        # Only affects blobs larger than multipartcopythresholdsize (> 1GB)
         multipartcopyMaxConcurrency: {{ .Values.registry.s3.multipartcopyMaxConcurrency | default 1 | int }}
+
+      # Disable S3 pre-signed URL redirect for blob downloads
+      # When false (redirect enabled): registry returns a pre-signed S3 URL
+      #   → client downloads blob directly from SeaweedFS
+      #   → works only if the client can reach the S3 endpoint
+      # When true (redirect disabled): registry proxies the blob content itself
+      #   → required when SeaweedFS is only accessible inside the cluster
       redirect:
         disable: {{ .Values.registry.storage.redirect.disable | default false }}
     http:
+      # Address and port the registry listens on
+      # ":5000" = 0.0.0.0:5000 → all network interfaces
+      # Use "127.0.0.1:5000" to restrict to localhost only
       addr: {{ .Values.registry.http.addr | default ":5000" }}
+
+      # Secret key used to encrypt and decrypt upload session state (_state parameter)
+      # The _state token encodes: { UUID, Offset, StartedAt } for each active upload
+      # ⚠ Must be identical across all registry replicas in HA setup
+      #   → if replicas have different secrets, PATCH/PUT from one replica cannot decrypt _state created by another → upload fails
+      # ⚠ Do not change while uploads are in progress
+      #   → existing _state tokens cannot be decrypted → active uploads fail
       secret: {{ .Values.registry.http.secret | required "registry.http.secret is required" }}
+      
       headers:
         X-Content-Type-Options: {{ .Values.registry.http.headers.XContentTypeOptions | default "[nosniff]" }}

@@ -102,11 +102,11 @@ createBucket:
 
   resources:
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 100m
+      memory: 256Mi
     limits:
-      cpu: 200m
-      memory: 128Mi
+      cpu: 500m
+      memory: 1Gi
 
 # ---------------------------------------------------------------------------
 # SeaweedFS (reference)

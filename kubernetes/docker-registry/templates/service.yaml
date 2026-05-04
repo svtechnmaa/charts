@@ -5,7 +5,9 @@ metadata:
   name: {{ include "common.names.fullname" . }}-service
   namespace: {{ .Release.Namespace }}
 spec:
-  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+  selector: 
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: docker-registry
   ports:
   - name: http
     port: 5000
