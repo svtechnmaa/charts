@@ -1,5 +1,5 @@
 postgresql:
-  enabled: true
+  enabled: false
   fullnameOverride: "postgresql-service"
   auth:
     username: dummy
@@ -40,14 +40,16 @@ postgresqlExternal:
   auth:
     username: dummy
     password: "dummy@123"
-    database: "etl_nmaa"
+    database: "default"
 #we deploy postgresql-ha when postgresqlExternal is enabled  
 postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
+  enabled: true
   nameOverride: postgresql-ha
+  postgresqlExternalHost: "postgresql-ha-pgpool" 
   postgresql:
     username: dummy
     password: "dummy@123"
-    database: "etl_nmaa"
+    database: "default"
     repmgrUsername: dummy
     repmgrPassword: "dummy@123"
     repmgrDatabase: "repmgr"
