@@ -1,0 +1,89 @@
+postgresql:
+  enabled: true
+  fullnameOverride: "postgresql-service"
+  auth:
+    username: dummy
+    password: "dummy@123"
+    database: "mageai_nmaa"
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    tag: 17.2.0-debian-12-r3
+    digest: ""
+  persistence:
+    storageClass: postgresql-standalone-postgresql
+    accessModes:
+      - ReadWriteOnce
+    size: 3Gi
+  primary:
+    persistence:
+      storageClass: postgresql-standalone-postgresql
+      accessModes:
+        - ReadWriteOnce
+      size: 3Gi
+  volumePermissions:
+    enabled: true
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/os-shell
+      tag: 11
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
+# A dependency conflict occurs with the `common` library chart in the PostgreSQL subchart when intergrated in nmaa stack.
+# As a workaround, Mage AI is configured to use an external PostgreSQL instance.
+# The external PostgreSQL must be provisioned prior to Helm installation.
+postgresqlExternal:
+  enabled: false
+  postgresqlExternalHost: "postgresql-ha-pgpool" 
+  auth:
+    username: dummy
+    password: "dummy@123"
+    database: "etl_nmaa"
+#we deploy postgresql-ha when postgresqlExternal is enabled  
+postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
+  nameOverride: postgresql-ha
+  postgresql:
+    username: dummy
+    password: "dummy@123"
+    database: "etl_nmaa"
+    repmgrUsername: dummy
+    repmgrPassword: "dummy@123"
+    repmgrDatabase: "repmgr"
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/postgresql-repmgr
+      tag: 14.5.0-debian-11-r19
+      digest: ""
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
+      ## Set to true if you would like to see extra information on logs
+      ##
+      debug: false
+    replicaCount: 3
+  pgpool:
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/pgpool
+      tag: 4.6.3-debian-12-r0
+      digest: ""
+      pullPolicy: IfNotPresent
+      debug: false
+  persistence:
+    storageClass: postgresql-ha-postgresql
+    accessModes:
+      - ReadWriteOnce
+    size: 3Gi
+  volumePermissions:
+    enabled: true
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/os-shell
+      tag: 11
+      digest: ""
+      pullPolicy: IfNotPresent
+# logFolderExternal:
+#   enabled: true
+#   path: /home/src/logs_dir
