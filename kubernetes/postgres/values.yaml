@@ -71,6 +71,7 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       digest: ""
       pullPolicy: IfNotPresent
       debug: false
+      
   persistence:
     storageClass: postgresql-ha-postgresql
     accessModes:
@@ -87,3 +88,13 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
 # logFolderExternal:
 #   enabled: true
 #   path: /home/src/logs_dir
+persistence:
+  # enabled: true
+  size: 3Gi
+  # dynamicProvisioning: false
+  # # storageClassName: storage-class-mageai
+  # storageClassName: seaweedfs-storage
+  # csi:
+  #   driver: seaweedfs-csi-driver
+  # pathFolder: mageai
+  hostPath: /data/postgresql-ha-postgresql
