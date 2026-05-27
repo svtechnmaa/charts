@@ -98,3 +98,8 @@ persistence:
   #   driver: seaweedfs-csi-driver
   # pathFolder: mageai
   hostPath: /data/postgresql-ha-postgresql
+
+imagePullSecrets:
+  - name: "ghcr-pull-secret"
+nameOverride: ""
+fullnameOverride: ""
