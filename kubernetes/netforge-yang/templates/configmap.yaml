@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: netforge-yang-env
+data:
+  {{- range $key, $val := .Values.netforgeYangEnv }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}

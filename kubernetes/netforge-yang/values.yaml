@@ -1,46 +1,34 @@
 # Default values
 # Global values. Define shared volumes and persistence volumes. For example:
 global:
-  imageRegistry: ghcr.io
-  basePath: /opt
-  frontendVip: "192.168.1.1"
   sharedVolume:
-    enabled: true
-  sharedPersistenceVolume: 
-  - volumeName: netforge-data
-    pvcName: netforge-pvc
-    storageSize: 2Gi
-    path: /etc/snmptt/
-    accessModes: ReadWriteOnce #ReadWriteMany
-    shareFor:
-      - netforge
-    storageClass: netforge-hostpath
+    enabled: false
+  sharedPersistenceVolume: []
+#     # snmp-manager volume
+#     - volumeName: snmp-manager-volume
+#       pvcName: snmp-manager-pvc
+#       storageSize: 10Mi
+#       path: /etc/snmptt/
+#       accessModes: ReadWriteOnce #ReadWriteMany
+#       shareFor:
+#         - snmp-manager
+#       storageClass: snmp-manager-hostpath
 
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-clusterDomain: cluster.local
 
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  repository: svtechnmaa/netforge-be
+  repository: svtechnmaa/netforge-yang
   tag: "latest" 
   pullPolicy: IfNotPresent
 
 # This is to override the chart name.
 nameOverride: ""
 fullnameOverride: ""
-
-flower:
-  image:
-    repository: mher/flower
-    tag: "2.0" 
-    pullPolicy: IfNotPresent
-
-
-
 
 podSecurityContext: {}
   # fsGroup: 2000
@@ -62,14 +50,9 @@ service:
 
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   ports:
-    - name: netforge-be
+    - name: netforge-yang
       port: 8000
       targetPort: 8000
-      protocol: TCP
-      # nodePort: 30080
-    - name: netforge-be-flower
-      port: 5555
-      targetPort: 5555
       protocol: TCP
       # nodePort: 30080
   
@@ -111,14 +94,22 @@ resources: {}
   #   memory: 128Mi
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-# livenessProbe:
-  # httpGet:
-  #   path: /
-  #   port: http
-# readinessProbe:
-  # httpGet:
-  #   path: /
-  #   port: http
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 20 
+  periodSeconds: 30       
+  timeoutSeconds: 5       
+  failureThreshold: 3     
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8000
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
 
 #This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
 autoscaling:
@@ -129,19 +120,25 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 # Additional volumes on the output Deployment definition.
-# volumes:
-# - name: seed-configs
-#   projected:
-#     defaultMode: 493
-#     sources:
-#     - configMap:
-#         name: seed-configs
-#     - configMap:
-#         name: traefik-config
+volumes: 
+  - name: yang-db
+    persistentVolumeClaim:
+      claimName: yang-db
+  - name: yang-uploads
+    persistentVolumeClaim:
+      claimName: yang-uploads
+  - name: yang-device
+    persistentVolumeClaim:
+      claimName: yang-device
+
 # Additional volumeMounts on the output Deployment definition.
-# volumeMounts:
-# - name: seed-configs
-#   mountPath: /opt
+volumeMounts: 
+  - name: yang-db
+    mountPath: /data
+  - name: yang-uploads
+    mountPath: /yang-files/uploads
+  - name: yang-device
+    mountPath: /yang-files/device
 
 nodeSelector: {}
 
@@ -159,29 +156,18 @@ affinity:
   #       matchLabels:
   #         app.kubernetes.io/name: traefik
   #     topologyKey: kubernetes.io/hostname
+
 timezone: Asia/Ho_Chi_Minh
 env: {}
 
-netforgeAppEnv:
-  GOOGLE_REDIRECT_URI: http://backend:8000/api/v1/auth/google/callback
-  FRONTEND_URL: http://frontend:3000
-  REDIS_URL: redis://redis:6379/0
-  CELERY_BROKER_URL: redis://redis:6379/1
-  CELERY_RESULT_BACKEND: redis://redis:6379/2
-  CORS_ORIGINS: '["http://localhost:3000",,"http://localhost:5173", "http://frontend:5173","http://frontend:3000"]'
-  GIT_REPO_ROOT: /opt/netforge
-  GIT_REMOTE: origin
-  GIT_BRANCH: main
-  GIT_BASE_BRANCH: main
-  GIT_OWNER: ""
-  GIT_REPO: ""
-  ANSIBLE_BASE_DIR: /opt/netforge/ansible
-  YANG_MANAGER_PATH: /opt/netforge/yang_manager/python-service
+netforgeYangEnv:
+  YANG_DB_ENGINE: duckdb
+  YANG_DB_PATH: /data/yang.duckdb
+  YANG_ROOT: /yang-files
+  YANG_UPLOAD_DIR: /yang-files/uploads
+  NW_BACKEND_URL: http://backend:8000
 
-netforgeAppSecretEnv:
-  # Generate SECRET_KEY: openssl rand -hex 32
-  SECRET_KEY: "{{ .Values.netforgeAppEnv.SECRET_KEY }}"
-  # Generate FERNET_KEY: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-  FERNET_KEY: "{{ .Values.netforgeAppEnv.FERNET_KEY }}"
-  DATABASE_URL: postgresql://nw_user:nw_pass@postgres:5432/netforge
-  FLOWER_BASIC_AUTH: admin:flower
+netforgeYangSecretEnv:
+  NW_JWT_SECRET: 
+  YANG_ADMIN_USER: admin
+  YANG_ADMIN_PASSWORD: admin

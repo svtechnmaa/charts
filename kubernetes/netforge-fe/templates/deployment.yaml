@@ -49,7 +49,7 @@ spec:
       # Containers config
       containers:
         # Server container
-        - name: {{ .Chart.Name }}-server # replace if needed
+        - name: {{ .Chart.Name }} # replace if needed
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
@@ -61,11 +61,11 @@ spec:
               containerPort: {{ .targetPort }}
               protocol: {{ .protocol | default "TCP" }}
             {{- end }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              npm run start
+          # command:
+          #   - /bin/sh
+          #   - -c
+          #   - |
+          #     npm run start
           env:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
