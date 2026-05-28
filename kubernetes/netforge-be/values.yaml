@@ -40,8 +40,6 @@ flower:
     pullPolicy: IfNotPresent
 
 
-
-
 podSecurityContext: {}
   # fsGroup: 2000
 
@@ -180,8 +178,8 @@ netforgeAppEnv:
 
 netforgeAppSecretEnv:
   # Generate SECRET_KEY: openssl rand -hex 32
-  SECRET_KEY: "{{ .Values.netforgeAppEnv.SECRET_KEY }}"
+  SECRET_KEY: "your-secret-key-here"
   # Generate FERNET_KEY: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-  FERNET_KEY: "{{ .Values.netforgeAppEnv.FERNET_KEY }}"
+  FERNET_KEY: "your-fernet-key-here"
   DATABASE_URL: postgresql://nw_user:nw_pass@postgres:5432/netforge
   FLOWER_BASIC_AUTH: admin:flower
