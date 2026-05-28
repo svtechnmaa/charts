@@ -71,7 +71,7 @@ service:
       targetPort: 8000
       protocol: TCP
       # nodePort: 30080
-    - name: netforge-be-flower
+    - name: flower
       port: 5555
       targetPort: 5555
       protocol: TCP
