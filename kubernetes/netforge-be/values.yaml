@@ -174,7 +174,7 @@ netforgeAppEnv:
   REDIS_URL: redis://redis:6379/0
   CELERY_BROKER_URL: redis://redis:6379/1
   CELERY_RESULT_BACKEND: redis://redis:6379/2
-  CORS_ORIGINS: '["http://localhost:3000",,"http://localhost:5173", "http://frontend:5173","http://frontend:3000"]'
+  CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173", "http://frontend:5173","http://frontend:3000"]'
   GIT_REPO_ROOT: /opt/netforge
   GIT_REMOTE: origin
   GIT_BRANCH: main
