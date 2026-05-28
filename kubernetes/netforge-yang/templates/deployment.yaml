@@ -104,12 +104,7 @@ spec:
             {{- if .Values.volumeMounts }}
             {{- toYaml .Values.volumeMounts | nindent 12 }}
             {{- end }}
-            - name: yang-db
-              mountPath: /data
-            - name: yang-uploads
-              mountPath: /yang-files/uploads
-            - name: yang-device
-              mountPath: /yang-files/device
+
 
       volumes:
       # shareVolume(volume): define in the global values
@@ -126,12 +121,3 @@ spec:
         {{- if .Values.volumes }}
         {{- toYaml .Values.volumes | nindent 8 }}
         {{- end }}
-        - name: yang-db
-          persistentVolumeClaim:
-            claimName: yang-db
-        - name: yang-uploads
-          persistentVolumeClaim:
-            claimName: yang-uploads
-        - name: yang-device
-          persistentVolumeClaim:
-            claimName: yang-device
