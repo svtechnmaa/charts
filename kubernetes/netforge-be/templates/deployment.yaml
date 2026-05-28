@@ -89,17 +89,17 @@ spec:
             value: netforge
           - name: REPO_PATH
             value: /opt/netforge
-          {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-          volumeMounts:
-            {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        volumeMounts:
+          {{- range .Values.global.sharedPersistenceVolume }}
 
-            {{- if has "netforge" .shareFor }}
-            - name: {{ .volumeName }}
-              mountPath: {{ .path }}
-            {{- end }}
-
-            {{- end }}
+          {{- if has "netforge" .shareFor }}
+          - name: {{ .volumeName }}
+            mountPath: {{ .path }}
           {{- end }}
+
+          {{- end }}
+        {{- end }}
 
       # Containers config
       containers:
