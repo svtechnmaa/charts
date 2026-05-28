@@ -51,7 +51,7 @@ postgresql:
   auth:
     username: dummy
     password: "dummy@123"
-    database: "mageai_nmaa"
+    database: "default"
   image:
     registry: docker.io
     repository: bitnamilegacy/postgresql
@@ -84,11 +84,11 @@ persistence:
   # enabled: true
   size: 3Gi
   # dynamicProvisioning: false
-  # # storageClassName: storage-class-mageai
+  # # storageClassName: storage-class-share
   # storageClassName: seaweedfs-storage
   # csi:
   #   driver: seaweedfs-csi-driver
-  # pathFolder: mageai
+  # pathFolder: share
   hostPath: /data/postgresql-ha-postgresql
 
 imagePullSecrets:
