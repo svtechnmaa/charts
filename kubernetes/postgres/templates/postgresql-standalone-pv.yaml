@@ -19,11 +19,11 @@ metadata:
 spec:
   storageClassName: postgresql-standalone-postgresql
   capacity:
-    storage: {{ $.Values.persistence.size | quote }}
+    storage: {{ $.Values.postgresql.persistence.size | quote }}
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: {{ $.Values.persistence.hostPath }}/{{ $namespace }}-data-postgresql-standalone-postgresql/
+    path: {{ $.Values.postgresql.persistence.hostPath }}/{{ $namespace }}-data-postgresql-standalone-postgresql/
 
 {{- end }}

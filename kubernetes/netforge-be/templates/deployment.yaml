@@ -267,7 +267,7 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.flower.image ) }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.flower.image.pullPolicy }}
           command:
             - /bin/sh
             - -c
