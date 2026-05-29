@@ -2,17 +2,36 @@
 # Global values. Define shared volumes and persistence volumes. For example:
 global:
   sharedVolume:
-    enabled: false
-  sharedPersistenceVolume: []
-#     # snmp-manager volume
-#     - volumeName: snmp-manager-volume
-#       pvcName: snmp-manager-pvc
-#       storageSize: 10Mi
-#       path: /etc/snmptt/
-#       accessModes: ReadWriteOnce #ReadWriteMany
-#       shareFor:
-#         - snmp-manager
-#       storageClass: snmp-manager-hostpath
+    enabled: true
+  sharedPersistenceVolume: 
+  - volumeName: yang-db
+    pvcName: yang-db
+    storageSize: 5Gi
+    path: /data
+    accessModes: ReadWriteOnce #ReadWriteMany
+    shareFor:
+      - netforge-yang
+    storageClass: yang-db-hostpath
+    folderName: netforge-yang-db # for syncthing
+  - volumeName: yang-uploads
+    pvcName: yang-uploads
+    storageSize: 10Gi
+    path: /yang-files/uploads
+    accessModes: ReadWriteOnce #ReadWriteMany
+    shareFor:
+      - netforge-yang
+    storageClass: yang-uploads-hostpath
+    folderName: netforge-yang-uploads # for syncthing
+  - volumeName: yang-device
+    pvcName: yang-device
+    storageSize: 5Gi
+    path: /yang-files/device
+    accessModes: ReadWriteOnce #ReadWriteMany
+    shareFor:
+      - netforge-yang
+    storageClass: yang-device-hostpath
+    folderName: netforge-yang-device # for syncthing
+
 
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -120,25 +139,25 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 # Additional volumes on the output Deployment definition.
-volumes: 
-  - name: yang-db
-    persistentVolumeClaim:
-      claimName: yang-db
-  - name: yang-uploads
-    persistentVolumeClaim:
-      claimName: yang-uploads
-  - name: yang-device
-    persistentVolumeClaim:
-      claimName: yang-device
+# volumes: 
+#   - name: yang-db
+#     persistentVolumeClaim:
+#       claimName: yang-db
+#   - name: yang-uploads
+#     persistentVolumeClaim:
+#       claimName: yang-uploads
+#   - name: yang-device
+#     persistentVolumeClaim:
+#       claimName: yang-device
 
 # Additional volumeMounts on the output Deployment definition.
-volumeMounts: 
-  - name: yang-db
-    mountPath: /data
-  - name: yang-uploads
-    mountPath: /yang-files/uploads
-  - name: yang-device
-    mountPath: /yang-files/device
+# volumeMounts: 
+#   - name: yang-db
+#     mountPath: /data
+#   - name: yang-uploads
+#     mountPath: /yang-files/uploads
+#   - name: yang-device
+#     mountPath: /yang-files/device
 
 nodeSelector: {}
 

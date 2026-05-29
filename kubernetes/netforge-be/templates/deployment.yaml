@@ -93,7 +93,7 @@ spec:
         volumeMounts:
           {{- range .Values.global.sharedPersistenceVolume }}
 
-          {{- if has "netforge" .shareFor }}
+          {{- if has $.Chart.Name .shareFor }}
           - name: {{ .volumeName }}
             mountPath: {{ .path }}
           {{- end }}
@@ -144,7 +144,7 @@ spec:
             # shareVolume: VolumeMount
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has "netforge" .shareFor }}
+            {{- if has $.Chart.Name .shareFor }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
             {{- end }}
@@ -200,7 +200,7 @@ spec:
             # shareVolume: VolumeMount
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has "netforge" .shareFor }}
+            {{- if has $.Chart.Name .shareFor }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
             {{- end }}
@@ -251,7 +251,7 @@ spec:
             # shareVolume: VolumeMount
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has "netforge" .shareFor }}
+            {{- if has $.Chart.Name .shareFor }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
             {{- end }}
@@ -306,7 +306,7 @@ spec:
             # shareVolume: VolumeMount
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has "netforge" .shareFor }}
+            {{- if has $.Chart.Name .shareFor }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
             {{- end }}
@@ -323,7 +323,7 @@ spec:
       # shareVolume(volume): define in the global values
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has "netforge" .shareFor }}
+        {{- if has $.Chart.Name .shareFor }}
         - name: {{ .volumeName }}
           persistentVolumeClaim:
             claimName: {{ .pvcName }}
