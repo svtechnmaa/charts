@@ -170,7 +170,7 @@ env: {}
 
 netforgeAppEnv:
   GOOGLE_REDIRECT_URI: http://backend:8000/api/v1/auth/google/callback
-  FRONTEND_URL: http://frontend:3000
+  FRONTEND_URL: http://frontend:3000/netforge
   REDIS_URL: redis://redis:6379/0
   CELERY_BROKER_URL: redis://redis:6379/1
   CELERY_RESULT_BACKEND: redis://redis:6379/2
