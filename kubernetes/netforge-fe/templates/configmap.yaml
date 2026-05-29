@@ -1,6 +1,10 @@
+{{- if .Values.netforgeWebConfig }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: netforge-web-env
 data:
-  VITE_API_URL: "{{ .Values.netforgeWebConfig.VITE_API_URL }}"
+  {{- range $key, $val := .Values.netforgeWebConfig }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
+{{- end }}

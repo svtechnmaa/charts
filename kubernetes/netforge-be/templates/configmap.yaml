@@ -1,3 +1,4 @@
+{{- if .Values.netforgeAppEnv }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,3 +7,4 @@ data:
   {{- range $key, $val := .Values.netforgeAppEnv }}
   {{ $key }}: {{ $val | quote }}
   {{- end }}
+{{- end }}
