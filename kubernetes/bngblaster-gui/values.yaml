@@ -1,0 +1,134 @@
+global:
+  imageRegistry: ghcr.io
+  imagePullSecrets:
+    - name: ghcr-pull-secret
+
+imagePullSecret:
+  create: true
+  name: ghcr-pull-secret
+  registry: ghcr.io
+  username: ""
+  token: ""
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: "svtechnmaa/bngblaster-gui/frontend"
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+  resources: {}
+
+backend:
+  replicaCount: 1
+  image:
+    repository: "svtechnmaa/bngblaster-gui/backend"
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  resources: {}
+  config:
+    bngblasterBackendUrl: ""
+    frontendUrl: ""
+    googleRedirectUri: ""
+    keycloakServerUrl: ""
+    keycloakRealm: ""
+    keycloakClientId: ""
+    keycloakRedirectUri: ""
+  secret:
+    secretKey: ""
+    fernetKey: ""
+    googleClientId: ""
+    googleClientSecret: ""
+    keycloakClientSecret: ""
+
+# Using when want to use an external PostgreSQL database instead of the built-in PostgreSQL HA deployment. 
+# If postgresql-ha.enabled=true, these values will be ignored and the HA deployment will be used.
+externalPostgresql:
+  host: ""
+  port: 5432
+  username: ""
+  password: ""
+  database: ""
+
+postgresql-ha:
+  enabled: true
+  global:
+    imagePullSecrets:
+      - ghcr-pull-secret
+    security:
+      allowInsecureImages: true
+  volumePermissions:
+    enabled: true
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/os-shell
+      tag: "11"
+      pullSecrets:
+        - ghcr-pull-secret
+  postgresql:
+    replicaCount: 3
+    username: bng_user
+    password: ""
+    database: bng_web
+    repmgrPassword: ""
+    podSecurityContext:
+      enabled: true
+      fsGroup: 1001
+    containerSecurityContext:
+      enabled: true
+      runAsUser: 1001
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/postgresql-repmgr
+      tag: "17.6.0-debian-12-r2"
+      pullSecrets:
+        - ghcr-pull-secret
+  pgpool:
+    replicaCount: 2
+    adminPassword: ""
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/pgpool
+      tag: "4.6.3-debian-12-r0"
+      pullSecrets:
+        - ghcr-pull-secret
+  persistence:
+    enabled: true
+    # Default: "-" binds Bitnami PVCs to the static PVs in postgresStorage.
+    # Production: set your StorageClass here and set postgresStorage.enabled=false.
+    storageClass: "-"
+    accessModes:
+      - ReadWriteOnce
+    size: 5Gi
+
+postgresStorage:
+  # Static hostPath PVs Used only when storageClass="-".
+  enabled: true
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  reclaimPolicy: Retain
+  volumes:
+    - name: postgres-data-0
+      capacity: 5Gi
+      hostPath: /data/postgresql/postgres-0
+    - name: postgres-data-1
+      capacity: 5Gi
+      hostPath: /data/postgresql/postgres-1
+    - name: postgres-data-2
+      capacity: 5Gi
+      hostPath: /data/postgresql/postgres-2

@@ -1,0 +1,16 @@
+BNGBlaster GUI has been installed.
+
+Frontend service:
+  kubectl get svc {{ include "bngblaster-gui.frontendName" . }} -n {{ include "bngblaster-gui.namespace" . }}
+
+Backend service:
+  kubectl get svc {{ include "bngblaster-gui.backendName" . }} -n {{ include "bngblaster-gui.namespace" . }}
+
+{{- $postgresqlHa := index .Values "postgresql-ha" }}
+{{- if $postgresqlHa.enabled }}
+Pgpool service:
+  kubectl get svc {{ include "bngblaster-gui.databaseHost" . }} -n {{ include "bngblaster-gui.namespace" . }}
+{{- else }}
+External PostgreSQL:
+  {{ include "bngblaster-gui.databaseHost" . }}:{{ .Values.externalPostgresql.port }}
+{{- end }}
