@@ -1,0 +1,23 @@
+context:
+  project: '.*'
+description: "normal users will only have read permissions"
+for:
+  resource:
+    - equals:
+        kind: node
+      allow: [read] # allow refresh node sources
+    - equals:
+        kind: event
+      allow: [read] # allow read/create events
+  job:
+    - match:
+        name: '.*'
+      allow: [read]
+  node:
+    - match:
+        nodename: '.*'
+      allow: [read,refresh]
+by:
+  username: [thrukadmin]
+
+     

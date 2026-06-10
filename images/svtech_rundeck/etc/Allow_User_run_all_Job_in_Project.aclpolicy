@@ -1,0 +1,12 @@
+description: Allow user run all Job in specified Project
+context:
+  project: ''       # 'project1|project2' for multi specify project
+for:
+  job:
+    - match:
+        name: '.*'      # '.*' for all Jobs
+      allow: [read,run]
+  node:
+    - allow: [read,run]
+by:
+  username: [thrukadmin]

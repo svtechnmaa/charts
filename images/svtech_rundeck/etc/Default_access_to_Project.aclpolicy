@@ -1,0 +1,10 @@
+description: Default_access_to_Project
+context:
+  application: 'rundeck'
+for:
+  project:
+    - match:
+        name: '.*'
+      allow: [read]
+by:
+  username: [.*]

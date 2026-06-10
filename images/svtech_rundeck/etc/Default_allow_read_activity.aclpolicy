@@ -1,0 +1,10 @@
+description: Default allow read activity
+context:
+  project: '.*'
+for:
+  resource:
+    - equals:
+        kind: event
+      allow: [read,create]
+by:
+  username: .*

@@ -1,0 +1,12 @@
+description: Allow user run specified Group Job
+context:
+  project: '.*'     # '.*' for all; 'project1|project2' for multi specify project
+for:
+  job:
+    - match:
+        group: ''   # 'Group1|Group2' for multi specify Group Job
+      allow: [read,create,update,run]
+  node:
+    - allow: [read,create,update,run]
+by:
+  username: [thrukadmin]

@@ -1,0 +1,78 @@
+FROM rundeck/rundeck:4.14.2
+
+LABEL org.opencontainers.image.source=https://github.com/svtechnmaa/stacked_charts
+
+LABEL maintainer "HaDN"
+
+USER root
+
+# Install Base packet
+RUN apt-get -y update && \
+    apt-get --no-install-recommends -y install rsync dnsutils vim iputils-ping software-properties-common git telnet libsnmp-dev libffi-dev libsmi2-dev snmp-mibs-downloader gcc apt-transport-https dos2unix zip unzip unrar sshpass lftp build-essential jq parallel mysql-client unar file && \
+    apt-get clean all && \
+    rm -rf /var/cache/apt/archives /var/lib/apt/lists/*
+
+# Install Rundeck-cli
+RUN curl -s https://packagecloud.io/install/repositories/pagerduty/rundeck/script.deb.sh | os=any dist=any bash && \
+    apt-get -y update && \
+    apt-get --no-install-recommends -y install rundeck-cli && \
+    apt-get clean all && \
+    rm -rf /var/cache/apt/archives /var/lib/apt/lists/*
+
+# Install Python, Pip
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get -y update && \
+    apt-get --no-install-recommends -y install python3.10 python3.10-dev graphviz tzdata apache2-utils  && \
+    apt-get clean all && \
+    rm -rf /var/cache/apt/archives /var/lib/apt/lists/* && \
+    ln -s /usr/bin/python3.10 /usr/bin/python && \
+    unlink /usr/bin/python3 && \
+    ln -s /usr/bin/python3.10 /usr/bin/python3 && \
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python && \
+    alias pip='python -m pip'
+
+# Install base python packages
+RUN pip install setuptools wheel setuptools_rust bcrypt==3.2.2 cryptography==3.3 pynacl==1.3.0 --no-cache-dir
+
+COPY ./requirements.txt /tmp/requirements.txt
+
+# Install Python Dependencies
+RUN pip install -r /tmp/requirements.txt --no-cache-dir
+
+RUN mkdir -p /etc/rundeck /var/lib/rundeck/jsnapy /etc/jsnapy /var/log/jsnapy
+RUN chmod u+s /var/log/jsnapy
+
+ENV RUNDECK_SERVER_CONTEXT_PATH=/rundeck \
+    RUNDECK_GRAILS_URL=http://10.98.0.140:4440/rundeck \
+    RUNDECK_SERVER_ADDRESS="0.0.0.0" \
+    RUNDECK_DATABASE_URL=jdbc:h2:file:/home/rundeck/server/data/grailsdb;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=MONTH,HOUR,MINUTE,YEAR,SECONDS \
+    # RUNDECK_DATABASE_URL=jdbc:mysql://10.98.0.140/rundeck?autoReconnect=true&useSSL=false \
+    # RUNDECK_DATABASE_DRIVER=org.mariadb.jdbc.Driver \
+    RUNDECK_DATABASE_USERNAME=rundeck \
+    RUNDECK_DATABASE_PASSWORD=juniper@123 \
+    RUNDECK_ADMIN_USER=thrukadmin \
+    RUNDECK_ADMIN_PASSWORD=thrukadmin \
+    RUNDECK_ADMIN_TOKEN=UkTttnpfh5MC9A3O859k43wPhhWbCsf8 \
+    TZ=Asia/Ho_Chi_Minh \
+    IMPORT_NMS_JOB="false" \
+    IMPORT_AUTOMATION_JOB="false" \
+    IMPORT_AUDIT_JOB="false" \
+    RUNDECK_OPTION_PROVIDER_URL=http://10.98.0.140:1111 \
+    ICINGA2_REPORT_URL=http://10.98.0.140:8888 \
+    ICINGA2_API_HOST=10.98.0.140 \
+    ICINGA2_CONTAINER="true"
+
+COPY ./config /home/rundeck/server/config
+COPY ./config /tmp/config
+COPY ./etc /home/rundeck/etc
+COPY ./etc /tmp/etc
+COPY ./docker-lib /home/rundeck/docker-lib
+COPY ./user_management /etc/rundeck/user_management
+COPY ./.gitconfig /root/.gitconfig
+COPY ./jsnapy_conf /etc/jsnapy
+COPY ./sudoers.d/users /etc/sudoers.d/users
+
+EXPOSE 4440
+
+ENTRYPOINT [ "/tini", "--", "docker-lib/entry.sh" ]
+
