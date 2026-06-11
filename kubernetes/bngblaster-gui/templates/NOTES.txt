@@ -1,16 +1,37 @@
-BNGBlaster GUI has been installed.
+{{- $namespace := include "bngblaster-gui.namespace" . -}}
+{{- $frontendName := include "bngblaster-gui.frontendName" . -}}
+{{- $backendName := include "bngblaster-gui.backendName" . -}}
+{{- $databaseHost := include "bngblaster-gui.databaseHost" . -}}
+{{- $postgresqlHa := index .Values "postgresql-ha" -}}
+BNGBlaster GUI deployed.
 
-Frontend service:
-  kubectl get svc {{ include "bngblaster-gui.frontendName" . }} -n {{ include "bngblaster-gui.namespace" . }}
+Frontend:
+  kubectl get svc {{ $frontendName }} -n {{ $namespace }}
+  kubectl port-forward svc/{{ $frontendName }} -n {{ $namespace }} 8080:{{ .Values.frontend.service.port }}
+  http://127.0.0.1:8080
 
-Backend service:
-  kubectl get svc {{ include "bngblaster-gui.backendName" . }} -n {{ include "bngblaster-gui.namespace" . }}
+Backend:
+  kubectl logs deploy/{{ $backendName }} -n {{ $namespace }}
+  kubectl port-forward svc/{{ $backendName }} -n {{ $namespace }} 8000:{{ .Values.backend.service.port }}
+  http://127.0.0.1:8000/health
 
-{{- $postgresqlHa := index .Values "postgresql-ha" }}
+Database:
 {{- if $postgresqlHa.enabled }}
-Pgpool service:
-  kubectl get svc {{ include "bngblaster-gui.databaseHost" . }} -n {{ include "bngblaster-gui.namespace" . }}
+  Mode: in-chart PostgreSQL HA
+  Host: {{ $databaseHost }}.{{ $namespace }}.svc.cluster.local:5432
+  User: {{ $postgresqlHa.postgresql.username }}
+  Database: {{ $postgresqlHa.postgresql.database }}
+  Password:
+    kubectl get secret {{ .Release.Name }}-postgresql-ha-postgresql -n {{ $namespace }} -o jsonpath='{.data.password}' | base64 -d; echo
 {{- else }}
-External PostgreSQL:
-  {{ include "bngblaster-gui.databaseHost" . }}:{{ .Values.externalPostgresql.port }}
+  Mode: external PostgreSQL
+  Host: {{ $databaseHost }}:{{ .Values.externalPostgresql.port }}
+  User: {{ .Values.externalPostgresql.username }}
+  Database: {{ .Values.externalPostgresql.database }}
 {{- end }}
+
+Current backend DATABASE_URL:
+  kubectl get secret {{ include "bngblaster-gui.fullname" . }}-secret -n {{ $namespace }} -o jsonpath='{.data.DATABASE_URL}' | base64 -d; echo
+
+Manual backup:
+  kubectl run bngblaster-gui-pg-backup -n {{ $namespace }} --rm -i --restart=Never --image=docker.io/bitnamilegacy/postgresql-repmgr:17.6.0-debian-12-r2 --env=DATABASE_URL="$(kubectl get secret {{ include "bngblaster-gui.fullname" . }}-secret -n {{ $namespace }} -o jsonpath='{.data.DATABASE_URL}' | base64 -d)" --command -- bash -c 'pg_dump "$DATABASE_URL"' > bngblaster-gui-$(date +%F-%H%M%S).sql

@@ -48,7 +48,7 @@ backend:
     googleClientSecret: ""
     keycloakClientSecret: ""
 
-# Using when want to use an external PostgreSQL database instead of the built-in PostgreSQL HA deployment. 
+# Use an external PostgreSQL database instead of the built-in PostgreSQL HA deployment.
 # If postgresql-ha.enabled=true, these values will be ignored and the HA deployment will be used.
 externalPostgresql:
   host: ""
@@ -78,6 +78,7 @@ postgresql-ha:
     password: ""
     database: bng_web
     repmgrPassword: ""
+    podAntiAffinityPreset: hard
     podSecurityContext:
       enabled: true
       fsGroup: 1001
@@ -123,12 +124,12 @@ postgresStorage:
     - ReadWriteOnce
   reclaimPolicy: Retain
   volumes:
-    - name: postgres-data-0
+    - name: bngblaster-gui-postgres-data-0
       capacity: 5Gi
-      hostPath: /data/postgresql/postgres-0
-    - name: postgres-data-1
+      hostPath: /data/postgresql/bngblaster-gui/postgres-0
+    - name: bngblaster-gui-postgres-data-1
       capacity: 5Gi
-      hostPath: /data/postgresql/postgres-1
-    - name: postgres-data-2
+      hostPath: /data/postgresql/bngblaster-gui/postgres-1
+    - name: bngblaster-gui-postgres-data-2
       capacity: 5Gi
-      hostPath: /data/postgresql/postgres-2
+      hostPath: /data/postgresql/bngblaster-gui/postgres-2

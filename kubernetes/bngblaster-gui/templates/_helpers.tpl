@@ -52,8 +52,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "bngblaster-gui.databaseHost" -}}
 {{- $externalPostgresql := default dict (index .Values "externalPostgresql") -}}
-{{- $legacyDatabase := default dict (index .Values "database") -}}
-{{- $host := default (index $legacyDatabase "host") (index $externalPostgresql "host") -}}
+{{- $host := index $externalPostgresql "host" -}}
 {{- if $host -}}
 {{- $host -}}
 {{- else -}}
@@ -81,16 +80,22 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "bngblaster-gui.imagePullSecrets" -}}
 {{- $secrets := list -}}
+{{- $createdSecretName := "" -}}
 
 {{- if .Values.imagePullSecret.create -}}
-{{- $secrets = append $secrets (dict "name" (include "bngblaster-gui.imagePullSecretName" .)) -}}
+{{- $createdSecretName = include "bngblaster-gui.imagePullSecretName" . -}}
+{{- $secrets = append $secrets (dict "name" $createdSecretName) -}}
 {{- end -}}
 
 {{- range .Values.global.imagePullSecrets }}
 {{- if kindIs "string" . }}
+{{- if ne . $createdSecretName -}}
 {{- $secrets = append $secrets (dict "name" .) -}}
+{{- end -}}
 {{- else }}
+{{- if ne (get . "name") $createdSecretName -}}
 {{- $secrets = append $secrets . -}}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -105,5 +110,5 @@ imagePullSecrets:
 {{- $username := required "imagePullSecret.username is required when imagePullSecret.create=true" .Values.imagePullSecret.username -}}
 {{- $token := required "imagePullSecret.token is required when imagePullSecret.create=true" .Values.imagePullSecret.token -}}
 {{- $auth := printf "%s:%s" $username $token | b64enc -}}
-{{- dict "auths" (dict $registry (dict "username" $username "password" $token "email" .Values.imagePullSecret.email "auth" $auth)) | toJson -}}
+{{- dict "auths" (dict $registry (dict "username" $username "password" $token "auth" $auth)) | toJson -}}
 {{- end -}}
