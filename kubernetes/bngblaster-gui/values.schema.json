@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "frontend": {
+      "type": "object",
+      "properties": {
+        "replicaCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "const": "latest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "properties": {
+        "replicaCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "const": "latest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "externalPostgresql": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "database": {
+          "type": "string"
+        }
+      }
+    },
+    "postgresql-ha": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "postgresql": {
+          "type": "object",
+          "properties": {
+            "replicaCount": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "podAntiAffinityPreset": {
+              "type": "string",
+              "enum": [
+                "",
+                "soft",
+                "hard"
+              ]
+            }
+          }
+        },
+        "pgpool": {
+          "type": "object",
+          "properties": {
+            "replicaCount": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "resources": {
+              "type": "object",
+              "required": [
+                "requests",
+                "limits"
+              ]
+            }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "storageClass": {
+              "type": "string"
+            },
+            "accessModes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "ReadWriteOnce",
+                  "ReadOnlyMany",
+                  "ReadWriteMany",
+                  "ReadWriteOncePod"
+                ]
+              },
+              "minItems": 1
+            },
+            "size": {
+              "type": "string",
+              "pattern": "^[0-9]+(Ei|Pi|Ti|Gi|Mi|Ki|E|P|T|G|M|k)?$"
+            }
+          }
+        }
+      }
+    },
+    "postgresStorage": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "accessModes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ReadWriteOnce",
+              "ReadOnlyMany",
+              "ReadWriteMany",
+              "ReadWriteOncePod"
+            ]
+          },
+          "minItems": 1
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "hostPath"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "capacity": {
+                "type": "string"
+              },
+              "hostPath": {
+                "type": "string",
+                "minLength": 1
+              },
+              "claimName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "nodeAffinity": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "required": [
+          "postgresql-ha"
+        ],
+        "properties": {
+          "postgresql-ha": {
+            "required": [
+              "enabled"
+            ],
+            "properties": {
+              "enabled": {
+                "const": false
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "externalPostgresql": {
+            "required": [
+              "host",
+              "username",
+              "password",
+              "database"
+            ],
+            "properties": {
+              "host": {
+                "minLength": 1
+              },
+              "username": {
+                "minLength": 1
+              },
+              "password": {
+                "minLength": 1
+              },
+              "database": {
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "postgresql-ha"
+        ],
+        "properties": {
+          "postgresql-ha": {
+            "required": [
+              "enabled"
+            ],
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "externalPostgresql": {
+            "properties": {
+              "host": {
+                "maxLength": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "postgresql-ha",
+          "postgresStorage"
+        ],
+        "properties": {
+          "postgresql-ha": {
+            "required": [
+              "enabled",
+              "persistence"
+            ],
+            "properties": {
+              "enabled": {
+                "const": true
+              },
+              "persistence": {
+                "required": [
+                  "storageClass"
+                ],
+                "properties": {
+                  "storageClass": {
+                    "not": {
+                      "const": "-"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "postgresStorage": {
+            "required": [
+              "enabled"
+            ],
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "postgresStorage": {
+            "properties": {
+              "enabled": {
+                "const": false
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
