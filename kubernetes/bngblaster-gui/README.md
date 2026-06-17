@@ -22,12 +22,14 @@ helm upgrade --install bngblaster-gui ./bngblaster-gui \
   --create-namespace \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
-  --set backend.secret.secretKey=change-me-to-a-32-byte-hex-string \
+  --set backend.secret.secretKey=<output-of-openssl-rand-hex-32> \
   --set externalPostgresql.host=postgres.database.svc.cluster.local \
   --set externalPostgresql.username=bng_user \
   --set externalPostgresql.password=change-me-db-password \
   --set externalPostgresql.database=bng_web
 ```
+
+Generate `backend.secret.secretKey` with `openssl rand -hex 32`; it should be a 64-character hex string.
 
 The chart already defines default image repositories and tags in `values.yaml`.
 Override them only when deploying a different build.
