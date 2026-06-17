@@ -7,8 +7,8 @@ metadata:
   labels:
     {{- include "bngblaster-gui.labels" . | nindent 4 }}
 data:
-  BNGBLASTER_BACKEND_URL: {{ default (printf "%s/api" $ingressPath) .Values.backend.config.bngblasterBackendUrl | quote }}
-  FRONTEND_URL: {{ .Values.backend.config.frontendUrl | quote }}
+  BNGBLASTER_BACKEND_URL: {{ printf "%s/api" $ingressPath | quote }}
+  FRONTEND_URL: {{ $ingressPath | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap

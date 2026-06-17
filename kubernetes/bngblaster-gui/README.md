@@ -92,7 +92,6 @@ Review these before production:
 - `ingress.*`
 - `backend.secret.secretKey`
 - `externalPostgresql.*`
-- `backend.config.frontendUrl`
 - `backend.secret.googleClientId`
 - `backend.secret.googleClientSecret`
 - `backend.secret.googleRedirectUri`
