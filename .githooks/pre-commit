@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+export INSTALL_DIR="/tmp"
+
+echo "[HOOK] Running betterleaks..."
+
+# Ensure installed
+./.githooks/install-betterleaks.sh
+
+# Run scan on staged changes
+if $INSTALL_DIR/betterleaks git --staged --verbose; then
+  git config --local betterleaks-status.var "passed"
+  echo "betterleaks passed"
+else
+  git config --local betterleaks-status.var "failed"
+  echo "Secret detected. Please review the output above and remove any secrets before committing."
+  exit 1 # Comment this line if use detect mode
+fi
