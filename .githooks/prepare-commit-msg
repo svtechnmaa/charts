@@ -1,0 +1,17 @@
+#!/bin/sh
+
+COMMIT_MSG_FILE="$1"
+STATUS=$(git config --local betterleaks-status.var)
+
+# Only act if scan result exists
+if [ -n "$STATUS" ]; then
+  # Avoid duplicate trailer
+  if ! grep -q "betterleaks-Scan:" "$COMMIT_MSG_FILE"; then
+    git interpret-trailers \
+      --in-place \
+      --trailer "betterleaks-Scan=$STATUS" \
+      "$COMMIT_MSG_FILE"
+  fi
+  # Remove local variable after use
+  git config --local --unset-all betterleaks-status.var || true
+fi
