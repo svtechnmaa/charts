@@ -1,3 +1,4 @@
+{{- $ingressPath := trimSuffix "/" (printf "/%s" (trimPrefix "/" .Values.ingress.path)) -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,13 +7,8 @@ metadata:
   labels:
     {{- include "bngblaster-gui.labels" . | nindent 4 }}
 data:
-  BNGBLASTER_BACKEND_URL: {{ .Values.backend.config.bngblasterBackendUrl | quote }}
+  BNGBLASTER_BACKEND_URL: {{ default (printf "%s/api" $ingressPath) .Values.backend.config.bngblasterBackendUrl | quote }}
   FRONTEND_URL: {{ .Values.backend.config.frontendUrl | quote }}
-  GOOGLE_REDIRECT_URI: {{ .Values.backend.config.googleRedirectUri | quote }}
-  KEYCLOAK_SERVER_URL: {{ .Values.backend.config.keycloakServerUrl | quote }}
-  KEYCLOAK_REALM: {{ .Values.backend.config.keycloakRealm | quote }}
-  KEYCLOAK_CLIENT_ID: {{ .Values.backend.config.keycloakClientId | quote }}
-  KEYCLOAK_REDIRECT_URI: {{ .Values.backend.config.keycloakRedirectUri | quote }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -29,7 +25,12 @@ data:
         root /usr/share/nginx/html;
         index index.html;
 
-        location /api/ {
+        location = {{ $ingressPath }} {
+            return 302 {{ $ingressPath }}/;
+        }
+
+        location {{ $ingressPath }}/api/ {
+            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
             proxy_pass http://{{ include "bngblaster-gui.backendName" . }}:{{ .Values.backend.service.port }};
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
@@ -38,15 +39,18 @@ data:
             proxy_read_timeout 300s;
         }
 
-        location /docs {
+        location {{ $ingressPath }}/docs {
+            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
             proxy_pass http://{{ include "bngblaster-gui.backendName" . }}:{{ .Values.backend.service.port }};
         }
 
-        location /openapi.json {
+        location {{ $ingressPath }}/openapi.json {
+            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
             proxy_pass http://{{ include "bngblaster-gui.backendName" . }}:{{ .Values.backend.service.port }};
         }
 
-        location / {
+        location {{ $ingressPath }}/ {
+            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
             try_files $uri $uri/ /index.html;
         }
     }

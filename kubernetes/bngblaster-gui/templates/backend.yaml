@@ -18,7 +18,8 @@ spec:
         {{- include "bngblaster-gui.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: backend
     spec:
-      {{- include "bngblaster-gui.imagePullSecrets" . | nindent 6 }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: backend
           image: {{ include "bngblaster-gui.image" (dict "root" . "component" "backend" "image" .Values.backend.image) | quote }}

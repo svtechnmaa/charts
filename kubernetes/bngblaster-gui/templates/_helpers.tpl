@@ -53,16 +53,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "bngblaster-gui.databaseHost" -}}
 {{- $externalPostgresql := default dict (index .Values "externalPostgresql") -}}
 {{- $host := index $externalPostgresql "host" -}}
-{{- if $host -}}
-{{- $host -}}
-{{- else -}}
-{{- $postgresqlHa := index .Values "postgresql-ha" -}}
-{{- if $postgresqlHa.enabled -}}
-{{- printf "%s-postgresql-ha-pgpool" .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- required "externalPostgresql.host is required when postgresql-ha.enabled=false" $host -}}
-{{- end -}}
-{{- end -}}
+{{- required "externalPostgresql.host is required" $host -}}
 {{- end -}}
 
 {{- define "bngblaster-gui.namespace" -}}
@@ -72,43 +63,4 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- else -}}
 {{- .Release.Namespace -}}
 {{- end -}}
-{{- end -}}
-
-{{- define "bngblaster-gui.imagePullSecretName" -}}
-{{- default (printf "%s-registry" (include "bngblaster-gui.fullname" .)) .Values.imagePullSecret.name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{- define "bngblaster-gui.imagePullSecrets" -}}
-{{- $secrets := list -}}
-{{- $createdSecretName := "" -}}
-
-{{- if .Values.imagePullSecret.create -}}
-{{- $createdSecretName = include "bngblaster-gui.imagePullSecretName" . -}}
-{{- $secrets = append $secrets (dict "name" $createdSecretName) -}}
-{{- end -}}
-
-{{- range .Values.global.imagePullSecrets }}
-{{- if kindIs "string" . }}
-{{- if ne . $createdSecretName -}}
-{{- $secrets = append $secrets (dict "name" .) -}}
-{{- end -}}
-{{- else }}
-{{- if ne (get . "name") $createdSecretName -}}
-{{- $secrets = append $secrets . -}}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{- if $secrets }}
-imagePullSecrets:
-{{- toYaml $secrets | nindent 2 }}
-{{- end }}
-{{- end -}}
-
-{{- define "bngblaster-gui.dockerConfigJson" -}}
-{{- $registry := required "imagePullSecret.registry is required when imagePullSecret.create=true" .Values.imagePullSecret.registry -}}
-{{- $username := required "imagePullSecret.username is required when imagePullSecret.create=true" .Values.imagePullSecret.username -}}
-{{- $token := required "imagePullSecret.token is required when imagePullSecret.create=true" .Values.imagePullSecret.token -}}
-{{- $auth := printf "%s:%s" $username $token | b64enc -}}
-{{- dict "auths" (dict $registry (dict "username" $username "password" $token "auth" $auth)) | toJson -}}
 {{- end -}}

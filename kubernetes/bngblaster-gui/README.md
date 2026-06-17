@@ -2,61 +2,81 @@
 
 Helm chart for BNGBlaster GUI with:
 
-- Frontend service exposed by `LoadBalancer`
+- Frontend service exposed by `Ingress`
 - Backend service exposed by `ClusterIP`
-- PostgreSQL HA dependency enabled by default
-- Static hostPath PVs for the default PostgreSQL HA storage
-- Optional chart-managed image pull secret for private registries
+- External PostgreSQL for backend database connectivity
 
 ## Install
-
-Fetch dependencies:
-
-```bash
-helm dependency update ./bngblaster-gui
-```
 
 Install with the required secrets:
 
 ```bash
+kubectl create secret docker-registry ghcr-pull-secret \
+  --namespace bngblaster-gui \
+  --docker-server=ghcr.io \
+  --docker-username=<username> \
+  --docker-password=<token>
+
 helm upgrade --install bngblaster-gui ./bngblaster-gui \
   --namespace bngblaster-gui \
   --create-namespace \
+  --set ingress.enabled=true \
+  --set ingress.className=nginx \
   --set backend.secret.secretKey=change-me-to-a-32-byte-hex-string \
-  --set postgresql-ha.postgresql.password=change-me-db-password \
-  --set postgresql-ha.postgresql.repmgrPassword=change-me-repmgr-password \
-  --set postgresql-ha.pgpool.adminPassword=change-me-pgpool-admin-password \
-  --set imagePullSecret.username=your-registry-username \
-  --set imagePullSecret.token=your-registry-token
+  --set externalPostgresql.host=postgres.database.svc.cluster.local \
+  --set externalPostgresql.username=bng_user \
+  --set externalPostgresql.password=change-me-db-password \
+  --set externalPostgresql.database=bng_web
 ```
 
 The chart already defines default image repositories and tags in `values.yaml`.
 Override them only when deploying a different build.
+`ghcr-pull-secret` must already exist in the target namespace.
 
-## Default Database
+## Ingress
 
-By default, `postgresql-ha.enabled=true`. The backend connects to Pgpool:
+By default the chart is configured for path-based ingress at:
 
 ```text
-<release-name>-postgresql-ha-pgpool:5432
+/bngblaster
 ```
 
-Backend database credentials are taken from:
-
-- `postgresql-ha.postgresql.username`
-- `postgresql-ha.postgresql.password`
-- `postgresql-ha.postgresql.database`
-
-When HA is enabled, `externalPostgresql.*` is ignored.
-
-## External Database
-
-Disable the dependency and set external connection values:
+Key values:
 
 ```yaml
-postgresql-ha:
-  enabled: false
+ingress:
+  enabled: true
+  className: ""
+  host: ""
+  path: /bngblaster
+```
 
+When you use a host or IP with this path, requests are routed as:
+
+```text
+http://<host-or-ip>/bngblaster -> frontend
+http://<host-or-ip>/bngblaster/api -> backend
+```
+
+## Database
+
+The backend always connects with:
+
+- `externalPostgresql.host`
+- `externalPostgresql.port`
+- `externalPostgresql.username`
+- `externalPostgresql.password`
+- `externalPostgresql.database`
+
+When deploying this chart you should provide:
+
+- `externalPostgresql.host`
+- `externalPostgresql.port`
+- `externalPostgresql.username`
+- `externalPostgresql.password`
+- `externalPostgresql.database`
+
+```yaml
 externalPostgresql:
   host: pgpool.database.svc.cluster.local
   port: 5432
@@ -65,83 +85,20 @@ externalPostgresql:
   database: bng_web
 ```
 
-## Storage
-
-Default storage uses static hostPath PVs:
-
-```yaml
-postgresql-ha:
-  persistence:
-    storageClass: "-"
-
-postgresStorage:
-  enabled: true
-```
-
-Default PostgreSQL PVC names:
-
-```text
-data-<release-name>-postgresql-ha-postgresql-0
-data-<release-name>-postgresql-ha-postgresql-1
-data-<release-name>-postgresql-ha-postgresql-2
-```
-
-Default static PV names and host paths include the app name:
-
-```text
-bngblaster-gui-postgres-data-0 -> /data/postgresql/bngblaster-gui/postgres-0
-bngblaster-gui-postgres-data-1 -> /data/postgresql/bngblaster-gui/postgres-1
-bngblaster-gui-postgres-data-2 -> /data/postgresql/bngblaster-gui/postgres-2
-```
-
-For production, prefer a real StorageClass:
-
-```yaml
-postgresql-ha:
-  persistence:
-    storageClass: your-storage-class
-
-postgresStorage:
-  enabled: false
-```
-
-hostPath requires node affinity, suitable host directory permissions, and a
-separate backup strategy. If you override release naming, set
-`postgresStorage.volumes[].claimName` explicitly.
-
-## Image Pull Secret
-
-By default, the chart creates `ghcr-pull-secret` from:
-
-```yaml
-imagePullSecret:
-  create: true
-  registry: ghcr.io
-  username: ""
-  token: ""
-```
-
-To use an existing secret instead:
-
-```yaml
-imagePullSecret:
-  create: false
-
-global:
-  imagePullSecrets:
-    - name: existing-registry-secret
-```
-
 ## Production Values
 
 Review these before production:
 
+- `ingress.*`
 - `backend.secret.secretKey`
-- `postgresql-ha.postgresql.password`
-- `postgresql-ha.postgresql.repmgrPassword`
-- `postgresql-ha.pgpool.adminPassword`
+- `externalPostgresql.*`
 - `backend.config.frontendUrl`
-- `backend.config.googleRedirectUri`
-- `backend.config.keycloakRedirectUri`
+- `backend.secret.googleClientId`
+- `backend.secret.googleClientSecret`
+- `backend.secret.googleRedirectUri`
+- `backend.secret.keycloakServerUrl`
+- `backend.secret.keycloakRealm`
+- `backend.secret.keycloakClientId`
+- `backend.secret.keycloakClientSecret`
+- `backend.secret.keycloakRedirectUri`
 - SSO client IDs and secrets
-- PostgreSQL storage configuration
