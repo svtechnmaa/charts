@@ -4,11 +4,20 @@ kind: Service
 metadata:
   name: {{ include "common.names.fullname" . }}-service
   namespace: {{ .Release.Namespace }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: docker-registry
   ports:
   - name: http
-    port: 5000
-    targetPort: 5000
-  type: ClusterIP
-
+    port: {{ .Values.service.port }}
+    targetPort: http
+  type: {{ .Values.service.type }}
+  sessionAffinity: {{ .Values.service.sessionAffinity }}
+  {{- with .Values.service.sessionAffinityConfig }}
+  sessionAffinityConfig:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}

@@ -1,0 +1,26 @@
+s{{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.localPV.enabled }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.registry.persistence.localPV.name | default (printf "%s-local-pv" (include "common.names.fullname" .)) }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: docker-registry
+spec:
+  capacity:
+    storage: {{ .Values.registry.persistence.size }}
+  accessModes:
+    {{- toYaml .Values.registry.persistence.accessModes | nindent 4 }}
+  persistentVolumeReclaimPolicy: {{ .Values.registry.persistence.localPV.reclaimPolicy | default "Retain" }}
+  storageClassName: {{ .Values.registry.persistence.storageClassName | quote }}
+  local:
+    path: {{ .Values.registry.persistence.localPV.path | required "registry.persistence.localPV.path is required" | quote }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - {{ .Values.registry.persistence.localPV.nodeName | required "registry.persistence.localPV.nodeName is required when localPV.enabled=true" | quote }}
+{{- end }}

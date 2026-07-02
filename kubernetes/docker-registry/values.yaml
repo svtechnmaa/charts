@@ -1,33 +1,158 @@
 global:
   imageRegistry: ""
 
+imagePullSecret:
+  enabled: true
+  registry: ghcr.io
+  username: ""
+  password: ""
+
 image:
-  registry: docker.io
-  repository: registry
-  tag: 2
+  registry: ghcr.io
+  repository: svtechnmaa/registry
+  tag: 3.0.0
   pullPolicy: IfNotPresent
 
-registryConfig: |-
-  version: 0.1
+# ---------------------------------------------------------------------------
+# Registry Configuration
+# ---------------------------------------------------------------------------
+registry:
+  # Backend selector: s3 | filesystem
+  storageBackend: s3
+
+  # -------------------------------------------------------------------------
+  # Common settings
+  # -------------------------------------------------------------------------
+  replicaCount: 1
+  strategy:
+    type: Recreate
 
   log:
     level: info
 
   storage:
-    s3:
-      bucket: registry
-      region: default
-      regionendpoint: http://seaweedfs-s3.seaweedfs:8333
-      secure: false
-      v4auth: true
-      accesskey: registry # corresponding to your s3 key
-      secretkey: registry@123 # corresponding to your s3 key
-      skipverify: true
-      rootdirectory: "/"
-    delete:
-      enabled: true
     redirect:
       disable: true
 
   http:
-    addr: :5000
+    addr: ":5000"
+    # Leave empty to auto-generate a registry HTTP secret at render time.
+    secret: ""
+    headers:
+      XContentTypeOptions: "[nosniff]"
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 2Gi
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podLabels: {}
+
+  # -------------------------------------------------------------------------
+  # S3 backend settings
+  # Used only when registry.storageBackend=s3
+  # -------------------------------------------------------------------------
+  s3:
+    bucket: registry
+    region: us-east-1
+    secure: false
+    rootdirectory: /
+    endpointOverride: ""
+    accesskey: ""
+    secretkey: ""
+    v4auth: true
+    forcepathstyle: true
+    chunksize: 5242880
+    multipartcopythresholdsize: 5368709120
+    multipartcopychunksize: 33554432
+    multipartcopymaxconcurrency: 1
+
+  # -------------------------------------------------------------------------
+  # Filesystem backend settings
+  # Used only when registry.storageBackend=filesystem
+  # -------------------------------------------------------------------------
+  filesystem:
+    rootdirectory: /var/lib/registry
+    delete:
+      enabled: true
+
+  persistence:
+    enabled: true
+    existingClaim: ""
+    mountPath: /var/lib/registry
+    accessModes:
+      - ReadWriteOnce
+    size: 50Gi
+    storageClassName: registry-local
+    annotations: {}
+    localPV:
+      enabled: false
+      name: ""
+      path: /data/registry
+      nodeName: ""
+      reclaimPolicy: Retain
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 5000
+  nodePort: ""
+  sessionAffinity: None
+  sessionAffinityConfig: {}
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Job: Create Bucket
+# Used only when registry.storageBackend=s3
+# ---------------------------------------------------------------------------
+createBucket:
+  activeDeadlineSeconds: 300
+
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/minio-client
+    tag: "2025-08-13"
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# ---------------------------------------------------------------------------
+# SeaweedFS S3 endpoint
+# Used only when registry.storageBackend=s3
+# ---------------------------------------------------------------------------
+seaweedfs:
+  serviceName: seaweedfs-s3
+  namespace: seaweedfs
+  port: 8333
+  protocol: http
+  filerServiceName: seaweedfs-filer-client
+  filerPort: 8888

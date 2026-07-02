@@ -1,10 +1,45 @@
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ printf "%s-configuration" (include "common.names.fullname" .) }}
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: docker-registry
 data:
   config.yml: |
-{{ .Values.registryConfig | indent 4 }}
-
+    version: 0.1
+    log:
+      level: {{ .Values.registry.log.level | default "info" }}
+    storage:
+      {{- if eq (.Values.registry.storageBackend | default "s3") "s3" }}
+      {{- $endpoint := .Values.registry.s3.endpointOverride | default (include "registry.s3.endpoint" .) }}
+      s3:
+        bucket: {{ .Values.registry.s3.bucket | required "registry.s3.bucket is required" }}
+        accesskey: {{ .Values.registry.s3.accesskey | required "registry.s3.accesskey is required" }}
+        secretkey: {{ .Values.registry.s3.secretkey | required "registry.s3.secretkey is required" }}
+        region: {{ .Values.registry.s3.region | default "us-east-1" }}
+        regionendpoint: {{ $endpoint }}
+        secure: {{ .Values.registry.s3.secure | default false }}
+        v4auth: {{ .Values.registry.s3.v4auth | default true }}
+        rootdirectory: {{ .Values.registry.s3.rootdirectory | default "/" }}
+        forcepathstyle: {{ .Values.registry.s3.forcepathstyle | default true }}
+        chunksize: {{ .Values.registry.s3.chunksize | default 134217728 | int64 }}
+        multipartcopythresholdsize: {{ .Values.registry.s3.multipartcopythresholdsize | default 1073741824 | int64 }}
+        multipartcopychunksize: {{ .Values.registry.s3.multipartcopychunksize | default 134217728 | int64 }}
+        multipartcopymaxconcurrency: {{ .Values.registry.s3.multipartcopymaxconcurrency | default 1 | int }}
+      {{- else if eq (.Values.registry.storageBackend | default "s3") "filesystem" }}
+      filesystem:
+        rootdirectory: {{ .Values.registry.filesystem.rootdirectory | default "/var/lib/registry" }}
+      delete:
+        enabled: {{ .Values.registry.filesystem.delete.enabled | default true }}
+      {{- else }}
+      {{- fail "registry.storageBackend must be either s3 or filesystem" }}
+      {{- end }}
+      redirect:
+        disable: {{ .Values.registry.storage.redirect.disable | default true }}
+    http:
+      addr: {{ .Values.registry.http.addr | default ":5000" }}
+      secret: {{ .Values.registry.http.secret | default (randAlphaNum 32) | quote }}
+      headers:
+        X-Content-Type-Options: {{ .Values.registry.http.headers.XContentTypeOptions | default (index .Values.registry.http.headers "X-Content-Type-Options") | default "[nosniff]" }}

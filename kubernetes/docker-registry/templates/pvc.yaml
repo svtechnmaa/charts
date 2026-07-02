@@ -1,16 +1,23 @@
----
+{{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.enabled (not .Values.registry.persistence.existingClaim) }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ printf "%s-storage" (include "common.names.fullname" .) }}
+  name: {{ printf "%s-data" (include "common.names.fullname" .) }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: docker-registry
-  namespace: {{ .Release.Namespace }}
+  {{- with .Values.registry.persistence.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: seaweedfs-storage
+    {{- toYaml .Values.registry.persistence.accessModes | nindent 4 }}
   resources:
     requests:
-      storage: 6Gi
+      storage: {{ .Values.registry.persistence.size }}
+  {{- if .Values.registry.persistence.storageClassName }}
+  storageClassName: {{ .Values.registry.persistence.storageClassName | quote }}
+  {{- end }}
+{{- end }}

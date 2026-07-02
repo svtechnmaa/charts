@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: docker-registry
+spec:
+  replicas: {{ .Values.registry.replicaCount }}
+  strategy:
+    {{- toYaml .Values.registry.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: docker-registry
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: docker-registry
+        {{- with .Values.registry.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.registry.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.imagePullSecret.enabled }}
+      imagePullSecrets:
+        - name: {{ include "common.names.fullname" . }}-pull-secret
+      {{- end }}
+      containers:
+        - name: registry
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          env:
+            - name: OTEL_TRACES_EXPORTER
+              value: "none"
+            - name: OTEL_SDK_DISABLED
+              value: "true"
+
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+
+          {{- with .Values.registry.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+
+          {{- if .Values.registry.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: {{ .Values.registry.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.registry.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.registry.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.registry.livenessProbe.failureThreshold }}
+          {{- end }}
+
+          {{- if .Values.registry.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: {{ .Values.registry.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.registry.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.registry.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.registry.readinessProbe.failureThreshold }}
+          {{- end }}
+
+          volumeMounts:
+            - name: config
+              mountPath: /etc/distribution
+              readOnly: true
+            {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.enabled }}
+            - name: registry-data
+              mountPath: {{ .Values.registry.persistence.mountPath | default "/var/lib/registry" }}
+            {{- end }}
+
+      volumes:
+        - name: config
+          configMap:
+            name: {{ printf "%s-configuration" (include "common.names.fullname" .) }}
+        {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.enabled }}
+        - name: registry-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.registry.persistence.existingClaim | default (printf "%s-data" (include "common.names.fullname" .)) }}
+        {{- end }}
+
+      {{- with .Values.registry.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.registry.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      {{- with .Values.registry.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
