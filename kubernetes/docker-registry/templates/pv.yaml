@@ -1,4 +1,4 @@
-s{{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.localPV.enabled }}
+{{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.localPV.enabled }}
 apiVersion: v1
 kind: PersistentVolume
 metadata:

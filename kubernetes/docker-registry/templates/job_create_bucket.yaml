@@ -41,9 +41,15 @@ spec:
             - name: S3_BUCKET
               value: {{ .Values.registry.s3.bucket | quote }}
             - name: S3_ACCESS_KEY
-              value: {{ .Values.registry.s3.accesskey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-s3
+                  key: accesskey
             - name: S3_SECRET_KEY
-              value: {{ .Values.registry.s3.secretkey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-s3
+                  key: secretkey
           command:
             - /bin/sh
             - -c

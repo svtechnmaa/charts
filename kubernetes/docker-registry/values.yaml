@@ -36,7 +36,8 @@ registry:
 
   http:
     addr: ":5000"
-    # Leave empty to auto-generate a registry HTTP secret at render time.
+    # Stable random secret used by the registry to sign client-side state.
+    # Generate one with: openssl rand -hex 32
     secret: ""
     headers:
       XContentTypeOptions: "[nosniff]"
@@ -103,13 +104,13 @@ registry:
     mountPath: /var/lib/registry
     accessModes:
       - ReadWriteOnce
-    size: 50Gi
+    size: 30Gi
     storageClassName: registry-local
     annotations: {}
     localPV:
       enabled: false
       name: ""
-      path: /data/registry
+      path: /opt/shared/registry
       nodeName: ""
       reclaimPolicy: Retain
 

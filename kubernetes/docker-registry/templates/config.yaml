@@ -16,8 +16,6 @@ data:
       {{- $endpoint := .Values.registry.s3.endpointOverride | default (include "registry.s3.endpoint" .) }}
       s3:
         bucket: {{ .Values.registry.s3.bucket | required "registry.s3.bucket is required" }}
-        accesskey: {{ .Values.registry.s3.accesskey | required "registry.s3.accesskey is required" }}
-        secretkey: {{ .Values.registry.s3.secretkey | required "registry.s3.secretkey is required" }}
         region: {{ .Values.registry.s3.region | default "us-east-1" }}
         regionendpoint: {{ $endpoint }}
         secure: {{ .Values.registry.s3.secure | default false }}
@@ -40,6 +38,5 @@ data:
         disable: {{ .Values.registry.storage.redirect.disable | default true }}
     http:
       addr: {{ .Values.registry.http.addr | default ":5000" }}
-      secret: {{ .Values.registry.http.secret | default (randAlphaNum 32) | quote }}
       headers:
         X-Content-Type-Options: {{ .Values.registry.http.headers.XContentTypeOptions | default (index .Values.registry.http.headers "X-Content-Type-Options") | default "[nosniff]" }}
