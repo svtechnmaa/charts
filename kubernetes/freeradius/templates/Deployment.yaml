@@ -233,13 +233,6 @@ spec:
           securityContext: {{- omit .Values.containerSecurityContext "enabled" | toYaml | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-            - name: data
-              mountPath: /etc/raddb
-              {{- if .Values.persistence.subPath }}
-              subPath: {{ .Values.persistence.subPath }}
-              {{- end }}
-            {{- end }}
             {{- if .Values.tls.enabled }}
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/tls
@@ -282,6 +275,16 @@ spec:
             - name: freeradius-sites
               mountPath: /etc/freeradius/sites-enabled/status
               subPath: status
+             # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
             {{- if .Values.extraVolumeMounts }}
               {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
             {{- end }}
@@ -297,11 +300,6 @@ spec:
         - name: freeradius-sites
           configMap:
             name: {{ printf "%s-sites" (include "common.names.fullname" .) }}
-        {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
-        - name: data
-          persistentVolumeClaim:
-            claimName: {{ tpl .Values.persistence.existingClaim . }}
-        {{- end }}
         {{- if .Values.tls.enabled }}
         - name: freeradius-tls
           secret:
@@ -310,6 +308,17 @@ spec:
         - name: shared-certs
           emptyDir: {}
         {{- end }}
+        # shareVolume(volume): define in the global values
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+      # unshareVolume(volume): define in the chart's values.yaml
         {{- if .Values.extraVolumes }}
           {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
         {{- end }}
