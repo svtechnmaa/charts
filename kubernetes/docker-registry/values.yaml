@@ -1,5 +1,9 @@
 global:
   imageRegistry: ""
+  # Used by the syncthing dependency hostPath: <basePath><namespace>
+  basePath: /opt/shared/
+  syncthing:
+    enabled: true
 
 imagePullSecret:
   enabled: true
@@ -13,6 +17,11 @@ image:
   tag: 3.0.0
   pullPolicy: IfNotPresent
 
+syncthing:
+  replicaCount: 3
+  env:
+    LIST_FOLDER: "syncthing_config, registry"
+
 # ---------------------------------------------------------------------------
 # Registry Configuration
 # ---------------------------------------------------------------------------
@@ -23,7 +32,7 @@ registry:
   # -------------------------------------------------------------------------
   # Common settings
   # -------------------------------------------------------------------------
-  replicaCount: 1
+  replicaCount: 3
   strategy:
     type: Recreate
 
@@ -98,21 +107,18 @@ registry:
     delete:
       enabled: true
 
-  persistence:
+  sharedVolume:
     enabled: true
-    existingClaim: ""
+    volumeName: "docker-registry"
+    path: "/opt/shared/registry" # require path in /opt
     mountPath: /var/lib/registry
-    accessModes:
-      - ReadWriteOnce
-    size: 30Gi
-    storageClassName: registry-local
+    pvcName: "docker-registry-pvc"
+    storageSize: 20Gi
+    accessModes: ReadWriteOnce
+    storageClass: registry-local
+    nodeName: ""
+    reclaimPolicy: Retain
     annotations: {}
-    localPV:
-      enabled: false
-      name: ""
-      path: /opt/shared/registry
-      nodeName: ""
-      reclaimPolicy: Retain
 
 # ---------------------------------------------------------------------------
 # Service

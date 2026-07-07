@@ -95,24 +95,29 @@ spec:
             - name: config
               mountPath: /etc/distribution
               readOnly: true
-            {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.enabled }}
+            {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.sharedVolume.enabled }}
             - name: registry-data
-              mountPath: {{ .Values.registry.persistence.mountPath | default "/var/lib/registry" }}
+              mountPath: {{ .Values.registry.sharedVolume.mountPath | default "/var/lib/registry" }}
             {{- end }}
 
       volumes:
         - name: config
           configMap:
             name: {{ printf "%s-configuration" (include "common.names.fullname" .) }}
-        {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.persistence.enabled }}
+        {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.sharedVolume.enabled }}
         - name: registry-data
           persistentVolumeClaim:
-            claimName: {{ .Values.registry.persistence.existingClaim | default (printf "%s-data" (include "common.names.fullname" .)) }}
+            claimName: {{ .Values.registry.sharedVolume.pvcName | quote }}
         {{- end }}
 
+      {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.sharedVolume.enabled .Values.registry.sharedVolume.nodeName }}
+      nodeSelector:
+        kubernetes.io/hostname: {{ .Values.registry.sharedVolume.nodeName | quote }}
+      {{- else }}
       {{- with .Values.registry.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- end }}
 
       {{- with .Values.registry.tolerations }}
