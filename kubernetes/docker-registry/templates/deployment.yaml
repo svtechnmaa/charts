@@ -110,16 +110,6 @@ spec:
             claimName: {{ .Values.registry.sharedVolume.pvcName | quote }}
         {{- end }}
 
-      {{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.sharedVolume.enabled .Values.registry.sharedVolume.nodeName }}
-      nodeSelector:
-        kubernetes.io/hostname: {{ .Values.registry.sharedVolume.nodeName | quote }}
-      {{- else }}
-      {{- with .Values.registry.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- end }}
-
       {{- with .Values.registry.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}

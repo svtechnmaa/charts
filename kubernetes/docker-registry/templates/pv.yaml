@@ -13,14 +13,6 @@ spec:
     - {{ .Values.registry.sharedVolume.accessModes }}
   persistentVolumeReclaimPolicy: {{ .Values.registry.sharedVolume.reclaimPolicy | default "Retain" }}
   storageClassName: {{ .Values.registry.sharedVolume.storageClass | quote }}
-  local:
+  hostPath:
     path: {{ .Values.registry.sharedVolume.path | required "registry.sharedVolume.path is required" | quote }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: kubernetes.io/hostname
-              operator: In
-              values:
-                - {{ .Values.registry.sharedVolume.nodeName | required "registry.sharedVolume.nodeName is required when sharedVolume.enabled=true" | quote }}
 {{- end }}

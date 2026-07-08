@@ -1,9 +1,5 @@
 global:
   imageRegistry: ""
-  # Used by the syncthing dependency hostPath: <basePath><namespace>
-  basePath: /opt/shared/
-  syncthing:
-    enabled: true
 
 imagePullSecret:
   enabled: true
@@ -16,11 +12,6 @@ image:
   repository: svtechnmaa/registry
   tag: 3.0.0
   pullPolicy: IfNotPresent
-
-syncthing:
-  replicaCount: 3
-  env:
-    LIST_FOLDER: "syncthing_config, registry"
 
 # ---------------------------------------------------------------------------
 # Registry Configuration
@@ -73,7 +64,6 @@ registry:
       cpu: 500m
       memory: 2Gi
 
-  nodeSelector: {}
   tolerations: []
   affinity: {}
   podAnnotations: {}
@@ -116,7 +106,6 @@ registry:
     storageSize: 20Gi
     accessModes: ReadWriteOnce
     storageClass: registry-local
-    nodeName: ""
     reclaimPolicy: Retain
     annotations: {}
 
