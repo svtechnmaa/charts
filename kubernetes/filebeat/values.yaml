@@ -1,11 +1,12 @@
 global:
+  ci: false
   externalIP: ""
   elasticsearch:
     clusterName: mbf
     version: 8.9.1
     adminUser:
-      name: elastic
-      pass: juniper@123
+      name: ""
+      pass: ""
       role: superuser
   rundeck:
     offlineLogFolder: /data/offlineLogFolder/
@@ -30,6 +31,7 @@ nodeAffinityPreset:
 
 service:
   type: LoadBalancer
+  loadBalancerIP: "172.168.1.2"
 ## Affinity for pod assignment
 ## Note: podAffinityPreset, podAntiAffinityPreset, and  nodeAffinityPreset will be ignored when it's set
 ##

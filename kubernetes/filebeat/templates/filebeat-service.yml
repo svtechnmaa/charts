@@ -7,7 +7,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.service.annotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  type: {{ .Values.service.type }}
+  type: {{ ternary "ClusterIP" .Values.service.type .Values.global.ci }}
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
   ports:
     - name: filebeat-syslog
@@ -26,9 +26,9 @@ spec:
   # {{- end }}
   {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
   externalTrafficPolicy: Local
-  {{- if .Values.global.externalIP }}
-  externalIPs: 
-    - {{ .Values.global.externalIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
-  loadBalancerIP: {{ .Values.global.logstash.loadBalancerIP }}
+  {{- if .Values.global.externalIP }}
+  externalIPs:
+    - {{ .Values.global.externalIP }}
   {{- end }}
