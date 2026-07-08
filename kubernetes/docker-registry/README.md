@@ -31,11 +31,7 @@ helm -n registry upgrade --install registry ./docker-registry/ \
   --set registry.storageBackend=filesystem \
   --set imagePullSecret.username=<username> \
   --set imagePullSecret.password=<token> \
-  --set registry.http.secret=<stable-random-secret> \
-  --set registry.sharedVolume.enabled=true \
-  --set registry.sharedVolume.path=/opt/shared/registry \
-  --set registry.sharedVolume.pvcName=docker-registry-pvc \
-  --set registry.sharedVolume.storageSize=20Gi
+  --set registry.http.secret=<stable-random-secret>
 ```
 
 ## Backend Selection

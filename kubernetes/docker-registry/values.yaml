@@ -100,7 +100,7 @@ registry:
   sharedVolume:
     enabled: true
     volumeName: "docker-registry"
-    path: "/opt/shared/registry/docker"
+    path: "/opt/shared/registry"
     mountPath: /var/lib/registry
     pvcName: "docker-registry-pvc"
     storageSize: 20Gi
