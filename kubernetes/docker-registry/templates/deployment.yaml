@@ -72,7 +72,7 @@ spec:
           {{- if .Values.registry.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
-              path: /
+              path: /v2/
               port: http
             initialDelaySeconds: {{ .Values.registry.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.registry.livenessProbe.periodSeconds }}
@@ -83,7 +83,7 @@ spec:
           {{- if .Values.registry.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
-              path: /
+              path: /v2/
               port: http
             initialDelaySeconds: {{ .Values.registry.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.registry.readinessProbe.periodSeconds }}

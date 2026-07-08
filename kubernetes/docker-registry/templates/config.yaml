@@ -19,10 +19,10 @@ data:
         region: {{ .Values.registry.s3.region | default "us-east-1" }}
         regionendpoint: {{ $endpoint }}
         secure: {{ .Values.registry.s3.secure | default false }}
-        v4auth: {{ .Values.registry.s3.v4auth | default true }}
+        v4auth: {{ .Values.registry.s3.v4auth }}
         rootdirectory: {{ .Values.registry.s3.rootdirectory | default "/" }}
-        forcepathstyle: {{ .Values.registry.s3.forcepathstyle | default true }}
-        chunksize: {{ .Values.registry.s3.chunksize | default 134217728 | int64 }}
+        forcepathstyle: {{ .Values.registry.s3.forcepathstyle }}
+        chunksize: {{ .Values.registry.s3.chunksize | default 5242880 | int64 }}
         multipartcopythresholdsize: {{ .Values.registry.s3.multipartcopythresholdsize | default 1073741824 | int64 }}
         multipartcopychunksize: {{ .Values.registry.s3.multipartcopychunksize | default 134217728 | int64 }}
         multipartcopymaxconcurrency: {{ .Values.registry.s3.multipartcopymaxconcurrency | default 1 | int }}
@@ -30,12 +30,12 @@ data:
       filesystem:
         rootdirectory: {{ .Values.registry.filesystem.rootdirectory | default "/var/lib/registry" }}
       delete:
-        enabled: {{ .Values.registry.filesystem.delete.enabled | default true }}
+        enabled: {{ .Values.registry.filesystem.delete.enabled }}
       {{- else }}
       {{- fail "registry.storageBackend must be either s3 or filesystem" }}
       {{- end }}
       redirect:
-        disable: {{ .Values.registry.storage.redirect.disable | default true }}
+        disable: {{ .Values.registry.storage.redirect.disable }}
     http:
       addr: {{ .Values.registry.http.addr | default ":5000" }}
       headers:
