@@ -23,8 +23,8 @@ data:
         rootdirectory: {{ .Values.registry.s3.rootdirectory | default "/" }}
         forcepathstyle: {{ .Values.registry.s3.forcepathstyle }}
         chunksize: {{ .Values.registry.s3.chunksize | default 5242880 | int64 }}
-        multipartcopythresholdsize: {{ .Values.registry.s3.multipartcopythresholdsize | default 1073741824 | int64 }}
-        multipartcopychunksize: {{ .Values.registry.s3.multipartcopychunksize | default 134217728 | int64 }}
+        multipartcopythresholdsize: {{ .Values.registry.s3.multipartcopythresholdsize | default 5368709120 | int64 }}
+        multipartcopychunksize: {{ .Values.registry.s3.multipartcopychunksize | default 33554432 | int64 }}
         multipartcopymaxconcurrency: {{ .Values.registry.s3.multipartcopymaxconcurrency | default 1 | int }}
       {{- else if eq (.Values.registry.storageBackend | default "s3") "filesystem" }}
       filesystem:
