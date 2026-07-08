@@ -14,7 +14,7 @@ spec:
       protocol: UDP
       port: 5066
       targetPort: 5066
-  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+  {{- if and (not .Values.global.ci) (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
       nodePort: 30901
   {{- end }}
   #   - name: upload-offline-log
@@ -24,7 +24,7 @@ spec:
   # {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
   #     nodePort: 30551
   # {{- end }}
-  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+  {{- if and (not .Values.global.ci) (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
   externalTrafficPolicy: Local
   loadBalancerIP: {{ .Values.service.loadBalancerIP }}
   {{- end }}
