@@ -23,7 +23,7 @@ registry:
   # -------------------------------------------------------------------------
   # Common settings
   # -------------------------------------------------------------------------
-  replicaCount: 3
+  replicaCount: 1
   strategy:
     type: Recreate
 
@@ -100,7 +100,7 @@ registry:
   sharedVolume:
     enabled: true
     volumeName: "docker-registry"
-    path: "/opt/shared/registry" # require path in /opt
+    path: "/opt/shared/registry/docker"
     mountPath: /var/lib/registry
     pvcName: "docker-registry-pvc"
     storageSize: 20Gi

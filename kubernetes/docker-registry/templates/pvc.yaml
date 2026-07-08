@@ -7,10 +7,11 @@ metadata:
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: docker-registry
-  {{- with .Values.registry.sharedVolume.annotations }}
   annotations:
+    helm.sh/resource-policy: keep
+    {{- with .Values.registry.sharedVolume.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   accessModes:
     - {{ .Values.registry.sharedVolume.accessModes }}
