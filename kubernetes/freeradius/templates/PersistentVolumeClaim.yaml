@@ -1,8 +1,9 @@
 {{- if and .Values.persistence.enabled .Values.persistence.existingClaim }}
+{{- $namespace := .Release.Namespace }}
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: data
+  name: freeradius-dictionary-pvc
 spec:
   storageClassName: {{ .Values.persistence.storageClass }}
   accessModes:
