@@ -79,6 +79,8 @@ spec:
               configMap:
                 name: akvorado-initdb-schema
           {{- end }}
+          imagePullSecrets:
+            - name: ghcr-pull-secret
               
     volumeClaimTemplates:
     {{- range $key, $values := .Values.clickhouse.volumes }}

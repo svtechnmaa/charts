@@ -197,8 +197,5 @@ spec:
                 sleep 5
               fi
             done
-
-
-
-
-
+      imagePullSecrets:
+        - name: ghcr-pull-secret

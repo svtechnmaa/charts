@@ -27,3 +27,5 @@ spec:
               fi
               kubectl create secret tls {{ .Values.tls.secretName }} --cert=/tls.crt --key=/tls.key --dry-run=client -o yaml | kubectl apply -f -
       restartPolicy: Never
+      imagePullSecrets:
+      - name: ghcr-pull-secret

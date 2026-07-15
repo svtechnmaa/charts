@@ -57,6 +57,8 @@ spec:
                 - name: TZ
                   value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
           securityContext: {{ toYaml .Values.clickhouseKeeper.securityContext | nindent 12 }}
+          imagePullSecrets:
+            - name: ghcr-pull-secret
 
     volumeClaimTemplates:
       - name: default

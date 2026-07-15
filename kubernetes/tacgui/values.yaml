@@ -46,6 +46,13 @@ clusterDomain: cluster.local
 extraDeploy: []
 
 ## @section Tacgui Image parameters
+## Init Job image
+init:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
+    tag: 1.33
+    pullPolicy: IfNotPresent
 
 ## Tacgui image
 ## ref: https://hub.docker.com/r/tacgui/tacgui-server/tags
