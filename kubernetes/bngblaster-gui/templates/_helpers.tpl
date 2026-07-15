@@ -1,31 +1,16 @@
-{{- define "bngblaster-gui.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
 {{- define "bngblaster-gui.fullname" -}}
-{{- if .Values.fullnameOverride -}}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
+{{- include "common.names.fullname" . -}}
 {{- end -}}
 
 {{- define "bngblaster-gui.labels" -}}
-helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
-app.kubernetes.io/name: {{ include "bngblaster-gui.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+{{ include "common.labels.standard" . }}
+{{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
 {{- end -}}
 
 {{- define "bngblaster-gui.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "bngblaster-gui.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+{{ include "common.labels.matchLabels" . }}
 {{- end -}}
 
 {{- define "bngblaster-gui.image" -}}
@@ -45,10 +30,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "bngblaster-gui.frontendName" -}}
 {{- printf "%s-frontend" (include "bngblaster-gui.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{- define "bngblaster-gui.postgresName" -}}
-{{- printf "%s-postgres" (include "bngblaster-gui.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{- define "bngblaster-gui.databaseHost" -}}
@@ -82,7 +63,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if hasPrefix "/" $hostPath -}}
 {{- $hostPath -}}
 {{- else -}}
-{{- $basePath := default "/opt/shared" .Values.global.basePath | trimSuffix "/" -}}
+{{- $global := default dict .Values.global -}}
+{{- $basePath := default "/opt/shared" $global.basePath | trimSuffix "/" -}}
 {{- printf "%s/%s/%s" $basePath $namespace $hostPath -}}
 {{- end -}}
 {{- end -}}
