@@ -46,7 +46,7 @@ spec:
           {{- if .resources }}
           resources: {{- toYaml .resources | nindent 12 }}
           {{- end }}
-        {{- if .Values.global.imageRegistry == "ghcr.io" }}
+        {{- if eq ($.Values.global.imageRegistry | default "ghcr.io") "ghcr.io" }}
         imagePullSecrets:
           - name: ghcr-pull-secret
         {{- end }}

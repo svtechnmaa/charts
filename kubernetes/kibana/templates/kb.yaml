@@ -60,7 +60,7 @@ spec:
         #   limits:
         #     memory: 4Gi #2Gi
 
-      {{- if .Values.global.imageRegistry == "ghcr.io" }}
+      {{- if eq (.Values.global.imageRegistry | default "ghcr.io") "ghcr.io" }}
       imagePullSecrets:
         - name: ghcr-pull-secret
       {{- end }}
