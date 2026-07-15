@@ -33,6 +33,9 @@ spec:
               mkdir -p /mnt/backend-data
               if [ -f "{{ .Values.backend.dataPersistence.sourcePath }}/{{ .Values.backend.dataPersistence.fileName }}" ] && [ ! -f "/mnt/backend-data/{{ .Values.backend.dataPersistence.fileName }}" ]; then
                 cp "{{ .Values.backend.dataPersistence.sourcePath }}/{{ .Values.backend.dataPersistence.fileName }}" "/mnt/backend-data/{{ .Values.backend.dataPersistence.fileName }}"
+                echo "Initialized data successfully"
+              else
+                echo "Data already initialized, skipping"
               fi
           volumeMounts:
             - name: {{ .Values.backend.dataPersistence.volumeName }}
