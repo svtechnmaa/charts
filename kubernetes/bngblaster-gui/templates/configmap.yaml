@@ -1,4 +1,5 @@
-{{- $ingressPath := trimSuffix "/" (printf "/%s" (trimPrefix "/" .Values.ingress.path)) -}}
+{{- $ingressPath := include "bngblaster-gui.ingressPath" . -}}
+{{- $isRootPath := eq $ingressPath "/" -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,7 +8,7 @@ metadata:
   labels:
     {{- include "bngblaster-gui.labels" . | nindent 4 }}
 data:
-  BNGBLASTER_BACKEND_URL: {{ printf "%s/api" $ingressPath | quote }}
+  BNGBLASTER_BACKEND_URL: {{ ternary "/api" (printf "%s/api" $ingressPath) $isRootPath | quote }}
   FRONTEND_URL: {{ $ingressPath | quote }}
 ---
 apiVersion: v1
@@ -25,12 +26,17 @@ data:
         root /usr/share/nginx/html;
         index index.html;
 
+        {{- if not $isRootPath }}
         location = {{ $ingressPath }} {
             return 302 {{ $ingressPath }}/;
         }
 
-        location {{ $ingressPath }}/api/ {
-            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
+        location {{ $ingressPath }}/ {
+            rewrite ^{{ $ingressPath }}/(.*)$ /$1 last;
+        }
+        {{- end }}
+
+        location ~ ^/api(?:/|$) {
             proxy_pass http://{{ include "bngblaster-gui.backendName" . }}:{{ .Values.backend.service.port }};
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
@@ -39,18 +45,19 @@ data:
             proxy_read_timeout 300s;
         }
 
-        location {{ $ingressPath }}/docs {
-            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
+        location = /docs {
             proxy_pass http://{{ include "bngblaster-gui.backendName" . }}:{{ .Values.backend.service.port }};
         }
 
-        location {{ $ingressPath }}/openapi.json {
-            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
+        location = /docs/oauth2-redirect {
             proxy_pass http://{{ include "bngblaster-gui.backendName" . }}:{{ .Values.backend.service.port }};
         }
 
-        location {{ $ingressPath }}/ {
-            rewrite ^{{ $ingressPath }}/(.*)$ /$1 break;
+        location = /openapi.json {
+            proxy_pass http://{{ include "bngblaster-gui.backendName" . }}:{{ .Values.backend.service.port }};
+        }
+
+        location / {
             try_files $uri $uri/ /index.html;
         }
     }

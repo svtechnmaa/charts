@@ -1,4 +1,5 @@
-{{- $ingressPath := trimSuffix "/" (printf "/%s" (trimPrefix "/" .Values.ingress.path)) -}}
+{{- $ingressPath := include "bngblaster-gui.ingressPath" . -}}
+{{- $probePath := ternary "/" (printf "%s/" $ingressPath) (eq $ingressPath "/") -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -25,6 +26,9 @@ spec:
         - name: frontend
           image: {{ include "bngblaster-gui.image" (dict "root" . "component" "frontend" "image" .Values.frontend.image) | quote }}
           imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          env:
+            - name: VITE_BASE_PATH
+              value: {{ $probePath | quote }}
           ports:
             - name: http
               containerPort: 80
@@ -34,13 +38,13 @@ spec:
               subPath: default.conf
           readinessProbe:
             httpGet:
-              path: {{ printf "%s/" $ingressPath }}
+              path: {{ $probePath }}
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: {{ printf "%s/" $ingressPath }}
+              path: {{ $probePath }}
               port: http
             initialDelaySeconds: 20
             periodSeconds: 20

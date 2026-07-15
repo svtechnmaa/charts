@@ -1,5 +1,6 @@
 global:
   imageRegistry: ghcr.io
+  basePath: /opt/shared
 
 ingress:
   enabled: true
@@ -14,7 +15,7 @@ frontend:
   replicaCount: 1
   image:
     repository: "svtechnmaa/bngblaster-gui-frontend"
-    tag: "v1.0.0"
+    tag: "v1.1.2"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -26,13 +27,20 @@ backend:
   replicaCount: 1
   image:
     repository: "svtechnmaa/bngblaster-gui-backend"
-    tag: "v1.0.0"
+    tag: "v1.1.2"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
     port: 8000
     targetPort: 8000
   resources: {}
+  dataPersistence:
+    enabled: true
+    volumeName: backend-data
+    hostPath: backend-data
+    mountPath: /app/app/data
+    sourcePath: /app/app/data
+    fileName: all_conf.yml
   secret:
     secretKey: ""
     fernetKey: ""

@@ -20,6 +20,24 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-pull-secret
+      {{- if .Values.backend.dataPersistence.enabled }}
+      initContainers:
+        - name: init-backend-data
+          image: {{ include "bngblaster-gui.image" (dict "root" . "component" "backend" "image" .Values.backend.image) | quote }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /mnt/backend-data
+              if [ -f "{{ .Values.backend.dataPersistence.sourcePath }}/{{ .Values.backend.dataPersistence.fileName }}" ] && [ ! -f "/mnt/backend-data/{{ .Values.backend.dataPersistence.fileName }}" ]; then
+                cp "{{ .Values.backend.dataPersistence.sourcePath }}/{{ .Values.backend.dataPersistence.fileName }}" "/mnt/backend-data/{{ .Values.backend.dataPersistence.fileName }}"
+              fi
+          volumeMounts:
+            - name: {{ .Values.backend.dataPersistence.volumeName }}
+              mountPath: /mnt/backend-data
+      {{- end }}
       containers:
         - name: backend
           image: {{ include "bngblaster-gui.image" (dict "root" . "component" "backend" "image" .Values.backend.image) | quote }}
@@ -44,8 +62,20 @@ spec:
               port: http
             initialDelaySeconds: 30
             periodSeconds: 20
+          {{- if .Values.backend.dataPersistence.enabled }}
+          volumeMounts:
+            - name: {{ .Values.backend.dataPersistence.volumeName }}
+              mountPath: {{ .Values.backend.dataPersistence.mountPath }}
+          {{- end }}
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- if .Values.backend.dataPersistence.enabled }}
+      volumes:
+        - name: {{ .Values.backend.dataPersistence.volumeName }}
+          hostPath:
+            path: {{ include "bngblaster-gui.backendDataHostPath" . | quote }}
+            type: DirectoryOrCreate
+      {{- end }}
 ---
 apiVersion: v1
 kind: Service

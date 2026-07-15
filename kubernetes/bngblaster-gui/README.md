@@ -40,7 +40,7 @@ Override them only when deploying a different build.
 By default the chart is configured for path-based ingress at:
 
 ```text
-/bngblaster
+/bngblaster-gui
 ```
 
 Key values:
@@ -50,14 +50,14 @@ ingress:
   enabled: true
   className: ""
   host: ""
-  path: /bngblaster
+  path: /bngblaster-gui
 ```
 
 When you use a host or IP with this path, requests are routed as:
 
 ```text
-http://<host-or-ip>/bngblaster -> frontend
-http://<host-or-ip>/bngblaster/api -> backend
+http://<host-or-ip>/bngblaster-gui -> frontend
+http://<host-or-ip>/bngblaster-gui/api -> backend
 ```
 
 ## Database

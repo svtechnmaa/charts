@@ -31,8 +31,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "bngblaster-gui.image" -}}
 {{- $repository := required (printf "%s.image.repository is required" .component) .image.repository -}}
 {{- $tag := required (printf "%s.image.tag is required" .component) .image.tag -}}
-{{- if .root.Values.global.imageRegistry -}}
-{{- printf "%s/%s:%s" (.root.Values.global.imageRegistry | trimSuffix "/") $repository $tag -}}
+{{- $global := default dict .root.Values.global -}}
+{{- if $global.imageRegistry -}}
+{{- printf "%s/%s:%s" ($global.imageRegistry | trimSuffix "/") $repository $tag -}}
 {{- else -}}
 {{- printf "%s:%s" $repository $tag -}}
 {{- end -}}
@@ -62,5 +63,26 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- index $namespace "name" -}}
 {{- else -}}
 {{- .Release.Namespace -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "bngblaster-gui.ingressPath" -}}
+{{- $path := default "/" .Values.ingress.path -}}
+{{- $normalized := trimSuffix "/" (printf "/%s" (trimPrefix "/" $path)) -}}
+{{- if eq $normalized "" -}}
+/
+{{- else -}}
+{{- $normalized -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "bngblaster-gui.backendDataHostPath" -}}
+{{- $namespace := include "bngblaster-gui.namespace" . -}}
+{{- $hostPath := .Values.backend.dataPersistence.hostPath -}}
+{{- if hasPrefix "/" $hostPath -}}
+{{- $hostPath -}}
+{{- else -}}
+{{- $basePath := default "/opt/shared" .Values.global.basePath | trimSuffix "/" -}}
+{{- printf "%s/%s/%s" $basePath $namespace $hostPath -}}
 {{- end -}}
 {{- end -}}
