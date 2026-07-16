@@ -75,6 +75,13 @@ image:
   tag: v1.1.0
   pullPolicy: IfNotPresent
 
+cronjob:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/svtech_kubectl
+    tag: latest
+    pullPolicy: IfNotPresent
+
 # This is to override the chart name.
 nameOverride: ""
 fullnameOverride: ""
