@@ -1,0 +1,13 @@
+apiVersion: v2
+annotations:
+  category: registry
+name: docker-registry
+description: Docker registry
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: 1.x.x
+
+version: 1.0.0
+appVersion: "v1.0.0"
