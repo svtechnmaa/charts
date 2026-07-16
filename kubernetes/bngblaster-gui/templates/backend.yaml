@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "bngblaster-gui.backendName" . }}
-  namespace: {{ include "bngblaster-gui.namespace" . | quote }}
   labels:
     {{- include "bngblaster-gui.labels" . | nindent 4 }}
     app.kubernetes.io/component: backend
@@ -15,7 +14,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "bngblaster-gui.selectorLabels" . | nindent 8 }}
+{{- include "bngblaster-gui.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: backend
     spec:
       imagePullSecrets:
@@ -84,7 +83,6 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "bngblaster-gui.backendName" . }}
-  namespace: {{ include "bngblaster-gui.namespace" . | quote }}
   labels:
     {{- include "bngblaster-gui.labels" . | nindent 4 }}
     app.kubernetes.io/component: backend

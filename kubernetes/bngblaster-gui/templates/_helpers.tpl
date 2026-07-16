@@ -38,18 +38,10 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- required "externalPostgresql.host is required" $host -}}
 {{- end -}}
 
-{{- define "bngblaster-gui.namespace" -}}
-{{- $namespace := index .Values "namespace" -}}
-{{- if and $namespace (index $namespace "name") -}}
-{{- index $namespace "name" -}}
-{{- else -}}
-{{- .Release.Namespace -}}
-{{- end -}}
-{{- end -}}
-
 {{- define "bngblaster-gui.ingressPath" -}}
 {{- $path := default "/" .Values.ingress.path -}}
-{{- $normalized := trimSuffix "/" (printf "/%s" (trimPrefix "/" $path)) -}}
+{{- $stripped := regexReplaceAll "^/+" $path "" -}}
+{{- $normalized := trimSuffix "/" (printf "/%s" $stripped) -}}
 {{- if eq $normalized "" -}}
 /
 {{- else -}}
@@ -58,13 +50,12 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end -}}
 
 {{- define "bngblaster-gui.backendDataHostPath" -}}
-{{- $namespace := include "bngblaster-gui.namespace" . -}}
 {{- $hostPath := .Values.backend.dataPersistence.hostPath -}}
 {{- if hasPrefix "/" $hostPath -}}
 {{- $hostPath -}}
 {{- else -}}
 {{- $global := default dict .Values.global -}}
 {{- $basePath := default "/opt/shared" $global.basePath | trimSuffix "/" -}}
-{{- printf "%s/%s/%s" $basePath $namespace $hostPath -}}
+{{- printf "%s/%s/%s" $basePath .Release.Namespace $hostPath -}}
 {{- end -}}
 {{- end -}}

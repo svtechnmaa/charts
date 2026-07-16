@@ -23,13 +23,26 @@ helm upgrade --install bngblaster-gui ./bngblaster-gui \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
   --set backend.secret.secretKey=<output-of-openssl-rand-hex-32> \
+  --set backend.secret.fernetKey=<output-of-fernet-generate-key> \
   --set externalPostgresql.host=postgres.database.svc.cluster.local \
   --set externalPostgresql.username=bng_user \
   --set externalPostgresql.password=change-me-db-password \
   --set externalPostgresql.database=bng_web
 ```
 
-Generate `backend.secret.secretKey` with `openssl rand -hex 32`; it should be a 64-character hex string.
+Generate the required backend keys before installation:
+
+```bash
+# Generate backend.secret.secretKey
+openssl rand -hex 32
+
+# Generate backend.secret.fernetKey
+openssl rand -base64 32 | tr '/+' '_-'
+```
+
+- Use the first output for `backend.secret.secretKey`.
+- Use the second output for `backend.secret.fernetKey`.
+- Keep both values stable across upgrades. Changing `secretKey` invalidates existing login tokens; changing `fernetKey` makes previously encrypted credentials unreadable.
 
 The chart already defines default image repositories and tags in `values.yaml`.
 Override them only when deploying a different build.

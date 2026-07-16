@@ -4,7 +4,6 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "bngblaster-gui.frontendName" . }}
-  namespace: {{ include "bngblaster-gui.namespace" . | quote }}
   labels:
     {{- include "bngblaster-gui.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
@@ -17,10 +16,7 @@ spec:
   ingressClassName: {{ . | quote }}
   {{- end }}
   rules:
-    - {{- if .Values.ingress.host }}
-      host: {{ .Values.ingress.host | quote }}
-      {{- end }}
-      http:
+    - http:
         paths:
           - path: {{ $ingressPath | quote }}
             pathType: {{ .Values.ingress.pathType }}
@@ -29,6 +25,9 @@ spec:
                 name: {{ include "bngblaster-gui.frontendName" . }}
                 port:
                   number: {{ .Values.frontend.service.port }}
+      {{- with .Values.ingress.host }}
+      host: {{ . | quote }}
+      {{- end }}
   {{- with .Values.ingress.tls }}
   tls:
     {{- toYaml . | nindent 4 }}
