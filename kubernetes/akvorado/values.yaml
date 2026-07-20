@@ -12,14 +12,15 @@ global:
 timezone: "Asia/Ho_Chi_Minh"
 init:
   image:
-    registry: docker.io
-    repository: busybox
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
     tag: 1.33
     pullPolicy: IfNotPresent
       
 console:
   image:
-    repository: ghcr.io/akvorado/akvorado
+    registry: ghcr.io
+    repository: svtechnmaa/akvorado
     tag: 1.11.2
     pullPolicy: IfNotPresent
   replicaCount: 1
@@ -37,7 +38,8 @@ console:
 
 redis:
   image:
-    repository: bitnamilegacy/valkey
+    registry: ghcr.io
+    repository: svtechnmaa/valkey
     tag: 7.2
     pullPolicy: IfNotPresent
   replicaCount: 1
@@ -48,7 +50,8 @@ redis:
   
 inlet:
   image:
-    repository: ghcr.io/akvorado/akvorado
+    registry: ghcr.io
+    repository: svtechnmaa/akvorado
     tag: 1.11.2
     pullPolicy: IfNotPresent
   replicaCount: 2
@@ -70,7 +73,8 @@ inlet:
 
 orchestrator:
   image:
-    repository: ghcr.io/akvorado/akvorado
+    registry: ghcr.io
+    repository: svtechnmaa/akvorado
     tag: 1.11.2
     pullPolicy: IfNotPresent
   replicaCount: 1
@@ -86,8 +90,9 @@ orchestrator:
 
 geoip:
   image:
-    repository: ghcr.io/akvorado/ipinfo-geoipupdate
-    tag: latest
+    registry: ghcr.io
+    repository: svtechnmaa/ipinfo-geoipupdate
+    tag: 2026-01-10-a7bdfc
     pullPolicy: IfNotPresent
   env:
     ipinfo_token: "a2632ea59736c7"

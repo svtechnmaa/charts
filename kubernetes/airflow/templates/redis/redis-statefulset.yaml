@@ -74,7 +74,7 @@ spec:
       securityContext: {{ $securityContext | nindent 8 }}
       containers:
         - name: redis
-          image: {{ template "redis_image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.redis "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.images.redis.pullPolicy }}
           command: ["/bin/sh"]
           resources:

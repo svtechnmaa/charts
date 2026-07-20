@@ -5,10 +5,12 @@ global:
     replicaCount: 3
 init:
   image:
-    repository: mysql
+    registry: ghcr.io
+    repository: svtechnmaa/mysql
     tag: 8.2.0
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech_maxscale
   tag: v1.0.8
   pullPolicy: IfNotPresent

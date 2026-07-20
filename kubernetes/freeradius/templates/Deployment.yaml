@@ -66,12 +66,12 @@ spec:
       {{- if .Values.topologySpreadConstraints }}
       topologySpreadConstraints: {{- include "common.tplvalues.render" (dict "value" .Values.topologySpreadConstraints "context" .) | nindent 8 }}
       {{- end }}
-      {{- if .Values.initContainers }}
-      initContainers: {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
-      {{- end }}
       initContainers:
+      {{- if .Values.initContainers }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.initContainers "context" $) | nindent 8 }}
+      {{- end }}
         - name: wait-for-mariadb
-          image: {{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.db.image "global" .Values.global) }}
           env:
           - name: SERVER_HOST
             value: {{ .Values.externalDatabase.host | quote }}

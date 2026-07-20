@@ -116,15 +116,15 @@ webServer:
 initContainer:
   waitForRedis:
     image:
-      registry: docker.io
-      repository: alpine
+      registry: ghcr.io
+      repository: svtechnmaa/alpine
       tag: 3.22.1
       digest: ""
   waitForPostgres:
     image:
-      registry: docker.io
-      repository: busybox
-      tag: 1.37.0
+      registry: ghcr.io
+      repository: svtechnmaa/busybox
+      tag: 1.33
       digest: ""
 
 # Enable Postgres as the DB
@@ -136,8 +136,8 @@ postgresql:
     password: "dummy@123"
     database: "mageai_nmaa"
   image:
-    registry: docker.io
-    repository: bitnamilegacy/postgresql
+    registry: ghcr.io
+    repository: svtechnmaa/postgresql
     tag: 17.2.0-debian-12-r3
     digest: ""
   persistence:

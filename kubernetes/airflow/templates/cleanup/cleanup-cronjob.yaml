@@ -83,7 +83,7 @@ spec:
           securityContext: {{ $securityContext | nindent 12 }}
           containers:
             - name: airflow-cleanup-pods
-              image: {{ template "airflow_image" . }}
+              image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.airflow "global" .Values.global ) }}
               imagePullPolicy: {{ .Values.images.airflow.pullPolicy }}
               {{- if .Values.cleanup.command }}
               command: {{ tpl (toYaml .Values.cleanup.command) . | nindent 16 }}

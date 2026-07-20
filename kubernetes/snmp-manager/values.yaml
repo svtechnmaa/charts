@@ -34,6 +34,7 @@ global:
 clusterDomain: cluster.local
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech_snmp_manager
   tag: v1.1.2
   pullPolicy: IfNotPresent

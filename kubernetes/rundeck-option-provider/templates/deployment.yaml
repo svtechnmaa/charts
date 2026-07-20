@@ -51,7 +51,7 @@ spec:
       {{- if .Values.init }}
       initContainers:
         - name: wait-for-init-repo
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.init.image) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh

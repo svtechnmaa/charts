@@ -61,7 +61,7 @@ spec:
       {{- if and .Values.volumePermissions.enabled .Values.persistence.enabled }}
       initContainers:
         - name: init-chmod-data
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image ) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.volumePermissions.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.volumePermissions.image.pullPolicy | quote }}
           command:
             - /bin/bash
@@ -87,7 +87,7 @@ spec:
       {{- end }}
       containers:
         - name: influxdb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.influxdb.securityContext.enabled }}
           securityContext:

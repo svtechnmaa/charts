@@ -53,7 +53,6 @@ spec:
         - name: init-seed
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
@@ -103,7 +102,6 @@ spec:
         - name: {{ .Chart.Name }}-server # replace if needed
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -157,7 +155,6 @@ spec:
         - name: {{ .Chart.Name }}-worker # replace if needed
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
