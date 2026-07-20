@@ -61,7 +61,7 @@ spec:
       # Init contaiter: change own for icingaweb config directory and waiting for icinga master
       initContainers:
         - name: icingaweb-init
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy }}
           command:
             - /bin/sh
@@ -207,7 +207,7 @@ spec:
         # chromedp container for pdf export module
         {{- if .Values.modules.pdfexport.enabled }}
         - name: chromedp # replace if needed
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chromedp.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chromedp.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.chromedp.image.pullPolicy }}
           env:
             - name: TZ

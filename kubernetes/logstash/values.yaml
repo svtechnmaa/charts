@@ -22,6 +22,13 @@ timezone: Asia/Ho_Chi_Minh
 replicas: 2
 heapSize: 1001m
 
+init:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
+    tag: 1.33
+    pullPolicy: IfNotPresent
+    
 affinity:
   podAntiAffinity:
     requiredDuringSchedulingIgnoredDuringExecution:

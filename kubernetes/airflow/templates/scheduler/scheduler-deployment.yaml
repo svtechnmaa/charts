@@ -147,12 +147,12 @@ spec:
         {{- include "git_sync_container" (dict "Values" .Values "is_init" "true") | nindent 8 }}
         {{- end }}
         {{- if .Values.scheduler.extraInitContainers }}
-        {{- toYaml .Values.scheduler.extraInitContainers | nindent 8 }}
+        {{- tpl (toYaml .Values.scheduler.extraInitContainers) . | nindent 8 }}
         {{- end }}
       containers:
         # Always run the main scheduler container.
         - name: scheduler
-          image: {{ template "airflow_image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.airflow "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.images.airflow.pullPolicy }}
           {{- if .Values.scheduler.command }}
           command: {{ tpl (toYaml .Values.scheduler.command) . | nindent 12 }}
@@ -225,7 +225,7 @@ spec:
         - name: scheduler-log-groomer
           resources:
 {{ toYaml .Values.scheduler.logGroomerSidecar.resources | indent 12 }}
-          image: {{ template "airflow_image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.airflow "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.images.airflow.pullPolicy }}
           {{- if .Values.scheduler.logGroomerSidecar.command }}
           command: {{ tpl (toYaml .Values.scheduler.logGroomerSidecar.command) . | nindent 12 }}

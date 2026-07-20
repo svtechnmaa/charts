@@ -37,7 +37,7 @@ spec:
       {{- end }}
       containers:
         - name: filebeat
-          image: docker.elastic.co/beats/filebeat:{{.Values.global.elasticsearch.version}}
+          image: '{{ .Values.global.imageRegistry | default "ghcr.io" }}/svtechnmaa/filebeat:{{.Values.global.elasticsearch.version}}'
           args: [
             "-c", "/etc/filebeat.yml",
             "-e",
@@ -88,6 +88,10 @@ spec:
           # - name: index-syslog
           #   mountPath: /var/tmp/index_syslog/
           #   readOnly: true
+
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+
       volumes:
       - name: config
         configMap:

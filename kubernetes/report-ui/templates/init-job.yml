@@ -60,6 +60,10 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      
       volumes:
       - secret:
           defaultMode: 420

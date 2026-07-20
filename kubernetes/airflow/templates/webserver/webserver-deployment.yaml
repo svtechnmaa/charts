@@ -144,7 +144,7 @@ spec:
         {{- end }}
       containers:
         - name: webserver
-          image: {{ template "airflow_image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.airflow "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.images.airflow.pullPolicy }}
           {{- if .Values.webserver.command }}
           command: {{ tpl (toYaml .Values.webserver.command) . | nindent 12 }}

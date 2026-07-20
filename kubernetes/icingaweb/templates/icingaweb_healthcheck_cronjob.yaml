@@ -17,7 +17,7 @@ spec:
             - name: ghcr-pull-secret
           containers:
             - name: icingaweb-health-check
-              image: ghcr.io/svtechnmaa/svtech_kubectl:latest  # Minimal image with kubectl & bash
+              image: {{ include "common.images.image" ( dict "imageRoot" .Values.cronjob.image "global" .Values.global) }}
               command:
               - /bin/bash
               - -c

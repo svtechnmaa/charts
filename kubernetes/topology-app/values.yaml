@@ -27,11 +27,11 @@ replicaCount: 1
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech_topology_visualizer_be # CHANGE THIS TO YOUR IMAGE
+  tag: v1.0.2
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest" # CHANGE THIS TO YOUR IMAGE TAG. "LATEST" IS NOT RECOMMENDED. 
 
 # This is to override the chart name.
 nameOverride: ""

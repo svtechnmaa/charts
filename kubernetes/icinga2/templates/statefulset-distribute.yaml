@@ -400,7 +400,9 @@ spec:
             {{- end }}
 
             {{- end }}
-
+      
+      
+        
       volumes:
         {{- range .Values.global.sharedPersistenceVolume }}
 
@@ -414,6 +416,8 @@ spec:
 
 
       {{- end  }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret
 
 
 

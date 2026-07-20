@@ -13,12 +13,13 @@ timezone: Asia/Ho_Chi_Minh
 
 init:
   image:
-    registry: docker.io
-    repository: busybox
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
     tag: 1.33
     pullPolicy: IfNotPresent
 
 image:
+  registry: ghcr.io
   repository: svtechnmaa/svtech_grafana
   tag: v1.3.1
   pullPolicy: IfNotPresent
@@ -26,7 +27,8 @@ image:
 
 renderer:
   image:
-    repository: grafana/grafana-image-renderer
+    registry: ghcr.io
+    repository: svtechnmaa/grafana-image-renderer
     tag: v4.0.10
     pullPolicy: IfNotPresent
   service:
@@ -35,8 +37,9 @@ renderer:
 
 chrome:
   image:
-    repository: chromedp/headless-shell
-    tag: 138.0.7204.101
+    registry: ghcr.io
+    repository: svtechnmaa/headless-shell
+    tag: 146.0.7680.80
     pullPolicy: IfNotPresent
   service:
     port: 9222

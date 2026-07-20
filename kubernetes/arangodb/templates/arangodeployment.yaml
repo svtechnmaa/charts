@@ -5,8 +5,10 @@ metadata:
   name: {{ include "common.names.fullname" . }}
 spec:
   mode: {{ $effectiveMode }}
-  image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-  # image: arangodb/arangodb:{{ .Values.image.tag }}
+  image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+  imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+  imagePullSecrets:
+    - ghcr-pull-secret
   bootstrap:
     passwordSecretNames:
       root: {{ .Values.auth.secretName }}

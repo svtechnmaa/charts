@@ -22,7 +22,7 @@ spec:
     spec:
       initContainers:
         - name: wait-for-backend
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.frontend.init.image) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.frontend.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.frontend.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -49,7 +49,7 @@ spec:
             {{- end }}
           {{- end }}
       containers:
-      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image ) }}
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global) }}
         {{- if .Values.frontend.image.pullPolicy }}
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         {{- end }}

@@ -78,7 +78,7 @@ spec:
       {{- end }}
       containers:
         - name: statsd
-          image: {{ template "statsd_image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.images.statsd "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.images.statsd.pullPolicy }}
           args:
             - "--statsd.mapping-config=/etc/statsd-exporter/mappings.yml"
