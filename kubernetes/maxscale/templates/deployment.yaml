@@ -105,7 +105,7 @@ spec:
             {{- end }}
           ports:
           {{- range .Values.routers }}
-            - name: {{ .id | replace "_" "-" | trunc 15 }}
+            - name: {{ .id | lower | replace "_" "-" | trunc 15 | trimSuffix "-" }}
               containerPort: {{ .port }}
           {{- end }}
       imagePullSecrets:
@@ -130,7 +130,7 @@ spec:
     app.kubernetes.io/component: maxscale
   ports:
     {{- range .Values.routers }}
-    - name: {{ .id | replace "_" "-" | trunc 15 }}
+    - name: {{ .id | lower | replace "_" "-" | trunc 15 | trimSuffix "-" }}
       protocol: TCP
       port: {{ .servicePort }}
       targetPort: {{ .port }}
