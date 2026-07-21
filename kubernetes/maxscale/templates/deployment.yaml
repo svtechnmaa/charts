@@ -91,8 +91,23 @@ spec:
               value: {{ .Values.maxscaleConfig.monitor_user }}
             - name: MONITOR_PASSWORD
               value: {{ .Values.maxscaleConfig.monitor_user_password }}
+            - name: MAXSCALE_ROUTERS
+              value: "{{- range $i, $r := .Values.routers }}{{- if $i }},{{ end }}{{ $r.id }}{{- end }}"
+            {{- range .Values.routers }}
+            - name: MXS_{{ .id }}_TYPE
+              value: {{ .type | quote }}
+            - name: MXS_{{ .id }}_PORT
+              value: {{ .port | quote }}
+            {{- if .options }}
+            - name: MXS_{{ .id }}_ROUTER_OPTIONS
+              value: {{ .options | quote }}
+            {{- end }}
+            {{- end }}
           ports:
-          - containerPort: {{ .Values.maxscaleConfig.port }}
+          {{- range .Values.routers }}
+            - name: {{ .id | replace "_" "-" | trunc 15 }}
+              containerPort: {{ .port }}
+          {{- end }}
       imagePullSecrets:
       - name: ghcr-pull-secret
       affinity:
@@ -114,9 +129,12 @@ spec:
   selector:
     app.kubernetes.io/component: maxscale
   ports:
-    - protocol: TCP
-      port: 3306
-      targetPort: {{ .Values.maxscaleConfig.port }}
+    {{- range .Values.routers }}
+    - name: {{ .id | replace "_" "-" | trunc 15 }}
+      protocol: TCP
+      port: {{ .servicePort }}
+      targetPort: {{ .port }}
+    {{- end }}
   {{- if .Values.global.externalIP }}
   externalIPs:
   - {{ .Values.global.externalIP }}
