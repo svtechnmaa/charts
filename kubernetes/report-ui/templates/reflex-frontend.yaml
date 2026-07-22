@@ -29,11 +29,11 @@ spec:
             - -c
             - |
               until nc -zvw5 {{ .Chart.Name }}-backend {{ .Values.backend.service.port }}; do echo "Waiting for Backend..."; sleep 2; done
-              until [ `ls -A /usr/share/nginx/html/ | grep 'completed' | wc -l` != 0 ];
-              do
-                echo "Waiting for Init Repo...";
-                sleep 2;
-              done
+              # until [ `ls -A /usr/share/nginx/html/ | grep 'completed' | wc -l` != 0 ];
+              # do
+              #   echo "Waiting for Init Repo...";
+              #   sleep 2;
+              # done
           {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
           volumeMounts:
             {{- range .Values.global.sharedPersistenceVolume }}
