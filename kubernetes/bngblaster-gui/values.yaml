@@ -1,0 +1,63 @@
+global:
+  imageRegistry: ghcr.io
+  basePath: /opt/shared
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  host: ""
+  path: /bngblaster-gui
+  pathType: Prefix
+  tls: []
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: "svtechnmaa/bngblaster-gui-frontend"
+    tag: "v1.1.3"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  resources: {}
+
+backend:
+  replicaCount: 1
+  image:
+    repository: "svtechnmaa/bngblaster-gui-backend"
+    tag: "v1.1.3"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  resources: {}
+  dataPersistence:
+    enabled: true
+    volumeName: backend-data
+    hostPath: backend-data
+    mountPath: /app/app/data
+    sourcePath: /app/app/data
+    fileName: all_conf.yml
+  secret:
+    secretKey: ""
+    fernetKey: ""
+    googleClientId: ""
+    googleClientSecret: ""
+    googleRedirectUri: ""
+    keycloakServerUrl: ""
+    keycloakRealm: ""
+    keycloakClientId: ""
+    keycloakClientSecret: ""
+    keycloakRedirectUri: ""
+
+# Default mode uses an external PostgreSQL database.
+# Fill these values to point the backend to your existing PostgreSQL service.
+externalPostgresql:
+  host: ""
+  port: 5432
+  username: ""
+  password: ""
+  database: ""

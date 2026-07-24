@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "bngblaster-gui.backendName" . }}
+  labels:
+    {{- include "bngblaster-gui.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "bngblaster-gui.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+{{- include "bngblaster-gui.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      {{- if .Values.backend.dataPersistence.enabled }}
+      initContainers:
+        - name: init-backend-data
+          image: {{ include "bngblaster-gui.image" (dict "root" . "component" "backend" "image" .Values.backend.image) | quote }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+              mkdir -p /mnt/backend-data
+              if [ -f "{{ .Values.backend.dataPersistence.sourcePath }}/{{ .Values.backend.dataPersistence.fileName }}" ] && [ ! -f "/mnt/backend-data/{{ .Values.backend.dataPersistence.fileName }}" ]; then
+                cp "{{ .Values.backend.dataPersistence.sourcePath }}/{{ .Values.backend.dataPersistence.fileName }}" "/mnt/backend-data/{{ .Values.backend.dataPersistence.fileName }}"
+                echo "Initialized data successfully"
+              else
+                echo "Data already initialized, skipping"
+              fi
+          volumeMounts:
+            - name: {{ .Values.backend.dataPersistence.volumeName }}
+              mountPath: /mnt/backend-data
+      {{- end }}
+      containers:
+        - name: backend
+          image: {{ include "bngblaster-gui.image" (dict "root" . "component" "backend" "image" .Values.backend.image) | quote }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: {{ include "bngblaster-gui.fullname" . }}-config
+            - secretRef:
+                name: {{ include "bngblaster-gui.fullname" . }}-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          {{- if .Values.backend.dataPersistence.enabled }}
+          volumeMounts:
+            - name: {{ .Values.backend.dataPersistence.volumeName }}
+              mountPath: {{ .Values.backend.dataPersistence.mountPath }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- if .Values.backend.dataPersistence.enabled }}
+      volumes:
+        - name: {{ .Values.backend.dataPersistence.volumeName }}
+          hostPath:
+            path: {{ include "bngblaster-gui.backendDataHostPath" . | quote }}
+            type: DirectoryOrCreate
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "bngblaster-gui.backendName" . }}
+  labels:
+    {{- include "bngblaster-gui.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  type: {{ .Values.backend.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.backend.service.port }}
+      targetPort: {{ .Values.backend.service.targetPort }}
+  selector:
+    {{- include "bngblaster-gui.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
