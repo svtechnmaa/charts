@@ -26,6 +26,14 @@ maxscaleConfig:
     - db03://10.98.3.13:3306
   monitor_user: maxscale_monitor
   monitor_user_password: maxscale@123
-  port: 4006
+
+# List of MaxScale router services to expose. Each entry becomes a router
+# inside the container (env MXS_<id>_TYPE / _PORT / _ROUTER_OPTIONS) and a
+# port on the mariadb Service. Default = single readwritesplit on 4006.
+routers:
+  - id: rwsplit
+    type: readwritesplit
+    port: 4006
+    servicePort: 3306
 
 replicaCount: 2
