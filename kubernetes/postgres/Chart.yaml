@@ -1,0 +1,51 @@
+apiVersion: v2
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "0.0.1"
+
+description: A Helm chart for PostgreSQL
+
+name: postgres
+dependencies:
+  - name: postgresql
+    version: 16.3.2
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+
+  # common 2.x.x — loaded alongside bitnami postgresql (matches its bundled version, avoids conflict)
+  - name: common
+    version: 2.x.x
+    repository: https://charts.bitnami.com/bitnami
+    alias: common-standalone
+    condition: postgresql.enabled
+
+  # common 1.x.x — loaded alongside postgresql-ha
+  - name: common
+    version: 1.x.x
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    condition: postgresql-ha.enabled
+
+  - name: postgresql-ha
+    version: 9.4.6-svtech
+    repository: https://svtechnmaa.github.io/charts/artifacthub/postgresql-ha
+    condition: postgresql-ha.enabled
+
+
+
+# A chart can be either an 'application' or a 'library' chart.
+#
+# Application charts are a collection of templates that can be packaged into versioned archives
+# to be deployed.
+#
+# Library charts provide useful utilities or functions for the chart developer. They're included as
+# a dependency of application charts to inject those utilities and functions into the rendering
+# pipeline. Library charts do not define any templates and therefore cannot be deployed.
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.0.1
