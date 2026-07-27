@@ -4,6 +4,7 @@ metadata:
   name: {{.Values.global.elasticsearch.clusterName}}
 spec:
   version: {{.Values.global.elasticsearch.version}}
+  image: '{{ .Values.global.imageRegistry | default "ghcr.io" }}/svtechnmaa/kibana:{{.Values.global.elasticsearch.version}}'
   count: 1
   elasticsearchRef:
     name: {{.Values.global.elasticsearch.clusterName}}
@@ -59,6 +60,7 @@ spec:
         #   limits:
         #     memory: 4Gi #2Gi
 
-
-
-
+      {{- if eq (.Values.global.imageRegistry | default "ghcr.io") "ghcr.io" }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      {{- end }}

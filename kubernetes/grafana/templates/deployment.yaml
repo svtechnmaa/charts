@@ -50,7 +50,7 @@ spec:
       {{- if .Values.init }}
       initContainers:
         - name: wait-for-mariadb
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
@@ -97,8 +97,6 @@ spec:
               value: "true"
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-            - name: GF_INSTALL_PLUGINS
-              value: briangann-datatable-panel,sni-thruk-datasource,yesoreyeram-infinity-datasource,grafana-clickhouse-datasource,netsage-sankey-panel,retrodaredevil-wildgraphql-datasource,marcusolsson-dynamictext-panel,volkovlabs-echarts-panel,volkovlabs-table-panel,volkovlabs-form-panel,volkovlabs-links-panel,volkovlabs-variable-panel,marcusolsson-static-datasource
             - name: GF_SERVER_ROOT_URL
               value: "https://{{ .Values.global.frontendVip }}/grafana"
             - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
@@ -131,7 +129,7 @@ spec:
         - args:
           - --ignore-certificate-errors
           - --disable-gpu
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chrome.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.chrome.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.chrome.image.pullPolicy | quote }}
           name: chrome
           ports:
@@ -152,7 +150,7 @@ spec:
             value: "15"
           - name: RENDERING_CLUSTERING_TIMEOUT
             value: "120"
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.renderer.image ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.renderer.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.renderer.image.pullPolicy | quote }}
           name: renderer
           ports:

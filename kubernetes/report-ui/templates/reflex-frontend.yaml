@@ -22,18 +22,18 @@ spec:
     spec:
       initContainers:
         - name: wait-for-backend
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.frontend.init.image) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.frontend.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.frontend.init.image.pullPolicy | quote }}
           command:
             - /bin/sh
             - -c
             - |
               until nc -zvw5 {{ .Chart.Name }}-backend {{ .Values.backend.service.port }}; do echo "Waiting for Backend..."; sleep 2; done
-              until [ `ls -A /usr/share/nginx/html/ | grep 'completed' | wc -l` != 0 ];
-              do
-                echo "Waiting for Init Repo...";
-                sleep 2;
-              done
+              # until [ `ls -A /usr/share/nginx/html/ | grep 'completed' | wc -l` != 0 ];
+              # do
+              #   echo "Waiting for Init Repo...";
+              #   sleep 2;
+              # done
           {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
           volumeMounts:
             {{- range .Values.global.sharedPersistenceVolume }}
@@ -49,7 +49,7 @@ spec:
             {{- end }}
           {{- end }}
       containers:
-      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image ) }}
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.frontend.image "global" .Values.global) }}
         {{- if .Values.frontend.image.pullPolicy }}
         imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
         {{- end }}

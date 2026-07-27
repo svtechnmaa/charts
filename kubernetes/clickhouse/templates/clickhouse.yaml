@@ -64,7 +64,7 @@ spec:
           {{- end }}
           containers:
             - name: clickhouse
-              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouse.image) }}
+              image: {{ include "common.images.image" ( dict "imageRoot" .Values.clickhouse.image "global" .Values.global) }}
               imagePullPolicy: {{ .Values.clickhouse.image.pullPolicy }}
               env:
                 - name: TZ
@@ -79,6 +79,8 @@ spec:
               configMap:
                 name: akvorado-initdb-schema
           {{- end }}
+          imagePullSecrets:
+            - name: ghcr-pull-secret
               
     volumeClaimTemplates:
     {{- range $key, $values := .Values.clickhouse.volumes }}

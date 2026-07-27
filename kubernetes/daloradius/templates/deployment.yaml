@@ -70,7 +70,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: daloradius
-          image: {{ template "daloradius.image" . }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           {{- if .Values.command }}
           command: {{- include "common.tplvalues.render" (dict "value" .Values.command "context" $) | nindent 12 }}

@@ -26,7 +26,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image ) }}
+      - image: {{ include "common.images.image" ( dict "imageRoot" .Values.redis.image "global" .Values.global) }}
         {{- if .Values.redis.image.pullPolicy }}
         imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
         {{- end}}

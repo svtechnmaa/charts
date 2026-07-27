@@ -1,0 +1,23 @@
+{{- if and (eq (.Values.registry.storageBackend | default "s3") "filesystem") .Values.registry.sharedVolume.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.registry.sharedVolume.pvcName | quote }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: docker-registry
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- with .Values.registry.sharedVolume.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.registry.sharedVolume.accessModes }}
+  resources:
+    requests:
+      storage: {{ .Values.registry.sharedVolume.storageSize }}
+  volumeName: {{ .Values.registry.sharedVolume.volumeName | quote }}
+  storageClassName: {{ .Values.registry.sharedVolume.storageClass | quote }}
+{{- end }}

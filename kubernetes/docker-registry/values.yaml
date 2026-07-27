@@ -1,0 +1,154 @@
+global:
+  imageRegistry: ""
+
+imagePullSecret:
+  enabled: true
+  registry: ghcr.io
+  username: ""
+  password: ""
+
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/registry
+  tag: 3.0.0
+  pullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------------------
+# Registry Configuration
+# ---------------------------------------------------------------------------
+registry:
+  # Backend selector: s3 | filesystem
+  storageBackend: s3
+
+  # -------------------------------------------------------------------------
+  # Common settings
+  # -------------------------------------------------------------------------
+  replicaCount: 1
+  strategy:
+    type: Recreate
+
+  log:
+    level: info
+
+  storage:
+    redirect:
+      disable: true
+
+  http:
+    addr: ":5000"
+    # Stable random secret used by the registry to sign client-side state.
+    # Generate one with: openssl rand -hex 32
+    secret: ""
+    headers:
+      XContentTypeOptions: "[nosniff]"
+
+  livenessProbe:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 2Gi
+
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+  podLabels: {}
+
+  # -------------------------------------------------------------------------
+  # S3 backend settings
+  # Used only when registry.storageBackend=s3
+  # -------------------------------------------------------------------------
+  s3:
+    bucket: registry
+    region: us-east-1
+    secure: false
+    rootdirectory: /
+    endpointOverride: ""
+    accesskey: ""
+    secretkey: ""
+    v4auth: true
+    forcepathstyle: true
+    chunksize: 5242880
+    multipartcopythresholdsize: 5368709120
+    multipartcopychunksize: 33554432
+    multipartcopymaxconcurrency: 1
+
+  # -------------------------------------------------------------------------
+  # Filesystem backend settings
+  # Used only when registry.storageBackend=filesystem
+  # -------------------------------------------------------------------------
+  filesystem:
+    rootdirectory: /var/lib/registry
+    delete:
+      enabled: true
+
+  sharedVolume:
+    enabled: true
+    volumeName: "docker-registry"
+    path: "/opt/shared/registry"
+    mountPath: /var/lib/registry
+    pvcName: "docker-registry-pvc"
+    storageSize: 20Gi
+    accessModes: ReadWriteOnce
+    storageClass: registry-local
+    reclaimPolicy: Retain
+    annotations: {}
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 5000
+  nodePort: ""
+  sessionAffinity: None
+  sessionAffinityConfig: {}
+  annotations: {}
+
+# ---------------------------------------------------------------------------
+# Job: Create Bucket
+# Used only when registry.storageBackend=s3
+# ---------------------------------------------------------------------------
+createBucket:
+  activeDeadlineSeconds: 300
+
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/minio-client
+    tag: "2025-08-13"
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# ---------------------------------------------------------------------------
+# SeaweedFS S3 endpoint
+# Used only when registry.storageBackend=s3
+# ---------------------------------------------------------------------------
+seaweedfs:
+  serviceName: seaweedfs-s3
+  namespace: seaweedfs
+  port: 8333
+  protocol: http
+  filerServiceName: seaweedfs-filer-client
+  filerPort: 8888

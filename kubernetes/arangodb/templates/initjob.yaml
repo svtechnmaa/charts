@@ -12,7 +12,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: init
-        image: curlimages/curl:8.5.0
+        image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
         env:
         - name: ARANGO_USER
           valueFrom:
@@ -50,3 +50,7 @@ spec:
             -H "Content-Type: application/json" \
             -X POST https://$ARANGO_HOST/_db/_system/_api/collection \
             -d '{"name":"topo_list"}' || true
+      
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      

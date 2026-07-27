@@ -19,7 +19,8 @@ spec:
     spec:
       containers:
         - name: copy-files
-          image: busybox:1.33
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
           command:
             - "/bin/sh"
             - "-c"
@@ -37,6 +38,8 @@ spec:
           - name: tacgui-data
             mountPath: /tmp/tacplus-data
       restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       volumes:
         - name: tacplus-cfg
           configMap:
