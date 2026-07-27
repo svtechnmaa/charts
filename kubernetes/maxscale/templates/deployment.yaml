@@ -102,6 +102,15 @@ spec:
             - name: MXS_{{ .id }}_ROUTER_OPTIONS
               value: {{ .options | quote }}
             {{- end }}
+            {{- if .servers }}
+            - name: MXS_{{ .id }}_SERVERS
+              value: {{ join "," .servers | quote }}
+            {{- end }}
+            {{- $rid := .id }}
+            {{- range $k, $v := .params }}
+            - name: MXS_{{ $rid }}_{{ $k | upper }}
+              value: {{ $v | quote }}
+            {{- end }}
             {{- end }}
           ports:
           {{- range .Values.routers }}

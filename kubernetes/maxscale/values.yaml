@@ -29,11 +29,77 @@ maxscaleConfig:
 
 # List of MaxScale router services to expose. Each entry becomes a router
 # inside the container (env MXS_<id>_TYPE / _PORT / _ROUTER_OPTIONS) and a
-# port on the mariadb Service. Default = single readwritesplit on 4006.
+# port on the mariadb Service. Default = single readwritesplit on 4006,
+# unscoped (no `servers` = all backends from maxscaleConfig.server), no
+# extra tuning `params` (MaxScale defaults apply).
+#
+# Optional per-router fields (image >= v1.0.10 required):
+#   servers: [id1, id2, ...]   # scope this router to a backend subset.
+#                              # Omit = all backends. Renders MXS_<id>_SERVERS.
+#   params:                    # free-form map of MaxScale router tuning
+#     key: value               # params. Renders MXS_<id>_<KEY> (upper-cased)
+#                              # for each entry, e.g. causal_reads: universal
+#                              # -> MXS_<id>_CAUSAL_READS=universal.
+#   options: "a=b,c=d"         # legacy free-text router_options string.
+#                              # Still supported; params.router_options is
+#                              # the equivalent, preferred going forward.
 routers:
   - id: rwsplit
     type: readwritesplit
     port: 4006
     servicePort: 3306
+
+# --- Copy-paste recipes (all commented out; enable by uncommenting and
+# --- replacing the default `routers:` list above) ---
+
+# Recipe 1: rwsplit with causal_reads=universal
+# Use when the app needs read-your-writes consistency on Galera — after a
+# write, an immediate read on any node reflects that write, at the cost of
+# a small extra wait on reads.
+# routers:
+#   - id: rwsplit
+#     type: readwritesplit
+#     port: 4006
+#     servicePort: 3306
+#     params:
+#       causal_reads: universal
+
+# Recipe 2: readconnroute pinned to master
+# Use when you want a single write endpoint that always resolves to the
+# current primary/master, following failover automatically (rather than
+# doing read/write splitting).
+# routers:
+#   - id: write
+#     type: readconnroute
+#     port: 4007
+#     servicePort: 3307
+#     params:
+#       router_options: master
+
+# Recipe 3: multi-router mix — rwsplit + readconnroute on the same Galera
+# subset, plus a schemarouter spanning two topologies.
+# Use when OLTP traffic needs read/write splitting (rwsplit), read-heavy
+# reporting traffic should be offloaded to replicas (readconnroute with
+# router_options: slave), and a separate schemarouter needs to route by
+# schema across both a Galera cluster (g1) and a standalone/master-replica
+# topology (m1).
+# routers:
+#   - id: rwsplit
+#     type: readwritesplit
+#     port: 4006
+#     servicePort: 3306
+#     servers: [g1, g2, g3]
+#   - id: readoffload
+#     type: readconnroute
+#     port: 4008
+#     servicePort: 3308
+#     servers: [g1, g2, g3]
+#     params:
+#       router_options: slave
+#   - id: schema
+#     type: schemarouter
+#     port: 4009
+#     servicePort: 3309
+#     servers: [g1, m1]
 
 replicaCount: 2
