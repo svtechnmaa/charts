@@ -27,12 +27,19 @@
 {{/*
 Sanitize a router id into a k8s IANA port name:
 - lowercase
-- underscores replaced with hyphens
-- max 15 characters
-- no trailing hyphen
+- any char outside [a-z0-9-] replaced with a hyphen
+- truncated to 15 characters
+- leading and trailing hyphens trimmed (after truncation, so trunc can't
+  leave a dangling '-')
+Fails template rendering if the sanitized result is empty (e.g. an id
+made only of separators like "___").
 */}}
 {{- define "maxscale.portName" -}}
-{{- . | lower | replace "_" "-" | trunc 15 | trimSuffix "-" -}}
+{{- $name := regexReplaceAll "[^a-z0-9-]" (lower .) "-" | trunc 15 | trimAll "-" -}}
+{{- if not $name -}}
+{{- fail (printf "maxscale: router id %q sanitizes to an empty port name — use characters in [a-z0-9]" .) -}}
+{{- end -}}
+{{- $name -}}
 {{- end -}}
 
 {{/*
