@@ -118,7 +118,7 @@ sharedPersistenceVolume:
 # Additional volumes on the output Deployment definition.
 volumes: |
   {{- if .Values.global.speedtest.enabled }}
-  - name: redis-data
+  - name: {{ .Values.sharedPersistenceVolume.volumeName }}
     persistentVolumeClaim:
       claimName: {{ .Values.sharedPersistenceVolume.pvcName }}
   - name: redis-config
@@ -156,3 +156,12 @@ affinity:
 
 timezone: Asia/Ho_Chi_Minh
 env: {}
+
+redisinsight:
+  replicaCount: 1
+  enabled: false
+  port: 15540
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/redisinsight
+    tag: latest
