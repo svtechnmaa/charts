@@ -202,7 +202,7 @@ jobs:
         fi
     
   create_vm:
-    if: ${{ needs.check_charts.outputs.no_ci != 'true' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true' || needs.check_charts.outputs.check_tacgui == 'true') }}
+    if: ${{ needs.check_charts.outputs.no_ci != 'true' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true' || needs.check_charts.outputs.check_tacgui == 'true' || needs.check_charts.outputs.check_radius == 'true') }}
     needs: check_charts
     runs-on: ansible-dind
     permissions:
