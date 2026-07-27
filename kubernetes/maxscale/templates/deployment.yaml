@@ -91,8 +91,10 @@ spec:
               value: {{ .Values.maxscaleConfig.monitor_user }}
             - name: MONITOR_PASSWORD
               value: {{ .Values.maxscaleConfig.monitor_user_password }}
+            {{- include "maxscale.assertUniqueRouters" . }}
             - name: MAXSCALE_ROUTERS
               value: "{{- range $i, $r := .Values.routers }}{{- if $i }},{{ end }}{{ $r.id }}{{- end }}"
+            {{- $reserved := list "type" "port" "servers" }}
             {{- range .Values.routers }}
             - name: MXS_{{ .id }}_TYPE
               value: {{ .type | quote }}
@@ -108,13 +110,16 @@ spec:
             {{- end }}
             {{- $rid := .id }}
             {{- range $k, $v := .params }}
+            {{- if has (lower $k) $reserved }}
+            {{- fail (printf "maxscale: router %q uses reserved key %q in params — use the top-level .%s field instead" $rid $k (lower $k)) }}
+            {{- end }}
             - name: MXS_{{ $rid }}_{{ $k | upper }}
               value: {{ $v | quote }}
             {{- end }}
             {{- end }}
           ports:
           {{- range .Values.routers }}
-            - name: {{ .id | lower | replace "_" "-" | trunc 15 | trimSuffix "-" }}
+            - name: {{ include "maxscale.portName" .id }}
               containerPort: {{ .port }}
           {{- end }}
       imagePullSecrets:
