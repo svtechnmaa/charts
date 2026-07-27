@@ -1,0 +1,43 @@
+{{- if .Values.redisinsight.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redisinsight
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redisinsight
+  template:
+    metadata:
+      labels:
+        app: redisinsight
+    spec:
+      containers:
+        - name: redisinsight
+          image: redis/redisinsight:latest
+          ports:
+            - containerPort: {{ .Values.redisinsight.port }}
+          env:
+            - name: RI_APP_PORT
+              value: {{ .Values.redisinsight.port | quote }}
+            - name: RI_REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: RI_REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: RI_REDIS_DB
+              value: "0"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redisinsight
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: {{ .Values.redisinsight.port }}
+      targetPort: {{ .Values.redisinsight.port }}
+  selector:
+    app: redisinsight
+{{- end }}

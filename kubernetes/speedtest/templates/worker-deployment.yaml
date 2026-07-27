@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-deployment
+spec:
+  replicas: {{ .Values.replicaCount.worker }}
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: {{ .Values.image.scheduler.repository }}:{{ .Values.image.scheduler.tag }}
+          env:
+            - name: NUM_WORKERS
+              value: {{ .Values.worker.numWorkers | quote }}
+            - name: MQTT_BROKER_HOST
+              value: {{ .Values.mqtt.brokerHost | quote }}
+            - name: MQTT_BROKER_PORT
+              value: {{ .Values.mqtt.brokerPort | quote }}
+            - name: MQTT_BROKER_PATH
+              value: {{ .Values.mqtt.brokerPath | quote }}
+            - name: MQTT_BROKER_USERNAME
+              value: {{ .Values.mqtt.username | quote }}
+            - name: MQTT_BROKER_PASSWORD
+              value: {{ .Values.mqtt.password | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+            - name: DB_ENGINE
+              value: {{ .Values.django.dbEngine | quote }}
+            - name: MAX_CONCURRENT_PER_SERVER
+              value: {{ .Values.mqtt.maxConcurrency | quote }}
+          envFrom:
+            - secretRef:
+                name: django-db-secret
+          volumeMounts:
+            - name: logs-volume
+              mountPath: "/app/logs"
+      volumes:
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.mqttLogs.claimName }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret

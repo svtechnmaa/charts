@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-deployment
+spec:
+  replicas: {{ .Values.replicaCount.scheduler }}
+  selector:
+    matchLabels:
+      app: scheduler
+  template:
+    metadata:
+      labels:
+        app: scheduler
+    spec:
+      containers:
+        - name: scheduler
+          image: {{ .Values.image.scheduler.repository }}:{{ .Values.image.scheduler.tag }}
+          command: ["python", "manage.py", "rqscheduler", "--interval", "5"]
+          env:
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+          volumeMounts:
+            - name: logs-volume
+              mountPath: "/app/logs"
+      volumes:
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.mqttLogs.claimName }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret

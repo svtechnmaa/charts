@@ -1,0 +1,13 @@
+{{- if .Values.db.enable }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.pvc.mariadb.claimName }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.pvc.mariadb.size }}
+  storageClassName: {{ .Values.pvc.mariadb.storageClass }}
+{{- end }}

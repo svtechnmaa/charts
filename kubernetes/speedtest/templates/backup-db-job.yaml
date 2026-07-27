@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-db-cronjob
+spec:
+  schedule: "0 2 * * *"  # Every day at 2:00 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup-db
+              image: {{ .Values.image.django.repository }}:{{ .Values.image.django.tag }}
+              command: ["/bin/sh", "-c", "find /app/backup-db -type f -name '*.sql' -mtime +90 -delete && python manage.py backup_database"]
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: "/app/backup-db"
+              env:
+                - name: DB_ENGINE
+                  value: {{ .Values.django.dbEngine | quote }}
+              envFrom:
+                - secretRef:
+                    name: django-db-secret
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: {{ .Values.pvc.backupDb.claimName }}
+          imagePullSecrets:
+            - name: ghcr-pull-secret

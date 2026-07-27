@@ -1,0 +1,13 @@
+{{- if and .Values.grafana.enabled .Values.grafana.database.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.pvc.grafanaMariadb.claimName }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.pvc.grafanaMariadb.size }}
+  storageClassName: {{ .Values.pvc.grafanaMariadb.storageClass }}
+{{- end }}

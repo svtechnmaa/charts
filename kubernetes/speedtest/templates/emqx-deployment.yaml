@@ -1,0 +1,25 @@
+apiVersion: apps.emqx.io/v2beta1
+kind: EMQX
+metadata:
+  name: emqx
+spec:
+  image: emqx/emqx:latest
+  config:
+    data: |
+      listeners.ws.default {
+        websocket.mqtt_path = {{.Values.paths.brokerWs | quote}}
+      }
+      
+      listeners.wss.default {
+        websocket.mqtt_path = {{.Values.paths.brokerWss | quote}}
+      }
+  coreTemplate:
+    spec:
+      replicas: 1
+      volumeClaimTemplates:
+        storageClassName: {{.Values.emqx.persistence.storageClass}}
+        resources:
+          requests:
+            storage: {{.Values.emqx.persistence.size}}
+        accessModes:
+          - ReadWriteOnce

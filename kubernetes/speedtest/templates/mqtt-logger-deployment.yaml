@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt-logger-deployment
+spec:
+  replicas: {{ .Values.replicaCount.mqttLogger }}
+  selector:
+    matchLabels:
+      app: mqtt-logger
+  template:
+    metadata:
+      labels:
+        app: mqtt-logger
+    spec:
+      containers:
+        - name: mqtt-logger
+          image: {{ .Values.image.mqttLogger.repository }}:{{ .Values.image.mqttLogger.tag }}
+          env:
+            - name: MAX_CONCURRENT_PER_SERVER
+              value: {{ .Values.mqtt.maxConcurrency | quote }}
+            - name: MQTT_BROKER_HOST
+              value: {{ .Values.mqtt.brokerHost | quote }}
+            - name: MQTT_BROKER_PORT
+              value: {{ .Values.mqtt.brokerPort | quote }}
+            - name: MQTT_BROKER_PATH
+              value: {{ .Values.mqtt.brokerPath | quote }}
+            - name: MQTT_BROKER_USERNAME
+              value: {{ .Values.mqtt.username | quote }}
+            - name: MQTT_BROKER_PASSWORD
+              value: {{ .Values.mqtt.password | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+          volumeMounts:
+            - name: logs-volume
+              mountPath: "/app/logs"
+      volumes:
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.mqttLogs.claimName }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret

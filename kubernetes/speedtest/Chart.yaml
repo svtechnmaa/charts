@@ -1,0 +1,11 @@
+apiVersion: v2
+name: speedtest
+description: A Helm chart to deploy Speedtest app
+version: 0.1.0
+appVersion: "1.0"
+
+dependencies:
+  - name: ingress-nginx
+    version: 1.0.2
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    condition: global.ingress-nginx.enabled

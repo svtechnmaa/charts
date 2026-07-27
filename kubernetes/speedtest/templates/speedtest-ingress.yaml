@@ -1,0 +1,148 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/client_max_body_size: "0"
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.global.enableHttps | quote }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: {{ .Values.global.enableHttps | quote }}
+    nginx.ingress.kubernetes.io/preserve-trailing-slash: 'true'
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+    - http:
+        paths:
+          - path: {{ .Values.paths.staticDjango }}
+            pathType: Prefix
+            backend:
+              service:
+                name: django-static-service
+                port:
+                  number: 80
+          - path: {{ .Values.paths.mediaDjango }}
+            pathType: Prefix
+            backend:
+              service:
+                name: django-static-service
+                port:
+                  number: 80
+          - path: {{ .Values.paths.adminPortal }}
+            pathType: Prefix
+            backend:
+              service:
+                name: django-service
+                port:
+                  number: 80
+          - path: {{ .Values.paths.backendApi }}
+            pathType: Prefix
+            backend:
+              service:
+                name: django-service
+                port:
+                  number: 80
+          - path: {{ .Values.paths.backendGraphQl }}
+            pathType: Prefix
+            backend:
+              service:
+                name: django-service
+                port:
+                  number: 80
+          - path: {{ .Values.paths.brokerWs }}
+            pathType: Prefix
+            backend:
+              service:
+                name: emqx-listeners
+                port:
+                  number: 8083
+          - path: {{ .Values.paths.brokerWss }}
+            pathType: Prefix
+            backend:
+              service:
+                name: emqx-listeners
+                port:
+                  number: 8084
+          - path: {{ .Values.paths.userPortal }}
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend-service
+                port:
+                  number: 80
+          - path: {{ .Values.paths.speedtestServer }}
+            pathType: Prefix
+            backend:
+              service:
+                name: tester-service
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-dashboard-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.global.enableHttps | quote }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: {{ .Values.global.enableHttps | quote }}
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/preserve-trailing-slash: 'true'
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+    - http:
+        paths:
+          - path: {{.Values.paths.emqxDashboard}}(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: emqx-dashboard
+                port:
+                  number: 18083
+{{- if .Values.grafana.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-grafana-ui-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.global.enableHttps | quote }}
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+    - http:
+        paths:
+          - path: {{.Values.paths.grafanaPath}}
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-ui-service
+                port:
+                  number: {{ .Values.grafana.servicePort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-grafana-embed-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.global.enableHttps | quote }}
+    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-User
+    nginx.ingress.kubernetes.io/auth-url: {{ if .Values.global.enableHttps }}https{{ else }}http{{ end }}://{{ .Values.global.frontendVip }}{{ .Values.paths.backendApi }}auth/grafana/
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+    - http:
+        paths:
+          - path: {{ .Values.paths.grafanaEmbedPath }}
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana-embed-service
+                port:
+                  number: {{ .Values.grafana.servicePort }}
+{{- end }}

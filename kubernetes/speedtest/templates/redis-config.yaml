@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+data:
+  redis.conf: |
+    dir /data
+
+    # Enable RDB persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    
+    # RDB filename
+    dbfilename dump.rdb
+    
+    # Enable AOF persistence
+    {{- if .Values.redis.enableAOF }}
+    appendonly yes
+    appendfilename appendonly.aof
+    appendfsync always
+    {{- end }}

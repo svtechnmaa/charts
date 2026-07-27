@@ -1,0 +1,38 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-embed-config
+data:
+  grafana.ini: |
+    [server]
+    domain = {{ .Values.global.frontendVip | quote }}
+    root_url = {{ .Values.grafana.rootEmbedUrl | quote }}
+    serve_from_sub_path = {{ ternary "true" "false" .Values.grafana.serveFromSubPath }}
+    
+    [auth.proxy]
+    enabled = true
+    auto_sign_up = true
+    header_name = X-Auth-User
+    
+    [auth.anonymous]
+    enabled = {{ ternary "true" "false" .Values.grafana.anonymous }}
+    org_role = Viewer
+
+    [security]
+    allow_embedding = true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-ui-config
+data:
+  grafana.ini: |
+    [server]
+    domain = {{ .Values.global.frontendVip | quote }}
+    root_url = {{ .Values.grafana.rootUiUrl | quote }}
+    serve_from_sub_path = {{ ternary "true" "false" .Values.grafana.serveFromSubPath }}
+    
+    [auth.anonymous]
+    enabled = false
+{{- end }}

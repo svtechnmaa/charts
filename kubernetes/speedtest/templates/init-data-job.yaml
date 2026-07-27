@@ -1,0 +1,34 @@
+{{- if .Values.global.runInitDataJob }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-data-job
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ .Values.image.django.repository }}:{{ .Values.image.django.tag }}
+          command: [ "python", "manage.py", "init_data" ]
+          env:
+            - name: DB_ENGINE
+              value: {{ .Values.django.dbEngine | quote }}
+            - name: DJANGO_SUPERUSER_USERNAME
+              value: {{ .Values.django.superUserUsername | quote }}
+            - name: DJANGO_SUPERUSER_EMAIL
+              value: {{ .Values.django.superUserEmail | quote }}
+            - name: DJANGO_SUPERUSER_PASSWORD
+              value: {{ .Values.django.superUserPassword | quote }}
+            - name: TEST_SERVER_HOST
+              value: {{ .Values.global.frontendVip | quote }}
+            - name: TEST_SERVER_URL_BASE
+              value: {{ .Values.paths.speedtestServer | quote }}
+            - name: ENABLE_HTTPS
+              value: {{ .Values.global.enableHttps | quote }}
+          envFrom:
+            - secretRef:
+                name: django-db-secret
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+{{- end }}

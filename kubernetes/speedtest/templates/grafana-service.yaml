@@ -1,0 +1,25 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-ui-service
+spec:
+  selector:
+    app: grafana-ui
+  ports:
+    - port: {{ .Values.grafana.servicePort }}
+      targetPort: 3000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-embed-service
+spec:
+  selector:
+    app: grafana-embed
+  ports:
+    - port: {{ .Values.grafana.servicePort }}
+      targetPort: 3000
+      protocol: TCP
+{{- end }}

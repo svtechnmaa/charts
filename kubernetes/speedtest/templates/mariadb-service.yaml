@@ -1,0 +1,12 @@
+{{- if .Values.db.enable }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+spec:
+  ports:
+    - port: 3306
+  clusterIP: None
+  selector:
+    app: mariadb
+{{- end }}

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-static
+spec:
+  replicas: {{ .Values.replicaCount.nginx }}
+  selector:
+    matchLabels:
+      app: django-static
+  template:
+    metadata:
+      labels:
+        app: django-static
+    spec:
+      containers:
+        - name: django-static
+          image: {{ .Values.image.nginx }}
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: static-volume
+              mountPath: /usr/share/nginx/html/{{ .Values.paths.staticDjango }}
+            - name: media-volume
+              mountPath: /usr/share/nginx/html/{{ .Values.paths.mediaDjango }}
+      volumes:
+        - name: static-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.static.claimName }}
+        - name: media-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.media.claimName }}

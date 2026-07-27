@@ -1,0 +1,14 @@
+{{- if and .Values.grafana.enabled .Values.grafana.database.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-mariadb
+spec:
+  selector:
+    app: grafana-mariadb
+  ports:
+    - port: 3306
+      targetPort: 3306
+      name: mariadb
+  clusterIP: None
+{{- end}}

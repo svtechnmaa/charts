@@ -1,0 +1,13 @@
+{{- if .Values.chromium.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: chromium-service
+spec:
+  selector:
+    app: chromium
+  ports:
+    - protocol: TCP
+      port: 9222
+      targetPort: 9222
+{{- end }}

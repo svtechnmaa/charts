@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: purge-retention-cronjob
+spec:
+  schedule: "0 3 * * *"  # Every day at 3:00 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: purge-retention
+              image: {{ .Values.image.django.repository }}:{{ .Values.image.django.tag }}
+              command: ["/bin/sh", "-c", "python manage.py purge_retention"]
+              volumeMounts:
+                - name: media-volume
+                  mountPath: {{ .Values.django.mediaRoot | quote }}
+              env:
+                - name: DB_ENGINE
+                  value: {{ .Values.django.dbEngine | quote }}
+                - name: MEDIA_ROOT
+                  value: {{ .Values.django.mediaRoot | quote }}
+                - name: TENANT_DB_NAMES
+                  value: {{ .Values.django.tenantDbNames | quote }}
+              envFrom:
+                - secretRef:
+                    name: django-db-secret
+          volumes:
+            - name: media-volume
+              persistentVolumeClaim:
+                claimName: {{ .Values.pvc.media.claimName }}
+          imagePullSecrets:
+            - name: ghcr-pull-secret

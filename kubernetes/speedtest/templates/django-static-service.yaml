@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-static-service
+spec:
+  selector:
+    app: django-static
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

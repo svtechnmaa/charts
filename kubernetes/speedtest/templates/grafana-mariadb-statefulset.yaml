@@ -1,0 +1,42 @@
+{{- if and .Values.grafana.enabled .Values.grafana.database.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: grafana-mariadb
+  labels:
+    app: grafana-mariadb
+spec:
+  selector:
+    matchLabels:
+      app: grafana-mariadb
+  serviceName: "grafana-mariadb"
+  replicas: {{ .Values.replicaCount.grafanaMariadb }}
+  template:
+    metadata:
+      labels:
+        app: grafana-mariadb
+    spec:
+      containers:
+        - name: grafana-mariadb
+          image: {{ .Values.image.mariadb }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              value: {{ .Values.grafana.database.rootPassword | quote }}
+            - name: MARIADB_DATABASE
+              value: {{ .Values.grafana.database.name | quote }}
+            - name: MARIADB_USER
+              value: {{ .Values.grafana.database.user | quote }}
+            - name: MARIADB_PASSWORD
+              value: {{ .Values.grafana.database.password | quote }}
+          ports:
+            - containerPort: 3306
+              name: mariadb
+          volumeMounts:
+            - name: grafana-mariadb-volume
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: grafana-mariadb-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.grafanaMariadb.claimName }}
+{{- end }}

@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-deployment
+spec:
+  replicas: {{ .Values.replicaCount.django }}
+  selector:
+    matchLabels:
+      app: django
+  template:
+    metadata:
+      labels:
+        app: django
+    spec:
+      {{- $reportChartFrontendBaseUrl := .Values.django.reportChartFrontendBaseUrl | default (printf "%s://%s%s" (ternary "https" "http" .Values.global.enableHttps) .Values.global.frontendVip .Values.paths.userPortal) }}
+      initContainers:
+        - name: migrate
+          image: {{ .Values.image.django.repository }}:{{ .Values.image.django.tag }}
+          command: ["/bin/sh", "-c", "./backup-and-migrate.sh"]
+          volumeMounts:
+            - name: backup-volume
+              mountPath: "/app/backup-db"
+          env:
+            - name: DB_ENGINE
+              value: {{ .Values.django.dbEngine | quote }}
+            - name: TENANT_DB_NAMES
+              value: {{ .Values.django.tenantDbNames | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+          envFrom:
+            - secretRef:
+                name: django-db-secret
+        - name: collectstatic
+          image: {{ .Values.image.django.repository }}:{{ .Values.image.django.tag }}
+          command: ["python", "manage.py", "collectstatic", "--noinput"]
+          volumeMounts:
+            - name: static-volume
+              mountPath: {{ .Values.django.staticRoot | quote }}
+          env:
+            - name: STATIC_ROOT
+              value: {{ .Values.django.staticRoot | quote }}
+            - name: TENANT_DB_NAMES
+              value: {{ .Values.django.tenantDbNames | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+      containers:
+        - name: django
+          image: {{ .Values.image.django.repository }}:{{ .Values.image.django.tag }}
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: static-volume
+              mountPath: {{ .Values.django.staticRoot | quote }}
+            - name: media-volume
+              mountPath: {{ .Values.django.mediaRoot | quote }}
+            - name: logs-volume
+              mountPath: "/app/logs"
+          env:
+            - name: ADMIN_PORTAL_PATH
+              value: {{ .Values.paths.adminPortal | quote }}
+            - name: DB_ENGINE
+              value: {{ .Values.django.dbEngine | quote }}
+            - name: STATIC_ROOT
+              value: {{ .Values.django.staticRoot | quote }}
+            - name: MEDIA_ROOT
+              value: {{ .Values.django.mediaRoot | quote }}
+            - name: ALLOWED_HOSTS
+              value: {{ .Values.django.allowedHosts | quote }}
+            {{- if .Values.global.enableHttps }}
+            - name: CSRF_TRUSTED_ORIGINS
+              value: {{ .Values.django.csrfTrustedOrigins | quote }}
+            {{- end }}
+            - name: TENANT_DB_NAMES
+              value: {{ .Values.django.tenantDbNames | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+            - name: GRAFANA_ROOT_URL
+              value: {{ .Values.grafana.rootEmbedUrl | quote }}
+            - name: REPORT_CHART_FRONTEND_BASE_URL
+              value: {{ $reportChartFrontendBaseUrl | quote }}
+            {{- if .Values.chromium.enabled }}
+            - name: REPORT_CHART_CHROMIUM_CDP_URL
+              value: "http://chromium-service:9222"
+            {{- end }}
+            - name: REPORT_CHART_SCREENSHOT_TIMEOUT_MS
+              value: {{ .Values.django.reportChartScreenshotTimeoutMs | quote }}
+            - name: REPORT_CHART_SCREENSHOT_SETTLE_DELAY_BASE_MS
+              value: {{ .Values.django.reportChartScreenshotSettleDelayBaseMs | quote }}
+            - name: REPORT_CHART_SCREENSHOT_SETTLE_DELAY_PER_CHART_MS
+              value: {{ .Values.django.reportChartScreenshotSettleDelayPerChartMs | quote }}
+            - name: REPORT_CHART_SCREENSHOT_THEME
+              value: {{ .Values.django.reportChartScreenshotTheme | quote }}
+          envFrom:
+            - secretRef:
+                name: django-db-secret
+      volumes:
+        - name: static-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.static.claimName }}
+        - name: media-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.media.claimName }}
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.backupDb.claimName }}
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.mqttLogs.claimName }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret

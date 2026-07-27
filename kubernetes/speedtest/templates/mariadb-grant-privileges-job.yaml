@@ -1,0 +1,41 @@
+{{- if .Values.db.enable }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mariadb-grant-privileges-job
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: grant-privileges
+          image: {{ .Values.image.mariadb }}
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              ROOT_PASSWORD="{{ .Values.db.rootPassword | default "root@$123" }}"
+              
+              echo "Waiting for MariaDB to be ready..."
+              until mariadb -h {{ .Values.db.host }} -u root -p"${ROOT_PASSWORD}" -e "SELECT 1" &>/dev/null; do
+                echo "MariaDB is not ready yet... waiting 5 seconds"
+                sleep 5
+              done
+              
+              echo "MariaDB is ready. Setting up user and privileges for remote access..."
+              mariadb -h {{ .Values.db.host }} -u root -p"${ROOT_PASSWORD}" <<-EOSQL
+                -- Grant all privileges on the specific database
+                GRANT ALL PRIVILEGES ON *.* TO '{{ .Values.db.user }}'@'%';
+                
+                -- Flush privileges to ensure changes take effect immediately
+                FLUSH PRIVILEGES;
+              EOSQL
+              
+              echo "Privileges granted successfully! User can now connect remotely."
+{{- end }}

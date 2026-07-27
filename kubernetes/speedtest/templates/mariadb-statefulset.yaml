@@ -1,0 +1,40 @@
+{{- if .Values.db.enable }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mariadb
+spec:
+  selector:
+    matchLabels:
+      app: mariadb
+  serviceName: "mariadb"
+  replicas: {{ .Values.replicaCount.mariadb }}
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      containers:
+        - name: mariadb
+          image: {{ .Values.image.mariadb }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              value: {{ .Values.db.rootPassword | quote }}
+            - name: MARIADB_DATABASE
+              value: {{ .Values.db.name | quote }}
+            - name: MARIADB_USER
+              value: {{ .Values.db.user | quote}}
+            - name: MARIADB_PASSWORD
+              value: {{ .Values.db.password | quote }}
+          ports:
+            - containerPort: 3306
+              name: mariadb
+          volumeMounts:
+            - name: mariadb-volume
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mariadb-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.mariadb.claimName }}
+{{- end }}

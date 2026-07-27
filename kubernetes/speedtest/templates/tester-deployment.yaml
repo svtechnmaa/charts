@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: speed-tester-deployment
+spec:
+  replicas: {{ .Values.replicaCount.testerServer }}
+  selector:
+    matchLabels:
+      app: speed-tester
+  template:
+    metadata:
+      labels:
+        app: speed-tester
+    spec:
+      containers:
+        - name: speed-tester
+          image: {{ .Values.image.testerServer.repository }}:{{ .Values.image.testerServer.tag }}
+          ports:
+            - containerPort: 8989
+          env:
+            - name: URL_BASE
+              value:  {{ .Values.paths.speedtestServer | quote }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret

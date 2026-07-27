@@ -1,0 +1,105 @@
+{{- if .Values.grafana.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-ui-deployment
+spec:
+  replicas: {{ .Values.replicaCount.grafanaUi }}
+  selector:
+    matchLabels:
+      app: grafana-ui
+  template:
+    metadata:
+      labels:
+        app: grafana-ui
+    spec:
+      containers:
+        - name: grafana-ui
+          image: grafana/grafana:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: {{ .Values.grafana.adminUser | quote }}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: {{ .Values.grafana.adminPassword | quote }}
+            - name: GF_DATABASE_TYPE
+              value: {{ .Values.grafana.database.type | quote }}
+            - name: GF_DATABASE_HOST
+              value: {{ print .Values.grafana.database.host ":" .Values.grafana.database.port | quote }}
+            - name: GF_DATABASE_NAME
+              value: {{ .Values.grafana.database.name | quote }}
+            - name: GF_DATABASE_USER
+              value: {{ .Values.grafana.database.user | quote }}
+            - name: GF_DATABASE_PASSWORD
+              value: {{ .Values.grafana.database.password | quote }}
+            - name: GF_DATABASE_SSL_MODE
+              value: {{ .Values.grafana.database.sslMode | quote }}
+            - name: GF_PLUGINS_PREINSTALL
+              value: {{ .Values.grafana.plugins | quote }}
+          volumeMounts:
+            - name: grafana-config
+              mountPath: /etc/grafana/grafana.ini
+              subPath: grafana.ini
+      volumes:
+        - name: grafana-config
+          configMap:
+            name: grafana-ui-config
+            items:
+              - key: grafana.ini
+                path: grafana.ini
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-embed-deployment
+spec:
+  replicas: {{ .Values.replicaCount.grafanaEmbed }}
+  selector:
+    matchLabels:
+      app: grafana-embed
+  template:
+    metadata:
+      labels:
+        app: grafana-embed
+    spec:
+      containers:
+        - name: grafana-embed
+          image: grafana/grafana:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: {{ .Values.grafana.adminUser | quote }}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: {{ .Values.grafana.adminPassword | quote }}
+            - name: GF_DATABASE_TYPE
+              value: {{ .Values.grafana.database.type | quote }}
+            - name: GF_DATABASE_HOST
+              value: {{ print .Values.grafana.database.host ":" .Values.grafana.database.port | quote }}
+            - name: GF_DATABASE_NAME
+              value: {{ .Values.grafana.database.name | quote }}
+            - name: GF_DATABASE_USER
+              value: {{ .Values.grafana.database.user | quote }}
+            - name: GF_DATABASE_PASSWORD
+              value: {{ .Values.grafana.database.password | quote }}
+            - name: GF_DATABASE_SSL_MODE
+              value: {{ .Values.grafana.database.sslMode | quote }}
+            - name: GF_PLUGINS_PREINSTALL
+              value: {{ .Values.grafana.plugins | quote }}
+          volumeMounts:
+            - name: grafana-config
+              mountPath: /etc/grafana/grafana.ini
+              subPath: grafana.ini
+      volumes:
+        - name: grafana-config
+          configMap:
+            name: grafana-embed-config
+            items:
+              - key: grafana.ini
+                path: grafana.ini
+{{- end }}
