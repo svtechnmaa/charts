@@ -685,7 +685,7 @@ jobs:
       - check_charts
       - create_vm
       - test_tacgui
-    if: ${{always() && !cancelled() && needs.create_vm.result == 'success' && needs.check_charts.outputs.check_radius == '1' && needs.check_charts.outputs.no_ci != 'true' }}
+    if: ${{always() && !cancelled() && needs.create_vm.result == 'success' && needs.check_charts.outputs.check_radius == 'true' && needs.check_charts.outputs.no_ci != 'true' }}
     steps:
       - name: Clone repos
         uses: actions/checkout@v4
