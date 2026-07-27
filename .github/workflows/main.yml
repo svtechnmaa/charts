@@ -679,6 +679,113 @@ jobs:
           name: robot-tacgui-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
         
+  install_radius_on_vm:
+    runs-on: ansible-dind
+    needs: 
+      - check_charts
+      - create_vm
+      - test_tacgui
+    if: ${{always() && !cancelled() && needs.create_vm.result == 'success' && needs.check_charts.outputs.check_radius == '1' && needs.check_charts.outputs.no_ci != 'true' }}
+    steps:
+      - name: Clone repos
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT_FULL_ID }} 
+          path: charts
+
+      - name: Checkout SVTECH_CICD_Utilities 
+        uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository_owner }}/SVTECH_CICD_Utilities'
+          token: ${{ secrets.PUSH_TOKEN }}
+          path: SVTECH_CICD_Utilities
+          ref: ${{ env.CICD_UTILITIES_BRANCH }}
+
+      - name: Checkout SVTECH-installation-automation
+        uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository_owner }}/SVTECH-installation-automation'
+          token: ${{ secrets.PUSH_TOKEN }}
+          path: SVTECH-installation-automation
+          ref: ${{ env.INSTALLATION_BRANCH }}
+
+      - name: Checkout stacked_charts 
+        uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository_owner }}/stacked_charts'
+          token: ${{ secrets.PUSH_TOKEN }}
+          path: stacked_charts
+          ref: ${{ env.STACKED_CHARTS_BRANCH }}
+
+      - name: Download build_vars.yml
+        uses: actions/download-artifact@v4
+        with:
+          name: vm_vars
+          path: ${{ github.workspace }}
+
+      - name: Create inventory file for Radius Stack
+        run: |
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          cd ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook
+          ansible-playbook ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook/create_inventory_file.yml \
+            -e "BUILD_VARS_PATH=${{ github.workspace }} \
+            template_file=${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook/templates/inventory_k8s_radius.j2 \
+            STACKED_CHARTS_BRANCH=${{ env.STACKED_CHARTS_BRANCH }} \
+            STACKED_CHARTS_COMMIT_ID='${{ env.STACKED_CHARTS_COMMIT_ID }}' \
+            AUTOMATION_BRANCH=${{ env.AUTOMATION_BRANCH }} \
+            STACK=radius"
+
+      - name: Deploy Radius Stack
+        run: |
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          cd ${{ github.workspace }}/SVTECH-installation-automation
+          ansible-playbook ${{ github.workspace }}/SVTECH-installation-automation/k8s_radius_for_ci.yml \
+            -e @${{ github.workspace }}/kubernetes/radius/image_chart_mapping.yml \
+            -e "GH_TOKEN=${{ secrets.PUSH_TOKEN }}" \
+            -e "GH_FG_TOKEN=${{ secrets.PUSH_TOKEN }}" \
+            -e "GH_USERNAME=svtechnmaa" \
+            -e "REPO_PATH=${{ github.workspace }}" \
+            -i ${{ github.workspace }}/radius_inventory
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: radius_build_vars
+          path: ${{ github.workspace }}/build_vars.yml
+      
+  test_radius:
+    runs-on: robot-dind
+    needs: 
+      - check_charts
+      - install_radius_on_vm 
+    if: ${{ always() && !cancelled() && needs.install_radius_on_vm.result == 'success' && needs.check_charts.outputs.no_ci != 'true' && needs.check_charts.outputs.check_radius == 'true' }}
+    steps:
+      - name: Checkout SVTECH_CICD_Utilities 
+        uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository_owner }}/SVTECH_CICD_Utilities'
+          token: ${{ secrets.PUSH_TOKEN }}
+          path: SVTECH_CICD_Utilities
+          ref: ${{ env.CICD_UTILITIES_BRANCH }}
+      - name: Download build_vars
+        uses: actions/download-artifact@v4
+        with:
+          name: radius_build_vars
+          path: ${{ github.workspace }}
+
+      - name: Run Radius integration tests
+        if: always() && !cancelled()
+        run: |
+          sh "${{ github.workspace }}/SVTECH_CICD_Utilities/integration-test/radius/run_testcase.sh" -D "${{ github.workspace }}" -I .
+      - name: Upload Test result
+        if: always()
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: robot-radius-result-#${{ github.run_number }}
+          path: ${{ github.workspace }}/test_result
+
+
   release_helm_charts:
     if: ${{ !failure() && !cancelled() && github.ref_name == 'main' && github.event_name != 'workflow_dispatch' && needs.check_charts.outputs.no_ci != 'true' && needs.check_charts.outputs.changed_charts != '' }}
     runs-on: ubuntu-dind
