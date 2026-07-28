@@ -1,0 +1,35 @@
+{{- if .Values.ingress.enabled }}
+{{- $ingressPath := include "bngblaster-gui.ingressPath" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "bngblaster-gui.frontendName" . }}
+  labels:
+    {{- include "bngblaster-gui.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  rules:
+    - http:
+        paths:
+          - path: {{ $ingressPath | quote }}
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: {{ include "bngblaster-gui.frontendName" . }}
+                port:
+                  number: {{ .Values.frontend.service.port }}
+      {{- with .Values.ingress.host }}
+      host: {{ . | quote }}
+      {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
