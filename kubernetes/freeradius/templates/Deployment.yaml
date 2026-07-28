@@ -116,8 +116,8 @@ spec:
               done
 
               echo "Successfully logged in to MySQL servers."
-      
-        - name: prepare-freeradius
+
+        - name: initialize-radius-pvc
           image: {{ template "freeradius.image" . }}
           command:
             - /bin/sh
@@ -125,33 +125,15 @@ spec:
             - |
               set -eu
 
-              mkdir -p /tmp/freeradius
-              cp -a /usr/share/freeradius/. /tmp/freeradius/
-          volumeMounts:
-            - name: freeradius-tmp
-              mountPath: /tmp/freeradius
-
-        - name: initialize-radius-pvc
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.pvc.image "global" .Values.global) }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              set -eu
-
-              if find /usr/share/freeradius -maxdepth 1 -type f -name 'dictionary*' -print -quit | grep -q .; then
+              if find /tmp/freeradius -maxdepth 1 -type f -name 'dictionary*' -print -quit | grep -q .; then
                 echo "[INIT] Dictionary files already exist, skipping copy"
               else
                 echo "[INIT] No dictionary files found, copying defaults"
-                cp -a /tmp/freeradius/. /usr/share/freeradius/
+                cp -a /usr/share/freeradius/. /tmp/freeradius/
               fi
           volumeMounts:
-            - name: freeradius-tmp
+            - name: freeradius-dictionary
               mountPath: /tmp/freeradius
-              readOnly: true
-            {{- if .Values.extraVolumeMounts }}
-              {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumeMounts "context" $) | nindent 12 }}
-            {{- end }}
         
       containers:
         - name: freeradius
@@ -330,8 +312,6 @@ spec:
       imagePullSecrets:
         - name: ghcr-pull-secret
       volumes:
-        - name: freeradius-tmp
-          emptyDir: {}
         - name: freeradius-mods
           configMap:
             name: {{ printf "%s-mods" (include "common.names.fullname" .) }}

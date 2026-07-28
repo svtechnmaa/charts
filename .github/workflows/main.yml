@@ -740,7 +740,7 @@ jobs:
           export ANSIBLE_HOST_KEY_CHECKING=False
           cd ${{ github.workspace }}/SVTECH-installation-automation
           ansible-playbook ${{ github.workspace }}/SVTECH-installation-automation/k8s_radius_for_ci.yml \
-            -e @${{ github.workspace }}/kubernetes/radius/image_chart_mapping.yml \
+            -e @${{ github.workspace }}/stacked_charts/kubernetes/radius/image_chart_mapping.yml \
             -e "GH_TOKEN=${{ secrets.PUSH_TOKEN }}" \
             -e "GH_FG_TOKEN=${{ secrets.PUSH_TOKEN }}" \
             -e "GH_USERNAME=svtechnmaa" \
