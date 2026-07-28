@@ -33,13 +33,6 @@ init:
       tag: 8.2.0
       pullPolicy: IfNotPresent
 
-  pvc:  
-    image:
-      registry: ghcr.io
-      repository: svtechnmaa/busybox
-      tag: 1.33
-      pullPolicy: IfNotPresent
-
 ## @section Common parameters
 
 ## @param kubeVersion Force target Kubernetes version (using Helm capabilities if not set)
