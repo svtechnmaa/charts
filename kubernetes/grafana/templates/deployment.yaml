@@ -98,7 +98,9 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_SERVER_ROOT_URL
-              value: "https://{{ .Values.global.frontendVip }}/grafana"
+              value: {{ default (printf "%s://%s%s" (ternary "https" "http" (default false .Values.global.enableHttps)) .Values.global.frontendVip .Values.grafanaConfig.subPath) .Values.grafanaConfig.rootUrl | quote }}
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: {{ (ternary "true" "false" (not (empty .Values.grafanaConfig.subPath))) | quote }}
             - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
               value: icinga2-report-datasource,icinga2-report-panel,icinga2-report-panel-transposed,mahendrapaipuri-dashboardreporter-app
             - name: GF_LOG_FILTERS
@@ -106,13 +108,13 @@ spec:
             - name: GF_FEATURE_TOGGLES_ENABLE
               value: accessControlOnCall,idForwarding
             - name: GF_REPORTER_PLUGIN_APP_URL
-              value: http://grafana:3000/grafana/
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
             - name: GF_RENDERING_SERVER_URL
               value: http://renderer:8081/render
             - name: GF_REPORTER_PLUGIN_REMOTE_CHROME_URL
               value: http://chrome:9222
             - name: GF_RENDERING_CALLBACK_URL
-              value: http://grafana:3000/grafana/
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
             - name: GF_REPORTER_PLUGIN_SKIP_TLS_CHECK
               value: "true"
             - name: GF_REPORTER_PLUGIN_NATIVE_RENDERER
@@ -123,12 +125,20 @@ spec:
               value: grid
             - name: GF_REPORTER_PLUGIN_REPORT_DASHBOARD_MODE
               value: full
+            {{- if .Values.grafanaConfig.env }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.grafanaConfig.env "context" $ ) | nindent 12 }}
+            {{- end }}
+
           ports:
             - name: grafana
               containerPort: 3000
+        {{- if .Values.chrome.enabled }}
         - args:
           - --ignore-certificate-errors
           - --disable-gpu
+          - --headless
+          - --no-sandbox
+          - --disable-dev-shm-usage
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.chrome.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.chrome.image.pullPolicy | quote }}
           name: chrome
@@ -136,9 +146,18 @@ spec:
           - containerPort: {{ .Values.chrome.service.port }}
             protocol: TCP
             name: chrome
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
           volumeMounts:
           - mountPath: /dev/shm
             name: shm
+        {{- end }}
+        {{- if .Values.renderer.enabled }}
         - env:
           - name: IGNORE_HTTPS_ERRORS
             value: "true"
@@ -157,10 +176,13 @@ spec:
           - containerPort: {{ .Values.renderer.service.port }}
             name: renderer
             protocol: TCP
+        {{- end }}
       volumes:
+      {{- if .Values.chrome.enabled }}
       - emptyDir:
           medium: Memory
           sizeLimit: 2Gi
         name: shm
+      {{- end }}
       imagePullSecrets:
       - name: ghcr-pull-secret
