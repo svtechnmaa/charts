@@ -1,0 +1,145 @@
+######### LATEST COMMIT: 21ba9f48ddf45cf065668dd81e1a9f1bff84aacc #########
+global:
+  imageRegistry: ""
+  backendVip: "" # <= Auto-assign with metalLB (Always set to empty string)
+  frontendVip: "10.98.98.110" # <= Auto-assign with metalLB or set your own IP
+  runInitDataJob: false # <= Set to true if you want to run the init data job
+  enableHttps: false # <= Set to true if you want to enable HTTPS
+
+nameOverride: ""
+fullnameOverride: ""
+commonLabels: {}
+commonAnnotations: {}
+podLabels: {}
+podAnnotations: {}
+######################################################  
+replicaCounts:
+  django: 1
+  frontend: 1
+  subscribeResult: 1
+  testerServer: 1
+  mqttLogger: 1
+  scheduler: 1
+  worker: 1
+  reportExportWorker: 1
+#####################################################
+image:
+  django:
+    registry: ghcr.io
+    repository: svtechnmaa/speedtester_backend
+    tag: 2.1.4
+  frontend:
+    registry: ghcr.io
+    repository: svtechnmaa/speedtester_frontend
+    tag: 2.1.7
+  testerServer:
+    registry: ghcr.io
+    repository: svtechnmaa/tester_server
+    tag: 2.0.34_dev
+  scheduler:
+    registry: ghcr.io
+    repository: svtechnmaa/speedtest_scheduler
+    tag: 1.0.14_dev
+  mqttLogger:
+    registry: ghcr.io
+    repository: svtechnmaa/speedtester_mqtt_logger
+    tag: 2.1.0
+  worker:
+    registry: ghcr.io
+    repository: svtechnmaa/speedtest_scheduler
+    tag: 1.0.14_dev
+  nginx:
+    registry: ghcr.io
+    repository: svtechnmaa/nginx
+    tag: 1.22.0
+#####################################################
+pvc:
+  static:
+    claimName: static-pvc
+    storageClass: seaweedfs-storage
+    size: 50Mi
+  media:
+    claimName: media-pvc
+    storageClass: seaweedfs-storage
+    size: 300Mi
+  frontendDist:
+    claimName: frontend-dist-pvc
+    storageClass: seaweedfs-storage
+    size: 50Mi
+  backupDb:
+    claimName: backup-db-pvc
+    storageClass: seaweedfs-storage
+    size: 2Gi
+  mqttLogs:
+    claimName: mqtt-logs-pvc
+    storageClass: seaweedfs-storage
+    size: 1Gi
+####################################################
+# Change this if you use a different service/IP
+db:
+  enable: false # <= External MariaDB is expected; this chart does not render MariaDB resources
+  secretName: django-db-secret
+  name: "speedtest"
+  user: "speedtest"
+  password: "speedtest@123"
+  host: "mariadb" # <= Change this to your MariaDB service name
+  port: "3306"
+  rootPassword: "root@$123" # <= Change this to your MariaDB root password
+####################################################
+# Change this if you use a different service/IP
+mqtt:
+  brokerHost: "emqx-listeners" # <= Change this to your MQTT broker service name or IP
+  brokerPort: "8083"
+  username: "admin"
+  password: "eec1999d7b704ee585089cffbfc5e129" # <= Change this to your MQTT broker password
+  maxConcurrency: 10
+  brokerPath: "/speedtest/ws-ep" # Must match paths.brokerWs
+vite:
+  mqttBrokerPort: "80" #<= Change to "443" if using secure WebSocketSecure
+  mqttBrokerProtocol: "ws" # <= Change to "wss" if using secure WebSocketSecure
+  mqttBrokerPath: "/speedtest/ws-ep" # Must match paths.brokerWs
+  mqttBrokerHost: "" # <= Leave empty to use the global frontendVip
+  defaultLang: "en"
+#####################################################
+django:
+  dbEngine: "mariadb"
+  superUserUsername: "admin"
+  superUserEmail: "admin@example.com"
+  superUserPassword: "admin@123"
+  allowedHosts: "*"
+  staticRoot: "/app/static/"
+  mediaRoot: "/app/media/"
+  csrfTrustedOrigins: "https://10.98.98.110" # <= Comma-separated origins for your frontendVip or domain
+  tenantDbNames: "" # <= Comma separated list of tenant database names if using multi-tenancy
+  reportChartFrontendBaseUrl: "" # <= Defaults to http(s)://<global.frontendVip><paths.userPortal> when left empty
+  reportChartBackendBaseUrl: ""
+  reportChartScreenshotTimeoutMs: "30000"
+  reportChartScreenshotSettleDelayBaseMs: "1000"
+  reportChartScreenshotSettleDelayPerChartMs: "500"
+  reportChartScreenshotTheme: "light"
+  reportExportJobTimeoutSeconds: "14400"
+  reportExportFileTtlSeconds: "604800"
+  reportExportStaleHeartbeatSeconds: "900"
+  reportExportPdfRenderTimeoutMs: "60000"
+  reportExportPdfSettleDelayMs: "2000"
+  reportExportPdfRenderBatchSize: "5"
+  reportExportPdfRenderAttempts: "3"
+  reportExportMaintenanceSchedule: "*/15 * * * *"
+#####################################################
+worker:
+  numWorkers: 3
+#####################################################
+redis:
+  host: "redis"
+  port: "6379"
+#####################################################
+paths: # This can be used to change the paths of the admin and user portals, can only change speedtest to something else
+  adminPortal: "/speedtest/admin/"
+  userPortal: "/speedtest/"
+  staticDjango: "/speedtest/static"
+  mediaDjango: "/speedtest/media"
+  backendApi: "/speedtest/api/"
+  backendGraphQl: "/speedtest/graphql/"
+  brokerWs: "/speedtest/ws-ep"
+  brokerWss: "/speedtest/wss-ep"
+  speedtestServer: "/speedtest/server/default"
