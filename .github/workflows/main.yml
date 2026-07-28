@@ -627,6 +627,7 @@ jobs:
             STACKED_CHARTS_COMMIT_ID='${{ env.STACKED_CHARTS_COMMIT_ID }}' \
             AUTOMATION_BRANCH=${{ env.JUNOS_BRANCH }} \
             STACK=tacgui"
+            
     - name: Deploy TACGUI Stack
       run: |
         # Install TACGUI
