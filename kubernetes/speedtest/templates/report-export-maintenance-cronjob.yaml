@@ -1,0 +1,72 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: report-export-maintenance-cronjob
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: report-export-maintenance
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: {{ .Values.django.reportExportMaintenanceSchedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: report-export-maintenance
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "common.labels.standard" . | nindent 12 }}
+            app.kubernetes.io/component: report-export-maintenance
+            {{- if .Values.commonLabels }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 12 }}
+            {{- end }}
+            {{- with .Values.podLabels }}
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+            {{- end }}
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: report-export-maintenance
+              image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+              command: ["python", "manage.py", "maintain_report_exports"]
+              volumeMounts:
+                - name: media-volume
+                  mountPath: {{ .Values.django.mediaRoot | quote }}
+              env:
+                - name: DB_ENGINE
+                  value: {{ .Values.django.dbEngine | quote }}
+                - name: MEDIA_ROOT
+                  value: {{ .Values.django.mediaRoot | quote }}
+                - name: TENANT_DB_NAMES
+                  value: {{ .Values.django.tenantDbNames | quote }}
+                - name: REPORT_EXPORT_FILE_TTL_SECONDS
+                  value: {{ .Values.django.reportExportFileTtlSeconds | quote }}
+                - name: REPORT_EXPORT_STALE_HEARTBEAT_SECONDS
+                  value: {{ .Values.django.reportExportStaleHeartbeatSeconds | quote }}
+              envFrom:
+                - secretRef:
+                    name: django-db-secret
+          volumes:
+            - name: media-volume
+              persistentVolumeClaim:
+                claimName: {{ .Values.pvc.media.claimName }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

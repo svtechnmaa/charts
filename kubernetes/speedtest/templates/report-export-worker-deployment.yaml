@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}-report-export-worker
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: report-export-worker
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCounts.reportExportWorker "global" .Values.global) }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: report-export-worker
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: report-export-worker
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- $reportChartFrontendBaseUrl := .Values.django.reportChartFrontendBaseUrl | default (printf "%s://%s%s" (ternary "https" "http" .Values.global.enableHttps) .Values.global.frontendVip .Values.paths.userPortal) }}
+      containers:
+        - name: report-export-worker
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          command: ["python", "manage.py", "rqworker", "report_export"]
+          volumeMounts:
+            - name: media-volume
+              mountPath: {{ .Values.django.mediaRoot | quote }}
+            - name: logs-volume
+              mountPath: "/app/logs"
+          env:
+            - name: DB_ENGINE
+              value: {{ .Values.django.dbEngine | quote }}
+            - name: MEDIA_ROOT
+              value: {{ .Values.django.mediaRoot | quote }}
+            - name: ALLOWED_HOSTS
+              value: {{ .Values.django.allowedHosts | quote }}
+            {{- if .Values.global.enableHttps }}
+            - name: CSRF_TRUSTED_ORIGINS
+              value: {{ .Values.django.csrfTrustedOrigins | quote }}
+            {{- end }}
+            - name: TENANT_DB_NAMES
+              value: {{ .Values.django.tenantDbNames | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+            - name: REPORT_CHART_FRONTEND_BASE_URL
+              value: {{ $reportChartFrontendBaseUrl | quote }}
+            - name: REPORT_EXPORT_BACKEND_BASE_URL
+              value: {{ .Values.django.reportChartBackendBaseUrl | quote }}
+            - name: REPORT_CHART_CHROMIUM_CDP_URL
+              value: "http://chrome:9222"
+            - name: REPORT_CHART_SCREENSHOT_TIMEOUT_MS
+              value: {{ .Values.django.reportChartScreenshotTimeoutMs | quote }}
+            - name: REPORT_CHART_SCREENSHOT_SETTLE_DELAY_BASE_MS
+              value: {{ .Values.django.reportChartScreenshotSettleDelayBaseMs | quote }}
+            - name: REPORT_CHART_SCREENSHOT_SETTLE_DELAY_PER_CHART_MS
+              value: {{ .Values.django.reportChartScreenshotSettleDelayPerChartMs | quote }}
+            - name: REPORT_CHART_SCREENSHOT_THEME
+              value: {{ .Values.django.reportChartScreenshotTheme | quote }}
+            - name: REPORT_EXPORT_JOB_TIMEOUT_SECONDS
+              value: {{ .Values.django.reportExportJobTimeoutSeconds | quote }}
+            - name: REPORT_EXPORT_FILE_TTL_SECONDS
+              value: {{ .Values.django.reportExportFileTtlSeconds | quote }}
+            - name: REPORT_EXPORT_STALE_HEARTBEAT_SECONDS
+              value: {{ .Values.django.reportExportStaleHeartbeatSeconds | quote }}
+            - name: REPORT_EXPORT_PDF_RENDER_TIMEOUT_MS
+              value: {{ .Values.django.reportExportPdfRenderTimeoutMs | quote }}
+            - name: REPORT_EXPORT_PDF_SETTLE_DELAY_MS
+              value: {{ .Values.django.reportExportPdfSettleDelayMs | quote }}
+            - name: REPORT_EXPORT_PDF_RENDER_BATCH_SIZE
+              value: {{ .Values.django.reportExportPdfRenderBatchSize | quote }}
+            - name: REPORT_EXPORT_PDF_RENDER_ATTEMPTS
+              value: {{ .Values.django.reportExportPdfRenderAttempts | quote }}
+          envFrom:
+            - secretRef:
+                name: django-db-secret
+      volumes:
+        - name: media-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.media.claimName }}
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.mqttLogs.claimName }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
