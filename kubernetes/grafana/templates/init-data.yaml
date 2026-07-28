@@ -1,3 +1,4 @@
+{{- if .Values.gdgConfig.runInitDataJob }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -178,3 +179,4 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+{{- end }}
