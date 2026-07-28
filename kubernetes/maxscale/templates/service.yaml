@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb
+spec:
+  selector:
+    app.kubernetes.io/component: maxscale
+  ports:
+    {{- include "maxscale.assertUniqueRouters" . }}
+    {{- range .Values.routers }}
+    - name: {{ include "maxscale.portName" .id }}
+      protocol: TCP
+      port: {{ .servicePort }}
+      targetPort: {{ .port }}
+    {{- end }}
+  {{- if .Values.global.externalIP }}
+  externalIPs:
+  - {{ .Values.global.externalIP }}
+  {{- end }}
+  type: ClusterIP
