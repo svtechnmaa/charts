@@ -1,0 +1,112 @@
+apiVersion: apps.emqx.io/v2
+kind: EMQX
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: emqx
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+  imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+  {{- if .Values.imagePullSecrets }}
+  imagePullSecrets:
+    {{- include "common.tplvalues.render" (dict "value" .Values.imagePullSecrets "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.serviceAccountName }}
+  serviceAccountName: {{ .Values.serviceAccountName | quote }}
+  {{- end }}
+  clusterDomain: {{ .Values.clusterDomain | quote }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  {{- if .Values.bootstrapAPIKeys }}
+  bootstrapAPIKeys:
+    {{- include "common.tplvalues.render" (dict "value" .Values.bootstrapAPIKeys "context" $) | nindent 4 }}
+  {{- end }}
+  config:
+    mode: {{ .Values.config.mode | quote }}
+    data: |
+      {{- if .Values.config.data }}
+      {{- tpl .Values.config.data $ | nindent 6 }}
+      {{- else }}
+      listeners.ws.default {
+        websocket.mqtt_path = {{ .Values.mqtt.websocket.mqttPath | quote }}
+      }
+      listeners.wss.default {
+        websocket.mqtt_path = {{ .Values.mqtt.secureWebsocket.mqttPath | quote }}
+      }
+      {{- end }}
+  {{- if .Values.updateStrategy }}
+  updateStrategy:
+    {{- include "common.tplvalues.render" (dict "value" .Values.updateStrategy "context" $) | nindent 4 }}
+  {{- end }}
+  coreTemplate:
+    spec:
+      replicas: {{ include "common.replicas" (dict "replicaCount" .Values.coreTemplate.replicaCount "global" .Values.global) }}
+      {{- if .Values.coreTemplate.minAvailable }}
+      minAvailable: {{ .Values.coreTemplate.minAvailable | quote }}
+      {{- end }}
+      {{- if .Values.coreTemplate.maxUnavailable }}
+      maxUnavailable: {{ .Values.coreTemplate.maxUnavailable | quote }}
+      {{- end }}
+      {{- if .Values.coreTemplate.nodeSelector }}
+      nodeSelector:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.tolerations }}
+      tolerations:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.affinity }}
+      affinity:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.resources }}
+      resources:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.resources "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.podSecurityContext }}
+      podSecurityContext:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.podSecurityContext "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.containerSecurityContext }}
+      containerSecurityContext:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.containerSecurityContext "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.extraVolumes }}
+      extraVolumes:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.extraVolumes "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.extraVolumeMounts }}
+      extraVolumeMounts:
+        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.extraVolumeMounts "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.coreTemplate.persistence.enabled }}
+      volumeClaimTemplates:
+        storageClassName: {{ .Values.coreTemplate.persistence.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ .Values.coreTemplate.persistence.size | quote }}
+        accessModes:
+          {{- toYaml .Values.coreTemplate.persistence.accessModes | nindent 10 }}
+      {{- end }}
+  {{- if .Values.replicantTemplate }}
+  replicantTemplate:
+    {{- include "common.tplvalues.render" (dict "value" .Values.replicantTemplate "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.dashboardServiceTemplate }}
+  dashboardServiceTemplate:
+    {{- include "common.tplvalues.render" (dict "value" .Values.dashboardServiceTemplate "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.listenersServiceTemplate }}
+  listenersServiceTemplate:
+    {{- include "common.tplvalues.render" (dict "value" .Values.listenersServiceTemplate "context" $) | nindent 4 }}
+  {{- end }}
+  {{- if .Values.extraSpec }}
+  {{- include "common.tplvalues.render" (dict "value" .Values.extraSpec "context" $) | nindent 2 }}
+  {{- end }}

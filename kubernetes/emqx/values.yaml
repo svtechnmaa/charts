@@ -1,0 +1,59 @@
+global:
+  imageRegistry: ""
+  enableHttps: false
+
+enabled: true
+
+nameOverride: ""
+fullnameOverride: ""
+commonLabels: {}
+commonAnnotations: {}
+
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/emqx
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull-secret
+
+serviceAccountName: ""
+clusterDomain: cluster.local
+revisionHistoryLimit: 3
+
+config:
+  mode: Merge
+  data: ""
+
+mqtt:
+  websocket:
+    mqttPath: /speedtest/ws-ep
+  secureWebsocket:
+    mqttPath: /speedtest/wss-ep
+
+coreTemplate:
+  replicaCount: 1
+  minAvailable: ""
+  maxUnavailable: ""
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  resources: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
+  extraVolumes: []
+  extraVolumeMounts: []
+  persistence:
+    enabled: true
+    storageClass: seaweedfs-storage
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+
+replicantTemplate: {}
+dashboardServiceTemplate: {}
+listenersServiceTemplate: {}
+bootstrapAPIKeys: []
+updateStrategy: {}
+extraSpec: {}
