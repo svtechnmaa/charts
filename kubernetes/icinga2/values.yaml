@@ -65,6 +65,17 @@ commonAnnotations:
   helm.sh/hook-weight: "0"
 commonLabels: {}
 
+## Secret holding credentials used by icinga2 (readiness probes, reload
+## scripts, cronjob) to authenticate against the icinga2 API.
+## If disabled, a Secret named "<chart-name>-secret" with keys
+## icinga2-admin-user / icinga2-admin-password must already exist.
+secrets:
+  enabled: true
+  icinga2ApiUser: icingaAdmin
+  icinga2ApiPassword: icingaAdmin
+  ## Extra arbitrary key/value pairs to add to the secret's stringData
+  data: {}
+
 ## architecture: standalone or distribute.
 ## - standalone: just master
 ## - distribute: distributed monitoring with master-satellite cluster
@@ -105,11 +116,28 @@ master:
   ## Tolerations for pod assignment
   tolerations: []
 
-  ## Extra volumes to add to the deployment
-  extraVolumes: []
-
-  ## Extra volume mounts to add to the container
-  extraVolumeMounts: []
+  volumes:
+  - name: election
+    configMap:
+      name: election
+      defaultMode: 511
+      items:
+      - key: election.py
+        path: election.py
+  - name: zone-manager
+    configMap:
+      name: zone-manager
+      defaultMode: 511
+      items:
+      - key: zone-manager.sh
+        path: zone-manager.sh
+  volumeMounts:
+  - name: election
+    mountPath: /opt/election/election.py
+    subPath: election.py
+  - name: zone-manager
+    mountPath: /opt/zone-manager/zone-manager.sh
+    subPath: zone-manager.sh
 
   securityContext:
     enabled: false
