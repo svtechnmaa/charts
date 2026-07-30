@@ -312,6 +312,22 @@ satellite:
               values:
                 - icinga2-satellite
         topologyKey: kubernetes.io/hostname
+  volumes:
+  - name: icinga2-satellite-zones-conf
+    emptyDir:
+      medium: Memory
+  - name: zone-manager
+    configMap:
+      name: zone-manager
+      defaultMode: 511
+      items:
+      - key: zone-manager.sh
+        path: zone-manager.sh
+  volumeMounts:
+  - name: icinga2-satellite-zones-conf
+    mountPath: /tmp/zone-config
+  - name: zone-manager
+    mountPath: /opt/zone-manager/zone-manager.sh
 
 rebalance:
   workloadType: Deployment

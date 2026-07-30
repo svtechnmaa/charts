@@ -59,80 +59,77 @@ spec:
           - bash
           - -ec
           - |
-            function check_empty_dir {
-              dir="$1"
-              default_dir="$2"
-              status=`ls -A $dir | grep -v 'lost+found' | grep -v '^\.st*' | wc -l`
-              if [[ $status -ne 0 ]]; then
-                echo "$dir is not Empty. Take no action"
+            function log() {
+              echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+            }
+
+            # Define a function to copy files from source to destination if destination does not exist or is empty
+            # Change ownership to icinga:icinga and permission to 775 for the destination folder and its contents
+            function copy_if_not_exist {
+              src="$1"
+              dest="$2"
+              if [[ ! -e $dest ]] || [[ -z "$(ls -A "$dest" | grep -Ev 'lost\+found|^\.st' 2>/dev/null)" ]]; then
+                log "$dest does not exist or is empty. Copying from $src to $dest"
+                rsync -azvh $src $dest
+                chown icinga:icinga $dest -R && chmod 775 $dest -R
               else
-                echo "$dir is Empty. Copying default files from $default_dir to $dir"
-                rsync -avzhp  $default_dir/* $dir
-                chown icinga:icinga $dir -R && chmod 775 $dir -R
+                log "$dest already exists and is not empty. Take no action"
               fi
             }
 
-            # ADD ICINGA2s' PREBUILD CONFIG and PLUGINS by SVTECH
+            #########################################################################################
+            log "Start icinga2 satellite command script"
+            # Prepare icinga2 config and plugins by SVTECH
+            log "Prepare icinga2 config and plugins by SVTECH"
             export REPO_DIR="/opt/SVTECH-Junos-Automation"
-            if [[ -d $REPO_DIR ]];then
-              echo "SVTECH-Junos-Automation repo found, copying svtech's plugins to prebuild folder (/opt/default_plugin)"
-              rsync -azhp $REPO_DIR/icinga2-entities/plugins-* /opt/default_plugin
-              rsync -azhp $REPO_DIR/module_utils /opt/default_plugin
+            export PLUGIN_DIR="/usr/share/icinga2/plugins/libexec"
+            copy_if_not_exist "$REPO_DIR/icinga2-entities/plugins-go" "/opt/default_plugin/plugin-go"
+            copy_if_not_exist "$REPO_DIR/icinga2-entities/plugins-py" "/opt/default_plugin/plugin-py"
+            copy_if_not_exist "$REPO_DIR/icinga2-entities/plugins-pl" "/opt/default_plugin/plugin-pl"
+            copy_if_not_exist "$REPO_DIR/module_utils" "/opt/default_plugin/module_utils"
+            copy_if_not_exist "$REPO_DIR/icinga2-entities/scripts" "/etc/icinga2/scripts"
+            copy_if_not_exist "/opt/default_config/conf.d" "/etc/icinga2/conf.d"
+            copy_if_not_exist "/opt/default_config/features-available" "/etc/icinga2/features-available"
+            copy_if_not_exist "/opt/default_plugin" "$PLUGIN_DIR"
 
-              check_empty_dir "/etc/icinga2/scripts" "$REPO_DIR/icinga2-entities/scripts"
-            fi
-
-            # Check and copy default config and plugins if not present
-            check_empty_dir "/etc/icinga2/conf.d" "/opt/default_config/conf.d"
-            check_empty_dir "/etc/icinga2/features-available" "/opt/default_config/features-available"
-            check_empty_dir "/usr/share/icinga2/plugins/libexec" "/opt/default_plugin"
+            cp --update --remove-destination --symbolic-link $PLUGIN_DIR/plugins-pl/* "$PLUGIN_DIR"
 
             # Icinga2 Setup
-            MASTER_NAME_ORIGIN={{ include "common.names.fullname" . }}-master
-            SATELLITE_NAME_ORIGIN={{ include "common.names.fullname" . }}-satellite
+            echo "***************** ICINGA2 PREPARE FOR NODE SETUP **********************"
+            MASTER_NAME_ORIGIN=${RELEASE_NAME}-${CHART_NAME}-master
+            SATELLITE_NAME_ORIGIN=${RELEASE_NAME}-${CHART_NAME}-satellite
+            FULL_POD_NAME=${POD_NAME}.${CHART_NAME}-satellite-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN }
+            COMMON_NAME=${POD_NAME}
             POD_INDEX=${POD_NAME: -1}
             ZONE_INDEX=$(($POD_INDEX/2))
             SATELLITE_ZONE_NAME=${ZONE}-${ZONE_INDEX}
-
-            # MASTER_POD_NAME=${MASTER_NAME_ORIGIN}-0.icinga2-headless.{{ .Release.Namespace }}.svc.{{ .Values.clusterDomain }}
             ROLE="satellite"
             PARENT_NAME=${MASTER_NAME_ORIGIN}-0
             PARENT_ZONE=${PARENT_ZONE}
-            PARENT_HOST={{ .Chart.Name }}
+            PARENT_HOST=${CHART_NAME}
             PARENT_PORT=5665
             TRUSTEDCERT=/var/lib/icinga2/certs/trusted-parent.crt
-            COMMON_NAME=${POD_NAME}
             ZONE=${SATELLITE_ZONE_NAME}
-
-            echo "*****************************"
-            echo "ICINGA2 NODE SETUP"
             echo "role: $ROLE, endpoint: $PARENT_NAME, parent_host: $PARENT_HOST, parent_port: $PARENT_PORT, parent_zone: $PARENT_ZONE, common_name: $COMMON_NAME, zone: $ZONE, icinga2_host: $ICINGA2_HOST, icinga2_port: $ICINGA2_PORT"
-            echo "*****************************"
-            /opt/scripts/entrypoint.sh no_start
 
-            # override zones.conf
-            echo "OVERRIDE /etc/icinga2/zones.conf"
+            echo "***************** ICINGA2 NODE SETUP **********************"
+            /opt/scripts/entrypoint.sh no_start
+            echo "***************** ICINGA2 NODE SETUP FINISHED **********************"
+
+            # Override zones.conf
+            log "GENERATE ZONES CONF"
+            log "Override /etc/icinga2/zones.conf"
             cat <<EOF | tee /etc/icinga2/zones.conf
-            {{- range $index, $_ := until 2 }}
-            object Endpoint "${MASTER_NAME_ORIGIN}-{{ $index }}" {
+            object Endpoint "${MASTER_NAME_ORIGIN}-0" {
             }
-            {{- end }}
+            object Endpoint "${MASTER_NAME_ORIGIN}-1" {
+            }
             object Zone "${PARENT_ZONE}" {
               endpoints = [
-              {{- range $index, $_ := until 2 }}
-              "${MASTER_NAME_ORIGIN}-{{ $index }}",
-              {{- end }}
+              "${MASTER_NAME_ORIGIN}-0",
+              "${MASTER_NAME_ORIGIN}-1",
               ]
             }
-
-            object Endpoint "$COMMON_NAME" {
-            }
-
-            object Zone "$SATELLITE_ZONE_NAME" {
-              endpoints = [ "$COMMON_NAME" ]
-              parent = "$PARENT_ZONE"
-            }
-
             object Zone "global-templates" {
               global = true
             }
@@ -142,28 +139,71 @@ spec:
             }
             EOF
 
+            # Create new satellite zone file
+            CONF_FILE="/tmp/zone-config/${ZONE}.conf"
+            /opt/zone-manager/zone-manager.sh generate_satellite_endpoint ${CONF_FILE} ${ZONE} ${COMMON_NAME} ${FULL_POD_NAME} ${PARENT_ZONE}
+            log "Create symbolic link for $CONF_FILE to /etc/icinga2/"
+            ln -sf $CONF_FILE /etc/icinga2/${ZONE}.conf
+            # Update icinga2.conf to include /etc/icinga2/${ZONE}.conf
+            if ! grep -qF "include \"${ZONE}.conf\"" /etc/icinga2/icinga2.conf; then
+              log "Adding include for /etc/icinga2/${ZONE}.conf to /etc/icinga2/icinga2.conf, keep /etc/icinga2/zones.conf as the first include"
+              sed -i "/include \"zones.conf\"/a include \"${ZONE}.conf\"" /etc/icinga2/icinga2.conf
+            fi
+
+            # Add curl into reload
+            log "Add reload script to reload icinga2 config and restart icinga2 process"
+            cat << 'EOF' > /usr/bin/reload
+            icinga2 daemon -C > /dev/null 2>&1
+            exit_code=$?
+            if [[ $exit_code -eq 0 ]]; then
+              echo "Valid icinga2 config"
+            else
+              echo "WARNING: Invalid icinga2 config, resolve the problem first"
+              echo "Cancle restart!!!"
+              exit 1
+            fi
+            url="https://localhost:5665/v1/actions/restart-process?pretty=1"
+            curl -k -s -S -i -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" -H 'Accept: application/json' -X POST "$url"
+            EOF
+
             # Add script to reload satellite
+            log "Add reload script to reload satellites"
             touch /usr/bin/reload-satellite
             chmod -R 775 /usr/bin/reload-satellite
             chown icinga:icinga /usr/bin/reload-satellite
             cat << 'EOF' > /usr/bin/reload-satellite
             echo 'Restarting satellite...'
             SATELLITE_LIST=$(dig srv +search +short icinga2-satellite-headless |awk '{print $4}' | uniq | sed 's/.$//g')
-            NAMESPACE=($(dig srv +search +short icinga2-headless | awk '{print $4}' | cut -d"." -f3))
+            NAMESPACE=${NAMESPACE}
             for SATELLITE in ${SATELLITE_LIST}
             do
             satellite_index=$(echo "$SATELLITE" | cut -d'.' -f1  | awk -F'-' '{print $NF}')
-            url="https://{{ .Release.Name }}-icinga2-satellite-${satellite_index}.icinga2-satellite-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
-            curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST "$url"
+            url="https://${SATELLITE_NAME_ORIGIN}-${satellite_index}.icinga2-satellite-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
+            curl -k -s -S -i -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" -H 'Accept: application/json' -X POST "$url"
             done
             EOF
 
             # Disable some features
+            log "Disable some features"
             icinga2 feature disable command icingadb ido-mysql influxdb livestatus notification syslog
-            # Start icinga2 with tini
+
             echo "Start Icinga2:"
             exec /tini -- icinga2 daemon
           env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RELEASE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/instance']
+            - name: CHART_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/name']
+            - name: CLUSTER_DOMAIN
+              value: {{ .Values.clusterDomain | quote }}
             - name: POD_NAME
               valueFrom:
                 fieldRef:
@@ -182,6 +222,16 @@ spec:
               value: zone-satellite
             - name: PARENT_ZONE
               value: master
+            - name: ICINGA2_API_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Chart.Name }}-secret
+                  key: icinga2-api-user
+            - name: ICINGA2_API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Chart.Name }}-secret
+                  key: icinga2-api-password
             {{- if .Values.master.ticketsalt }}
             - name: TICKET_SALT
               valueFrom:
@@ -220,7 +270,7 @@ spec:
                 - bash
                 - -c
                 - |
-                  curl -k -s -u icingaAdmin:icingaAdmin https://localhost:5665/v1
+                  curl -k -s -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" https://localhost:5665/v1
             initialDelaySeconds: {{ .Values.master.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.master.readinessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.master.readinessProbe.timeoutSeconds }}
@@ -235,19 +285,174 @@ spec:
           {{- end }}
           {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
           volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
-
             {{- if has "icinga2-satellite" .shareFor }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
             {{- end }}
-
             {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.satellite.volumeMounts }}
+            {{- toYaml .Values.satellite.volumeMounts | nindent 12 }}
+            {{- end }}
+
           {{- end }}
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                - bash
+                - -ec
+                - |
+                  log() {
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+                  }
+                  log "PreStop hook: Stopping icinga2 process gracefully"
+
+                  COMMON_NAME=${POD_NAME}
+                  POD_INDEX=${POD_NAME: -1}
+                  ZONE_INDEX=$((POD_INDEX/2))
+                  ZONE="${ZONE}-${ZONE_INDEX}"
+                  CONF_FILE="/tmp/zone-config/${ZONE}.conf"
+                  /opt/zone-manager/zone-manager.sh remove_endpoint ${CONF_FILE} ${ZONE} ${COMMON_NAME}
+
       imagePullSecrets:
       - name: ghcr-pull-secret
       {{- if .Values.init }}
       initContainers:
+        - name: sidecar
+          restartPolicy: Always
+          image: bash:5.2.15
+          imagePullPolicy: IfNotPresent
+          command:
+          - bash
+          - -ec
+          - |
+            log() {
+              echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+            }
+            log "Start sidecar container"
+            # Wait for icinga2 to be ready
+            until nc -zvw5 localhost 5665;
+            do
+              log "Waiting for Icinga2 to be ready...";
+              sleep 5;
+            done
+            log "Icinga2 is ready, start sidecar container"
+
+            # Determine this pod's zone and the 2 pod ordinals that belong to it
+            POD_INDEX=${POD_NAME: -1}
+            ZONE_INDEX=$((POD_INDEX/2))
+            SATELLITE_ZONE_NAME="${ZONE}-${ZONE_INDEX}"
+            HEADLESS_SVC="icinga2-satellite-headless"
+            POD_BASENAME="${POD_NAME%-*}"
+            PEER0="${POD_BASENAME}-$((ZONE_INDEX*2))"
+            PEER1="${POD_BASENAME}-$((ZONE_INDEX*2+1))"
+            CONF_FILE="/tmp/zone-config/${SATELLITE_ZONE_NAME}.conf"
+
+            log "Monitoring zone ${SATELLITE_ZONE_NAME} (expected members: ${PEER0}, ${PEER1})"
+
+            # Prints, one per line, whichever of PEER0/PEER1 currently accept
+            # connections on the icinga2 port (i.e. are up and reachable).
+            get_active_endpoints() {
+              local peer
+              for peer in "$PEER0" "$PEER1"; do
+                if nc -zvw3 "${peer}.${HEADLESS_SVC}.${NAMESPACE}.svc.cluster.local" 5665 2>/dev/null; then
+                  echo "$peer"
+                fi
+              done
+            }
+
+            # Reload the local icinga2 process so it picks up the updated CONF_FILE
+            reload_icinga2() {
+              local url="https://${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}@localhost:5665/v1/actions/restart-process?pretty=1"
+              log "Reloading local icinga2 to pick up ${CONF_FILE} changes"
+              if wget -q -O /dev/null \
+                  --no-check-certificate \
+                  --header='Accept: application/json' \
+                  --post-data='' \
+                  "$url"; then
+                log "icinga2 restart-process request sent successfully"
+              else
+                log "WARNING: icinga2 restart-process request failed"
+              fi
+            }
+
+            while true; do
+              ACTIVE_ENDPOINTS="$(get_active_endpoints)"
+              ACTIVE_COUNT=$(printf '%s\n' "$ACTIVE_ENDPOINTS" | grep -c . || true)
+
+              PREV_ENDPOINTS=""
+              if [[ -f "$CONF_FILE" ]]; then
+                PREV_ENDPOINTS="$(grep -oE 'object Endpoint "[^"]+"' "$CONF_FILE" | sed -E 's/object Endpoint "([^"]+)"/\1/' | sort -u)"
+              fi
+              CURRENT_COUNT=$(printf '%s\n' "$PREV_ENDPOINTS" | grep -c . || true)
+
+              if [[ "$ACTIVE_COUNT" -ne "$CURRENT_COUNT" ]]; then
+                log "Zone ${SATELLITE_ZONE_NAME}: endpoint count changed (was ${CURRENT_COUNT}, now ${ACTIVE_COUNT}: ${ACTIVE_ENDPOINTS//$'\n'/, }) - reconciling ${CONF_FILE}"
+
+                # Endpoints that became active: add them via zone-manager.sh
+                while read -r ep; do
+                  [[ -z "$ep" ]] && continue
+                  if ! grep -qxF "$ep" <<<"$PREV_ENDPOINTS"; then
+                    log "Endpoint ${ep} became active, generating it in ${CONF_FILE}"
+                    FULL_HOST="${ep}.${HEADLESS_SVC}.${NAMESPACE}.svc.cluster.local"
+                    /opt/zone-manager/zone-manager.sh generate_satellite_endpoint "$CONF_FILE" "$SATELLITE_ZONE_NAME" "$ep" "$FULL_HOST" "$PARENT_ZONE"
+                  fi
+                done <<<"$ACTIVE_ENDPOINTS"
+
+                # Endpoints that are no longer active: remove them via zone-manager.sh
+                while read -r ep; do
+                  [[ -z "$ep" ]] && continue
+                  if ! grep -qxF "$ep" <<<"$ACTIVE_ENDPOINTS"; then
+                    log "Endpoint ${ep} no longer active, removing it from ${CONF_FILE}"
+                    /opt/zone-manager/zone-manager.sh remove_endpoint "$CONF_FILE" "$SATELLITE_ZONE_NAME" "$ep"
+                  fi
+                done <<<"$PREV_ENDPOINTS"
+
+                reload_icinga2
+              else
+                log "Zone ${SATELLITE_ZONE_NAME}: no change (${ACTIVE_COUNT}/2 endpoints active)"
+              fi
+
+              sleep 30
+            done
+          env:
+          - name: NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: ICINGA2_API_USER
+            valueFrom:
+              secretKeyRef:
+                key: icinga2-api-user
+                name: icinga2-secret
+          - name: ICINGA2_API_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: icinga2-api-password
+                name: icinga2-secret
+          - name: TZ
+            value: Asia/Ho_Chi_Minh
+          - name: ROLE
+            value: satellite
+          - name: COMMON_NAME
+            value: satellite
+          - name: ZONE
+            value: zone-satellite
+          - name: PARENT_ZONE
+            value: master
+          volumeMounts:
+            {{- if .Values.satellite.volumeMounts }}
+            {{- toYaml .Values.satellite.volumeMounts | nindent 12 }}
+            {{- end }}
         - name: wait-icinga2-master
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.init.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.init.image.pullPolicy | quote }}
@@ -262,16 +467,19 @@ spec:
               done
       {{- end }}
 
-      {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
       volumes:
-      {{- range .Values.global.sharedPersistenceVolume }}
-
-      {{- if has "icinga2-satellite" .shareFor }}
-      - name: {{ .volumeName }}
-        persistentVolumeClaim:
-          claimName: {{ .pvcName }}
-      {{- end }}
-
-      {{- end }}
-      {{- end  }}
+        # shareVolume(volume): define in the global values
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has "icinga2-satellite" .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        # unshareVolume(volume): define in the chart's values.yaml
+        {{- if .Values.satellite.volumes }}
+        {{- toYaml .Values.satellite.volumes | nindent 8 }}
+        {{- end }}
 {{- end }}
