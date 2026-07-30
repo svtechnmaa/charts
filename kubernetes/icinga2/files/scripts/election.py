@@ -113,8 +113,8 @@ LEASE_NAME     = os.environ["LEASE_NAME"]
 OPT_ZONES      = os.environ["OPT_ZONES_DIR"]
 ETC_ZONES      = os.environ["ETC_ZONES_DIR"]
 API_URL        = "https://localhost:5665"
-API_USER       = os.environ.get("ICINGA_API_USER", "icingaAdmin")
-API_PASS       = os.environ.get("ICINGA_API_PASSWORD", "icingaAdmin")
+API_USER       = os.environ.get("ICINGA2_API_USER", "icingaAdmin")
+API_PASS       = os.environ.get("ICINGA2_API_PASSWORD", "icingaAdmin")
 
 
 def run_promote():

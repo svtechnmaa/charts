@@ -133,11 +133,9 @@ master:
         path: zone-manager.sh
   volumeMounts:
   - name: election
-    mountPath: /opt/election/election.py
-    subPath: election.py
+    mountPath: /opt/election
   - name: zone-manager
-    mountPath: /opt/zone-manager/zone-manager.sh
-    subPath: zone-manager.sh
+    mountPath: /opt/zone-manager
 
   securityContext:
     enabled: false
@@ -327,7 +325,7 @@ satellite:
   - name: icinga2-satellite-zones-conf
     mountPath: /tmp/zone-config
   - name: zone-manager
-    mountPath: /opt/zone-manager/zone-manager.sh
+    mountPath: /opt/zone-manager
 
 rebalance:
   workloadType: Deployment
