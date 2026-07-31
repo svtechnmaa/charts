@@ -264,9 +264,6 @@ spec:
             fi
 
             chmod 777 /opt/zones.d -R
-            # install python3 packages for election client
-            log "Install python3 packages for election client"
-            pip3 install kubernetes
 
             # Start election client in background
             log "Start election client in background"
