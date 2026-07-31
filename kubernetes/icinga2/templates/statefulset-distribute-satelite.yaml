@@ -98,7 +98,7 @@ spec:
             echo "***************** ICINGA2 PREPARE FOR NODE SETUP **********************"
             MASTER_NAME_ORIGIN=${RELEASE_NAME}-${CHART_NAME}-master
             SATELLITE_NAME_ORIGIN=${RELEASE_NAME}-${CHART_NAME}-satellite
-            FULL_POD_NAME=${POD_NAME}.${CHART_NAME}-satellite-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN }
+            FULL_POD_NAME=${POD_NAME}.${CHART_NAME}-satellite-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN}
             COMMON_NAME=${POD_NAME}
             POD_INDEX=${POD_NAME: -1}
             ZONE_INDEX=$(($POD_INDEX/2))
