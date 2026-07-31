@@ -300,24 +300,6 @@ spec:
             {{- end }}
 
           {{- end }}
-          lifecycle:
-            preStop:
-              exec:
-                command:
-                - bash
-                - -ec
-                - |
-                  log() {
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-                  }
-                  log "PreStop hook: Stopping icinga2 process gracefully"
-
-                  COMMON_NAME=${POD_NAME}
-                  POD_INDEX=${POD_NAME: -1}
-                  ZONE_INDEX=$((POD_INDEX/2))
-                  ZONE="${ZONE}-${ZONE_INDEX}"
-                  CONF_FILE="/tmp/zone-config/${ZONE}.conf"
-                  /opt/zone-manager/zone-manager.sh remove_endpoint ${CONF_FILE} ${ZONE} ${COMMON_NAME}
 
       imagePullSecrets:
       - name: ghcr-pull-secret
@@ -414,8 +396,6 @@ spec:
                 done <<<"$PREV_ENDPOINTS"
 
                 reload_icinga2
-              else
-                log "Zone ${SATELLITE_ZONE_NAME}: no change (${ACTIVE_COUNT}/2 endpoints active)"
               fi
 
               sleep 30
