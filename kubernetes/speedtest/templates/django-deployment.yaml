@@ -36,8 +36,18 @@ spec:
     spec:
       {{- $reportChartFrontendBaseUrl := .Values.django.reportChartFrontendBaseUrl | default (printf "%s://%s%s" (ternary "https" "http" .Values.global.enableHttps) .Values.global.frontendVip .Values.paths.userPortal) }}
       initContainers:
+        - name: wait-for-mariadb
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image.initWaitDb "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -zvw5 {{ .Values.db.host }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+
         - name: migrate
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: ["/bin/sh", "-c", "./backup-and-migrate.sh"]
           volumeMounts:
             - name: backup-volume
@@ -58,6 +68,7 @@ spec:
                 name: django-db-secret
         - name: collectstatic
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: ["python", "manage.py", "collectstatic", "--noinput"]
           volumeMounts:
             - name: static-volume
@@ -76,6 +87,7 @@ spec:
       containers:
         - name: django
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           ports:
             - containerPort: 8000
           volumeMounts:

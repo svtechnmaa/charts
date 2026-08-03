@@ -37,6 +37,7 @@ spec:
       containers:
         - name: scheduler
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.scheduler "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: ["python", "manage.py", "rqscheduler", "--interval", "5"]
           env:
             - name: REDIS_HOST

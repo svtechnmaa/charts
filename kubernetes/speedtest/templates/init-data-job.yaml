@@ -1,4 +1,4 @@
-{{- if .Values.global.runInitDataJob }}
+{{- if .Values.global.speedtest.runInitDataJob }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -31,9 +31,20 @@ spec:
       {{- end }}
     spec:
       restartPolicy: Never
+      initContainers:
+        - name: wait-for-mariadb
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image.initWaitDb "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -zvw5 {{ .Values.db.host }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+
       containers:
         - name: migrate
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: [ "python", "manage.py", "init_data" ]
           env:
             - name: DB_ENGINE
