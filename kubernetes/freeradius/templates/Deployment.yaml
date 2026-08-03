@@ -116,7 +116,28 @@ spec:
               done
 
               echo "Successfully logged in to MySQL servers."
- 
+
+        - name: initialize-radius-pvc
+          image: {{ template "freeradius.image" . }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -eu
+
+              if find /tmp/freeradius -maxdepth 1 -type f -name 'dictionary*' -print -quit | grep -q .; then
+                echo "[INIT] Dictionary files already exist, skipping copy"
+              else
+                echo "[INIT] No dictionary files found, copying defaults"
+                cp -a /usr/share/freeradius/. /tmp/freeradius/
+              fi
+          securityContext:
+              runAsUser: 0
+              runAsNonRoot: false
+          volumeMounts:
+            - name: freeradius-dictionary
+              mountPath: /tmp/freeradius
+        
       containers:
         - name: freeradius
           image: {{ template "freeradius.image" . }}
