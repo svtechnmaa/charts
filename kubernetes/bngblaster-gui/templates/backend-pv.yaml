@@ -1,0 +1,20 @@
+{{- $namespace := .Release.Namespace }}
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ printf "%s-%s-pv" (include "bngblaster-gui.fullname" .) .Values.sharedVolume.volumeName | trunc 63 | trimSuffix "-" | quote }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  claimRef:
+    namespace: {{ .Release.Namespace }}
+    name: {{ printf "%s-%s" (include "bngblaster-gui.fullname" .) .Values.sharedVolume.pvcName | trunc 63 | trimSuffix "-" }}
+  accessModes:
+    - {{ .Values.sharedVolume.accessModes }}
+  capacity:
+    storage: {{ .Values.sharedVolume.storageSize }}
+  hostPath:
+    path: {{ include "bngblaster-gui.backendDataHostPath" . | quote }}
+    type: DirectoryOrCreate
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: {{ printf "%s-%s" $namespace .Values.sharedVolume.storageClass }}
