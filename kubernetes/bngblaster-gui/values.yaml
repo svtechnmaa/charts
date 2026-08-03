@@ -34,13 +34,6 @@ backend:
     port: 8000
     targetPort: 8000
   resources: {}
-  dataPersistence:
-    enabled: true
-    volumeName: backend-data
-    hostPath: backend-data
-    mountPath: /app/app/data
-    sourcePath: /app/app/data
-    fileName: all_conf.yml
   secret:
     secretKey: ""
     fernetKey: ""
@@ -52,6 +45,14 @@ backend:
     keycloakClientId: ""
     keycloakClientSecret: ""
     keycloakRedirectUri: ""
+
+sharedVolume:
+  volumeName: backend-data
+  path: /app/app/data
+  pvcName: backend-data-pvc
+  storageSize: 2Gi
+  accessModes: ReadWriteOnce
+  storageClass: backend-data-hostpath
 
 # Default mode uses an external PostgreSQL database.
 # Fill these values to point the backend to your existing PostgreSQL service.

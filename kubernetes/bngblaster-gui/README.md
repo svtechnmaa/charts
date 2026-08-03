@@ -100,6 +100,30 @@ externalPostgresql:
   database: bng_web
 ```
 
+## Persistence
+
+Backend data is mounted through a `PersistentVolumeClaim`. By default, the chart
+also creates a retained static `PersistentVolume` backed by the host path:
+
+```text
+<global.basePath>/<namespace>/backend-data
+```
+
+Key values:
+
+```yaml
+backend:
+  replicaCount: 1
+
+sharedVolume:
+  volumeName: backend-data
+  path: /app/app/data
+  pvcName: backend-data-pvc
+  storageSize: 2Gi
+  accessModes: ReadWriteOnce
+  storageClass: backend-data-hostpath
+```
+
 ## Production Values
 
 Review these before production:

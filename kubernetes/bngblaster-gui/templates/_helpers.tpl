@@ -50,12 +50,12 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end -}}
 
 {{- define "bngblaster-gui.backendDataHostPath" -}}
-{{- $hostPath := .Values.backend.dataPersistence.hostPath -}}
-{{- if hasPrefix "/" $hostPath -}}
-{{- $hostPath -}}
+{{- $volumeName := .Values.sharedVolume.volumeName -}}
+{{- if hasPrefix "/" $volumeName -}}
+{{- $volumeName -}}
 {{- else -}}
 {{- $global := default dict .Values.global -}}
 {{- $basePath := default "/opt/shared" $global.basePath | trimSuffix "/" -}}
-{{- printf "%s/%s/%s" $basePath .Release.Namespace $hostPath -}}
+{{- printf "%s/%s/%s" $basePath .Release.Namespace $volumeName -}}
 {{- end -}}
 {{- end -}}

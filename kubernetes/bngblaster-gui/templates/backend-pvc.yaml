@@ -1,0 +1,14 @@
+{{- $namespace := .Release.Namespace }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.sharedVolume.pvcName }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    - {{ .Values.sharedVolume.accessModes }}
+  storageClassName: {{ printf "%s-%s" $namespace .Values.sharedVolume.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.sharedVolume.storageSize }}
