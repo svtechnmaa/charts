@@ -26,25 +26,24 @@ data:
         #     customRequestHeaders:
         #       Authorization: "<dummy-fill up when applying>"
 
-      redirect-homepage:
-        redirectRegex:
-          regex: "^(https?://[^/]+)/?$"
-          replacement: "${1}/app"
-          permanent: false
+        redirect-homepage:
+          redirectRegex:
+            regex: "^(https?://[^/]+)/?$"
+            replacement: "${1}/app"
+            permanent: false
 
-    routers:
-      default:
-        middlewares:
-          - "redirect-homepage"
-        rule: "Path(`/`)"
-        service: "frontend"
-
-      default-tls:
-        middlewares:
-          - "redirect-homepage"
-        rule: "Path(`/`)"
-        service: "frontend"
-        tls: {}
+      routers:
+        default:
+          middlewares:
+            - "redirect-homepage"
+          rule: "Path(`/`)"
+          service: "frontend"
+        default-tls:
+          middlewares:
+            - "redirect-homepage"
+          rule: "Path(`/`)"
+          service: "frontend"
+          tls: {}
         backend:
           middlewares:
             - "cors"
