@@ -38,6 +38,7 @@ spec:
       containers:
         - name: report-export-worker
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: ["python", "manage.py", "rqworker", "report_export"]
           volumeMounts:
             - name: media-volume

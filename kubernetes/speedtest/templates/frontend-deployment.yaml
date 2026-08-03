@@ -37,6 +37,7 @@ spec:
       initContainers:
         - name: build-frontend
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.frontend "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: ["/bin/sh", "-c"]
           args:
             - npm run build && cp -r dist/* /app-dist/ && find /app-dist/ -type f -mtime +7 -delete
@@ -62,6 +63,7 @@ spec:
       containers:
         - name: frontend
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.frontend "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           volumeMounts:
             - name: app-dist-volume
               mountPath: /usr/share/nginx/html

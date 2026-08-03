@@ -37,6 +37,7 @@ spec:
       containers:
         - name: worker
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.worker "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           env:
             - name: NUM_WORKERS
               value: {{ .Values.worker.numWorkers | quote }}

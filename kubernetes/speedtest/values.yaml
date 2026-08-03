@@ -3,8 +3,11 @@ global:
   imageRegistry: ""
   backendVip: "" # <= Auto-assign with metalLB (Always set to empty string)
   frontendVip: "10.98.98.110" # <= Auto-assign with metalLB or set your own IP
-  runInitDataJob: false # <= Set to true if you want to run the init data job
   enableHttps: false # <= Set to true if you want to enable HTTPS
+  grafana-embed:
+    subPath: "/speedtest/grafana"
+  speedtest:
+    runInitDataJob: false # <= Set to true if you want to run the init data job
 
 nameOverride: ""
 fullnameOverride: ""
@@ -12,6 +15,9 @@ commonLabels: {}
 commonAnnotations: {}
 podLabels: {}
 podAnnotations: {}
+imagePullPolicy: IfNotPresent
+imagePullSecrets:
+  - name: ghcr-pull-secret
 ######################################################  
 replicaCounts:
   django: 1
@@ -19,6 +25,7 @@ replicaCounts:
   subscribeResult: 1
   testerServer: 1
   mqttLogger: 1
+  djangoStatic: 1
   scheduler: 1
   worker: 1
   reportExportWorker: 1
@@ -52,6 +59,10 @@ image:
     registry: ghcr.io
     repository: svtechnmaa/nginx
     tag: 1.22.0
+  initWaitDb:
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
+    tag: 1.33
 #####################################################
 pvc:
   static:
@@ -78,7 +89,6 @@ pvc:
 # Change this if you use a different service/IP
 db:
   enable: false # <= External MariaDB is expected; this chart does not render MariaDB resources
-  secretName: django-db-secret
   name: "speedtest"
   user: "speedtest"
   password: "speedtest@123"

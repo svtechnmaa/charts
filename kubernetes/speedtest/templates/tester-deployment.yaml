@@ -37,6 +37,7 @@ spec:
       containers:
         - name: speed-tester
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.testerServer "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           ports:
             - containerPort: 8989
           env:

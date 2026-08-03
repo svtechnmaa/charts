@@ -37,6 +37,7 @@ spec:
       containers:
         - name: mqtt-logger
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.mqttLogger "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           env:
             - name: MAX_CONCURRENT_PER_SERVER
               value: {{ .Values.mqtt.maxConcurrency | quote }}
