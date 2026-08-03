@@ -26,16 +26,25 @@ data:
         #     customRequestHeaders:
         #       Authorization: "<dummy-fill up when applying>"
 
-      routers:
-        default:
-          middlewares: []
-          rule: "PathPrefix(`/`)"
-          service: ""
-        default-tls:
-          middlewares: []
-          rule: "PathPrefix(`/`)"
-          service: ""
-          tls: {}
+      redirect-homepage:
+        redirectRegex:
+          regex: "^(https?://[^/]+)/?$"
+          replacement: "${1}/app"
+          permanent: false
+
+    routers:
+      default:
+        middlewares:
+          - "redirect-homepage"
+        rule: "Path(`/`)"
+        service: "frontend"
+
+      default-tls:
+        middlewares:
+          - "redirect-homepage"
+        rule: "Path(`/`)"
+        service: "frontend"
+        tls: {}
         backend:
           middlewares:
             - "cors"
@@ -62,7 +71,7 @@ data:
           middlewares:
             - "cors"
           rule: >-
-            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) ||
+            PathPrefix(`/login`) || PathPrefix(`/logout`) ||
             PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) ||
             PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) ||
             PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) ||
@@ -72,7 +81,7 @@ data:
           middlewares:
             - "cors"
           rule: >-
-            Path(`/`) || PathPrefix(`/login`) || PathPrefix(`/logout`) ||
+            PathPrefix(`/login`) || PathPrefix(`/logout`) ||
             PathPrefix(`/admin`) || PathPrefix(`/app`) || PathPrefix(`/build`) ||
             PathPrefix(`/api/visualizer`) || PathPrefix(`/api/datasources`) ||
             PathPrefix(`/api/metadata`) || PathPrefix(`/api/queries`) ||
