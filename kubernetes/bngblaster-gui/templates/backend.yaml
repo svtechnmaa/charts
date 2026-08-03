@@ -29,11 +29,15 @@ spec:
             - |
               set -eu
               mkdir -p /mnt/backend-data
-              if [ -f "{{ .Values.sharedVolume.path }}/all_conf.yml" ] && [ ! -f "/mnt/backend-data/all_conf.yml" ]; then
-                cp "{{ .Values.sharedVolume.path }}/all_conf.yml" "/mnt/backend-data/all_conf.yml"
+              seed_source="{{ .Values.sharedVolume.path }}/all_conf.yml"
+              seed_dest="/mnt/backend-data/all_conf.yml"
+              if [ -f "$seed_dest" ]; then
+                echo "Data already initialized, skipping"
+              elif [ -f "$seed_source" ]; then
+                cp "$seed_source" "$seed_dest"
                 echo "Initialized data successfully"
               else
-                echo "Data already initialized, skipping"
+                echo "Seed file $seed_source not found; backend data volume was left empty"
               fi
           volumeMounts:
             - name: {{ .Values.sharedVolume.volumeName }}
@@ -70,7 +74,7 @@ spec:
       volumes:
         - name: {{ .Values.sharedVolume.volumeName }}
           persistentVolumeClaim:
-            claimName: {{ .Values.sharedVolume.pvcName }}
+            claimName: {{ printf "%s-%s" (include "bngblaster-gui.fullname" .) .Values.sharedVolume.pvcName | trunc 63 | trimSuffix "-" }}
 ---
 apiVersion: v1
 kind: Service

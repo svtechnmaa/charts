@@ -2,10 +2,13 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: {{ printf "%s-%s-pv" $namespace .Values.sharedVolume.volumeName | quote }}
+  name: {{ printf "%s-%s-pv" (include "bngblaster-gui.fullname" .) .Values.sharedVolume.volumeName | trunc 63 | trimSuffix "-" | quote }}
   annotations:
     helm.sh/resource-policy: keep
 spec:
+  claimRef:
+    namespace: {{ .Release.Namespace }}
+    name: {{ printf "%s-%s" (include "bngblaster-gui.fullname" .) .Values.sharedVolume.pvcName | trunc 63 | trimSuffix "-" }}
   accessModes:
     - {{ .Values.sharedVolume.accessModes }}
   capacity:

@@ -124,6 +124,18 @@ sharedVolume:
   storageClass: backend-data-hostpath
 ```
 
+Managed PV/PVC names include the Helm release fullname to avoid install
+collisions between releases in the same namespace.
+
+The default host path is:
+
+```text
+<global.basePath>/<namespace>/backend-data
+```
+
+The chart-managed PV is hostPath-backed and `ReadWriteOnce` by default. For
+multiple backend replicas, prefer network-backed RWX storage.
+
 ## Production Values
 
 Review these before production:
