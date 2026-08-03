@@ -208,27 +208,14 @@ spec:
               # Add curl into post-commit
               log "Add post-commit script to reload icinga2 config and restart icinga2 process"
               cat << 'EOF' > /opt/zones.d/.git/hooks/post-commit
-            #!/bin/bash
-            LINK="/etc/icinga2/zones.d"
-            # Only restart if this node owns the active zones.d
-            if [ ! -L "$LINK" ]; then
-                echo "Not leader, skipping restart."
-                exit 0
-            fi
-            TARGET=$(readlink -f "$LINK")
-            if [ "$TARGET" != "/opt/zones.d" ]; then
-                echo "zones.d points elsewhere, skipping."
-                exit 0
-            fi
-            HOST=$(hostname)
-
-            sleep 30
-
-            url="https://${HOST}.icinga2-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
-            curl -k -sS \
-                -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" \
-                -H "Accept: application/json" \
-                -X POST "$url"
+            echo 'post-commit'
+            MASTER_LIST=$(dig srv +search +short icinga2-headless |awk '{print $4}' | uniq | sed 's/.$//g')
+            for MASTER in ${MASTER_LIST}
+            do
+            master_index=$(echo "$MASTER" | cut -d'.' -f1  | awk -F'-' '{print $NF}')
+            url="https://${RELEASE_NAME}-icinga2-master-${master_index}.icinga2-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
+            curl -k -s -S -i -u ${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD} -H 'Accept: application/json' -X POST "$url"
+            done
             EOF
             fi
 
