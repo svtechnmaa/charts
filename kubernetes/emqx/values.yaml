@@ -12,7 +12,7 @@ commonAnnotations: {}
 image:
   registry: ghcr.io
   repository: svtechnmaa/emqx
-  tag: latest
+  tag: 6
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -46,7 +46,7 @@ coreTemplate:
   extraVolumeMounts: []
   persistence:
     enabled: true
-    storageClass: seaweedfs-storage
+    storageClass: local-path
     size: 1Gi
     accessModes:
       - ReadWriteOnce
