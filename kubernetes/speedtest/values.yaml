@@ -34,7 +34,7 @@ image:
   django:
     registry: ghcr.io
     repository: svtechnmaa/speedtester_backend
-    tag: 2.1.4
+    tag: 2.1.5
   frontend:
     registry: ghcr.io
     repository: svtechnmaa/speedtester_frontend
@@ -135,6 +135,8 @@ django:
   reportExportPdfRenderBatchSize: "5"
   reportExportPdfRenderAttempts: "3"
   reportExportMaintenanceSchedule: "*/15 * * * *"
+  numWorkers: "3" # <= Uvicorn worker processes;
+  reportExportNumWorkers: "2" # <= Uvicorn worker processes;
 #####################################################
 worker:
   numWorkers: 3

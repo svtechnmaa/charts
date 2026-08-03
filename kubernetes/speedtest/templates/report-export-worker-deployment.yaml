@@ -46,6 +46,8 @@ spec:
             - name: logs-volume
               mountPath: "/app/logs"
           env:
+            - name: NUM_WORKERS
+              value: {{ .Values.django.reportExportNumWorkers | quote }}
             - name: DB_ENGINE
               value: {{ .Values.django.dbEngine | quote }}
             - name: MEDIA_ROOT
