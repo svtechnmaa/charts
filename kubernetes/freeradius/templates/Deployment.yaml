@@ -131,6 +131,9 @@ spec:
                 echo "[INIT] No dictionary files found, copying defaults"
                 cp -a /usr/share/freeradius/. /tmp/freeradius/
               fi
+          securityContext:
+              runAsUser: 0
+              runAsNonRoot: false
           volumeMounts:
             - name: freeradius-dictionary
               mountPath: /tmp/freeradius
