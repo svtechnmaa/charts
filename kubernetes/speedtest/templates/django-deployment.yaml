@@ -100,6 +100,8 @@ spec:
           env:
             - name: ADMIN_PORTAL_PATH
               value: {{ .Values.paths.adminPortal | quote }}
+            - name: NUM_WORKERS
+              value: {{ .Values.django.numWorkers | quote }}
             - name: DB_ENGINE
               value: {{ .Values.django.dbEngine | quote }}
             - name: STATIC_ROOT
