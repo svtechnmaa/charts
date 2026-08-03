@@ -90,10 +90,10 @@ spec:
                 --namespace {{ .Release.Namespace }} \
                 --master-headless-service {{ .Chart.Name }}-headless \
                 --satellite-headless-service {{ .Chart.Name }}-satellite-headless \
-                --master-zones-file /opt/zones.d/master_zones.conf \
-                --satellite-zones-file /opt/zones.d/master/satellite_zones.conf \
-                --icinga2-zones-folder /opt/zones.d/ \
-                --all-hosts-folder /opt/zones.d/all_config \
+                --master-zones-file /etc/icinga2/zones.d/master_zones.conf \
+                --satellite-zones-file /etc/icinga2/zones.d/master/satellite_zones.conf \
+                --icinga2-zones-folder /etc/icinga2/zones.d/ \
+                --all-hosts-folder /etc/icinga2/zones.d/all_config \
                 --zone-prefix zone-satellite \
                 --interval 60 \
                 --loglevel INFO
