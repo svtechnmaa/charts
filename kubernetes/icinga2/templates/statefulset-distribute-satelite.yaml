@@ -154,8 +154,8 @@ spec:
             log "Add reload script to reload icinga2 config and restart icinga2 process"
             cat << EOF > /usr/bin/reload
             icinga2 daemon -C > /dev/null 2>&1
-            exit_code=$?
-            if [[ $exit_code -eq 0 ]]; then
+            exit_code=\$?
+            if [[ \$exit_code -eq 0 ]]; then
               echo "Valid icinga2 config"
             else
               echo "WARNING: Invalid icinga2 config, resolve the problem first"
@@ -163,7 +163,7 @@ spec:
               exit 1
             fi
             url="https://localhost:5665/v1/actions/restart-process?pretty=1"
-            curl -k -s -S -i -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" -H 'Accept: application/json' -X POST "$url"
+            curl -k -s -S -i -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" -H 'Accept: application/json' -X POST "\$url"
             EOF
 
             # Add script to reload satellite
@@ -173,13 +173,12 @@ spec:
             chown icinga:icinga /usr/bin/reload-satellite
             cat << EOF > /usr/bin/reload-satellite
             echo 'Restarting satellite...'
-            SATELLITE_LIST=$(dig srv +search +short icinga2-satellite-headless |awk '{print $4}' | uniq | sed 's/.$//g')
-            NAMESPACE=${NAMESPACE}
-            for SATELLITE in ${SATELLITE_LIST}
+            SATELLITE_LIST=\$(dig srv +search +short icinga2-satellite-headless |awk '{print \$4}' | uniq | sed 's/.$//g')
+            for SATELLITE in \${SATELLITE_LIST}
             do
-            satellite_index=$(echo "$SATELLITE" | cut -d'.' -f1  | awk -F'-' '{print $NF}')
-            url="https://${SATELLITE_NAME_ORIGIN}-${satellite_index}.icinga2-satellite-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
-            curl -k -s -S -i -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" -H 'Accept: application/json' -X POST "$url"
+            satellite_index=\$(echo "\$SATELLITE" | cut -d'.' -f1  | awk -F'-' '{print \$NF}')
+            url="https://${SATELLITE_NAME_ORIGIN}-\${satellite_index}.icinga2-satellite-headless.${NAMESPACE}:5665/v1/actions/restart-process?pretty=1"
+            curl -k -s -S -i -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" -H 'Accept: application/json' -X POST "\$url"
             done
             EOF
 
