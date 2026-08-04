@@ -152,7 +152,7 @@ spec:
 
             # Add curl into reload
             log "Add reload script to reload icinga2 config and restart icinga2 process"
-            cat << 'EOF' > /usr/bin/reload
+            cat << EOF > /usr/bin/reload
             icinga2 daemon -C > /dev/null 2>&1
             exit_code=$?
             if [[ $exit_code -eq 0 ]]; then
@@ -171,7 +171,7 @@ spec:
             touch /usr/bin/reload-satellite
             chmod -R 775 /usr/bin/reload-satellite
             chown icinga:icinga /usr/bin/reload-satellite
-            cat << 'EOF' > /usr/bin/reload-satellite
+            cat << EOF > /usr/bin/reload-satellite
             echo 'Restarting satellite...'
             SATELLITE_LIST=$(dig srv +search +short icinga2-satellite-headless |awk '{print $4}' | uniq | sed 's/.$//g')
             NAMESPACE=${NAMESPACE}
