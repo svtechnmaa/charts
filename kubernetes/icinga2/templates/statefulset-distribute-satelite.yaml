@@ -404,12 +404,12 @@ spec:
             valueFrom:
               secretKeyRef:
                 key: icinga2-api-user
-                name: icinga2-secret
+                name: {{ .Chart.Name }}-secret
           - name: ICINGA2_API_PASSWORD
             valueFrom:
               secretKeyRef:
                 key: icinga2-api-password
-                name: icinga2-secret
+                name: {{ .Chart.Name }}-secret
           - name: TZ
             value: Asia/Ho_Chi_Minh
           - name: ROLE
