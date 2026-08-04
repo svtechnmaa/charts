@@ -27,8 +27,19 @@ spec:
               satellite_index=$(cut -d'.' -f1 <<< $(echo $SATELLITE 2>/dev/null) | awk -F'-' '{print $NF}')
               echo "Reloading satellite ${satellite_index}..."
               url="https://{{ .Release.Name }}-icinga2-satellite-${satellite_index}.icinga2-satellite-headless.{{ .Release.Namespace }}:5665/v1/actions/restart-process?pretty=1"
-              curl -k -s -S -i -u icingaAdmin:icingaAdmin -H 'Accept: application/json' -X POST "$url"
+              curl -k -s -S -i -u "${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}" -H 'Accept: application/json' -X POST "$url"
               done
+            env:
+              - name: ICINGA2_API_USER
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Chart.Name }}-secret
+                    key: icinga2-api-user
+              - name: ICINGA2_API_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Chart.Name }}-secret
+                    key: icinga2-api-password
           restartPolicy: OnFailure
           imagePullSecrets:
             - name: ghcr-pull-secret
