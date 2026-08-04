@@ -300,7 +300,7 @@ spec:
       initContainers:
         - name: sidecar
           restartPolicy: Always
-          image: bash:5.2.15
+          image: ghcr.io/svtechnmaa/bash:5.2.15
           imagePullPolicy: IfNotPresent
           command:
           - bash
