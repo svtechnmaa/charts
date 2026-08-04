@@ -276,7 +276,6 @@ spec:
           {{- if .Values.master.resources }}
           resources: {{- toYaml .Values.master.resources | nindent 12 }}
           {{- end }}
-          {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
           volumeMounts:
             # shareVolume: VolumeMount
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
@@ -291,8 +290,6 @@ spec:
             {{- if .Values.satellite.volumeMounts }}
             {{- toYaml .Values.satellite.volumeMounts | nindent 12 }}
             {{- end }}
-
-          {{- end }}
 
       imagePullSecrets:
       - name: ghcr-pull-secret

@@ -112,16 +112,16 @@ spec:
             SATELLITE_NAME_ORIGIN=${RELEASE_NAME}-${CHART_NAME}-satellite
             FULL_POD_NAME=${POD_NAME}.${CHART_NAME}-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN}
             COMMON_NAME=${POD_NAME}
-            POD_INDEX=${POD_NAME: -1}
+            POD_INDEX="${FULL_POD_NAME##*-}"
             if [[ $POD_INDEX != "0" ]]; then
               log "Init variable for icinga2 master node setup as satellite role"
               ROLE="satellite"
               PARENT_NAME=${MASTER_NAME_ORIGIN}-0
-              PARENT_ZONE=${ZONE}
+              PARENT_ZONE="master"
               PARENT_HOST=${CHART_NAME}
               PARENT_PORT=5665
               TRUSTEDCERT=/var/lib/icinga2/certs/trusted-parent.crt
-              ZONE=${ZONE}
+              ZONE="master"
             fi
 
             # change permission /var/lib/icinga2 because of persistent volume from different user
@@ -141,10 +141,11 @@ spec:
 
             # Add curl into reload
             log "Add reload script to reload icinga2 config and restart icinga2 process"
-            cat << EOF > /usr/bin/reload
+            cat << 'EOF' > /usr/bin/reload
+            #!/bin/bash
             icinga2 daemon -C > /dev/null 2>&1
-            exit_code=\$?
-            if [[ \$exit_code -eq 0 ]]; then
+            exit_code=$?
+            if [[ $exit_code -eq 0 ]]; then
               echo "Valid icinga2 config"
             else
               echo "WARNING: Invalid icinga2 config, resolve the problem first"
@@ -152,8 +153,10 @@ spec:
               exit 1
             fi
             url="https://localhost:5665/v1/actions/restart-process?pretty=1"
-            curl -k -s -S -i -u "$ICINGA2_API_USER:$ICINGA2_API_PASSWORD" -H 'Accept: application/json' -X POST "\$url"
+            curl -k -s -S -i -u "$ICINGA2_API_USER:$ICINGA2_API_PASSWORD" -H 'Accept: application/json' -X POST "$url"
             EOF
+            chmod -R 775 /usr/bin/reload
+            chown icinga:icinga /usr/bin/reload
 
             # Add script to reload master
             log "Add reload script to reload masters"
@@ -207,16 +210,19 @@ spec:
               git add -A && git commit -m "init config"
               # Add curl into post-commit
               log "Add post-commit script to reload icinga2 config and restart icinga2 process"
-              cat << EOF > /opt/zones.d/.git/hooks/post-commit
+              cat << 'EOF' > /opt/zones.d/.git/hooks/post-commit
+            #!/bin/bash
             echo 'post-commit'
-            MASTER_LIST=\$(dig srv +search +short icinga2-headless |awk '{print \$4}' | uniq | sed 's/.$//g')
-            for MASTER in \${MASTER_LIST}
+            MASTER_LIST=$(dig srv +search +short icinga2-headless |awk '{print $4}' | uniq | sed 's/.$//g')
+            for MASTER in ${MASTER_LIST}
             do
-            master_index=\$(echo "\$MASTER" | cut -d'.' -f1  | awk -F'-' '{print \$NF}')
-            url="https://$RELEASE_NAME-icinga2-master-\${master_index}.icinga2-headless.$NAMESPACE:5665/v1/actions/restart-process?pretty=1"
-            curl -k -s -S -i -u "$ICINGA2_API_USER:$ICINGA2_API_PASSWORD" -H 'Accept: application/json' -X POST "\$url"
+            master_index=$(echo "$MASTER" | cut -d'.' -f1  | awk -F'-' '{print $NF}')
+            url="https://$RELEASE_NAME-icinga2-master-${master_index}.icinga2-headless.$NAMESPACE:5665/v1/actions/restart-process?pretty=1"
+            curl -k -s -S -i -u "$ICINGA2_API_USER:$ICINGA2_API_PASSWORD" -H 'Accept: application/json' -X POST "$url"
             done
             EOF
+              chmod -R 775 /opt/zones.d/.git/hooks/post-commit
+              chown icinga:icinga /opt/zones.d/.git/hooks/post-commit
             fi
 
             # Create host object for the endpoint
