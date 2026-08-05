@@ -28,9 +28,9 @@ data:
 
         redirect-homepage:
           redirectRegex:
-            regex: "^(https?://[^/]+)/?$"
-            replacement: "${1}/app"
-            permanent: false
+            regex: '^(https?://[^/]+)/?([?].*)?$'
+            replacement: "${1}/app${2}"
+            permanent: true
 
       routers:
         default:
