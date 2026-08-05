@@ -923,7 +923,7 @@ jobs:
           echo "COMMITTER_EMAIL: $COMMITTER_EMAIL"
         
       - name: Send mail to committer to notify failure
-        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success')
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success')
         continue-on-error: true
         uses: dawidd6/action-send-mail@v6
         with:
@@ -954,7 +954,7 @@ jobs:
 
 
       - name: Wait before cleanup
-        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success')
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success')
         continue-on-error: true
         run: |
           if [ ${{ env.WAIT_SECONDS }} -gt 3600 ]; then
@@ -973,7 +973,7 @@ jobs:
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
 
       - name: Send mail to committer to notify success
-        if: ${{ ! ( (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') ) }}
+        if: ${{ ! ( (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success') ) }}
         continue-on-error: true
         uses: dawidd6/action-send-mail@v6
         with:
