@@ -47,6 +47,30 @@ flower:
     tag: "2.0" 
     pullPolicy: IfNotPresent
 
+conductor:
+  replicaCount: 1
+  image:
+    registry: docker.io
+    repository: conductoross/conductor
+    tag: "3.31.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    ports:
+      - name: api
+        port: 8080
+        targetPort: 8080
+        protocol: TCP
+      - name: ui
+        port: 5000
+        targetPort: 5000
+        protocol: TCP
+  resources: {}
+
+conductorWorker:
+  replicaCount: 3
+  resources: {}
+
 
 podSecurityContext: {}
   # fsGroup: 2000
@@ -189,6 +213,7 @@ netforgeAppEnv:
   INFLUX_URL: "http://influxdb:8086"
   INFLUX_ORG: "netforge"
   INFLUX_BUCKET: "netforge"
+  CONDUCTOR_API_URL: http://conductor:8080/api
 
 netforgeAppSecretEnv:
   # Generate SECRET_KEY: openssl rand -hex 32
@@ -201,3 +226,8 @@ netforgeAppSecretEnv:
   S3_SECRET_KEY: ""
   INFLUX_USERNAME: "juniper"
   INFLUX_PASSWORD: "juniper@123"
+
+conductorSecretEnv:
+  # Dedicated PostgreSQL URL for Conductor. Keep the jdbc: prefix.
+  # Credentials may be supplied as JDBC query parameters as shown below.
+  CONDUCTOR_DATABASE_URL: "jdbc:postgresql://conductor-postgres:5432/conductor?user=conductor&password=conductor_pass"
