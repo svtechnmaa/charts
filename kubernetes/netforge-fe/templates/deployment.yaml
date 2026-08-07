@@ -76,7 +76,7 @@ spec:
           envFrom:
             - configMapRef:
                 name: netforge-web-env
-                optional: false
+                optional: true
 
           {{- if .Values.livenessProbe }}
           livenessProbe:

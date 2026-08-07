@@ -26,6 +26,47 @@ image:
   tag: "latest" 
   pullPolicy: IfNotPresent
 
+adapter:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: svtechnmaa/netforge-adapter
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  env:
+    ADAPTER_DIR: /adapters
+  envFrom:
+    # backend environment managed by the netforge-be chart.
+    configMap: netforge-be-env
+    secret: netforge-be-secret-env
+  service:
+    type: ClusterIP
+    port: 8001
+    targetPort: 8001
+  persistence:
+    # The current netforge-adapter image does not contain adapter_manager/adapters.
+    # Enable this and point it at the shared NetForge repository PVC to match docker-compose.
+    enabled: false
+    existingClaim: ""
+    subPath: adapter_manager/adapters
+  resources: {}
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
 # This is to override the chart name.
 nameOverride: ""
 fullnameOverride: ""
@@ -137,4 +178,7 @@ affinity:
 timezone: Asia/Ho_Chi_Minh
 env: {}
 
-# netforgeWebConfig:
+netforgeWebConfig:
+  BACKEND_URL: http://backend:8000
+  YANG_URL: http://yang-python:8000
+  ADAPTER_URL: http://adapter:8000
