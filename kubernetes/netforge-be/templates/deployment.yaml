@@ -67,6 +67,14 @@ spec:
               git clone --branch "$GIT_REF" --single-branch "https://$GH_USER:$GH_FG_TOKEN@github.com/svtechnmaa/$name.git" "$REPO_PATH"
               echo "true" > "$REPO_PATH/completed"
             else
+              if [[ ! -d "$REPO_PATH/.git" ]]; then
+                echo "$REPO_PATH does not contain a .git directory. Fail init" >&2
+                exit 1
+              fi
+              if [[ ! -f "$REPO_PATH/completed" ]]; then
+                echo "$REPO_PATH does not contain a completed file. Fail init" >&2
+                exit 1
+              fi
               echo "$REPO_PATH is not Empty. Ignore"
             fi
         env:
