@@ -51,6 +51,8 @@ spec:
             - name: {{ .volumeName }}
               mountPath: /app/config/config.properties
               subPath: conductor/config/config.properties
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
             {{- end }}
             {{- end }}
             {{- end }}
