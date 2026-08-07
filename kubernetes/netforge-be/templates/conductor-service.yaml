@@ -1,0 +1,21 @@
+{{- if .Values.conductor.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: conductor
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: conductor
+spec:
+  type: {{ .Values.conductor.service.type }}
+  selector:
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: conductor
+  ports:
+    {{- range .Values.conductor.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+    {{- end }}
+{{- end }}
