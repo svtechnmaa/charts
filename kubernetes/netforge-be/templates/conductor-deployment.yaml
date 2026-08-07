@@ -1,3 +1,4 @@
+{{- if .Values.conductor.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,11 +45,23 @@ spec:
           resources:
             {{- toYaml .Values.conductor.resources | nindent 12 }}
           volumeMounts:
-            - name: conductor-config
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
               mountPath: /app/config/config.properties
-              subPath: config.properties
-              readOnly: true
+              subPath: conductor/config/config.properties
+            {{- end }}
+            {{- end }}
+            {{- end }}
       volumes:
-        - name: conductor-config
-          configMap:
-            name: conductor-config
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+{{- end }}

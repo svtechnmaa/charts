@@ -48,6 +48,7 @@ flower:
     pullPolicy: IfNotPresent
 
 conductor:
+  enabled: true
   replicaCount: 1
   image:
     registry: docker.io

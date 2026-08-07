@@ -4,15 +4,6 @@ global:
   sharedVolume:
     enabled: false
   sharedPersistenceVolume: []
-#     # snmp-manager volume
-#     - volumeName: snmp-manager-volume
-#       pvcName: snmp-manager-pvc
-#       storageSize: 10Mi
-#       path: /etc/snmptt/
-#       accessModes: ReadWriteOnce #ReadWriteMany
-#       shareFor:
-#         - snmp-manager
-#       storageClass: snmp-manager-hostpath
 
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -43,12 +34,6 @@ adapter:
     type: ClusterIP
     port: 8001
     targetPort: 8001
-  persistence:
-    # The current netforge-adapter image does not contain adapter_manager/adapters.
-    # Enable this and point it at the shared NetForge repository PVC to match docker-compose.
-    enabled: false
-    existingClaim: ""
-    subPath: adapter_manager/adapters
   resources: {}
   livenessProbe:
     httpGet:

@@ -8,25 +8,3 @@ data:
   {{ $key }}: {{ $val | quote }}
   {{- end }}
 {{- end }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: conductor-config
-data:
-  config.properties: |
-    conductor.db.type=postgres
-    conductor.queue.type=postgres
-    spring.datasource.url=${CONDUCTOR_DATABASE_URL}
-    conductor.indexing.enabled=true
-    conductor.indexing.type=postgres
-    conductor.elasticsearch.version=0
-    conductor.external-payload-storage.type=postgres
-    conductor.external-payload-storage.postgres.url=${CONDUCTOR_DATABASE_URL}
-    conductor.external-payload-storage.postgres.conductor-url=http://conductor:8080
-    conductor.app.taskInputPayloadSizeThreshold=10
-    conductor.app.taskOutputPayloadSizeThreshold=10
-    conductor.app.workflowInputPayloadSizeThreshold=10
-    conductor.app.workflowOutputPayloadSizeThreshold=10
-    loadSample=false
-    conductor.metrics-prometheus.enabled=false

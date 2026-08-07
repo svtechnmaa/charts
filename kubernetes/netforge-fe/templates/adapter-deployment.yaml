@@ -62,17 +62,24 @@ spec:
             {{- toYaml .Values.adapter.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.adapter.resources | nindent 12 }}
-          {{- if .Values.adapter.persistence.enabled }}
           volumeMounts:
-            - name: adapters
-              mountPath: {{ .Values.adapter.env.ADAPTER_DIR }}
-              subPath: {{ .Values.adapter.persistence.subPath }}
-              readOnly: true
-          {{- end }}
-      {{- if .Values.adapter.persistence.enabled }}
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ $.Values.adapter.env.ADAPTER_DIR }}
+              subPath: adapter_manager/adapters
+            {{- end }}
+            {{- end }}
+            {{- end }}
       volumes:
-        - name: adapters
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
           persistentVolumeClaim:
-            claimName: {{ required "adapter.persistence.existingClaim is required when adapter.persistence.enabled=true" .Values.adapter.persistence.existingClaim }}
-      {{- end }}
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
 {{- end }}
