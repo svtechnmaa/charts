@@ -3,22 +3,22 @@ kind: Deployment
 metadata:
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: {{ .Chart.Name }}-backend
+    app.kubernetes.io/component: {{ .Chart.Name }}
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
-  name: {{ include "common.names.fullname" . }}-backend
+  name: {{ include "common.names.fullname" . }}
 spec:
   replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.backend.replicaCount "global" .Values.global ) }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: {{ .Chart.Name }}-backend
+      app.kubernetes.io/component: {{ .Chart.Name }}
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: {{ .Chart.Name }}-backend
+        app.kubernetes.io/component: {{ .Chart.Name }}
     spec:
       initContainers:
         - name: wait-for-mariadb
@@ -38,21 +38,29 @@ spec:
         {{- if .Values.backend.image.pullPolicy }}
         imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
         {{- end }}
-        name: reflex-backend
+        name: reflex
         command:
           - bash
           - -ec
           - |
+            sed -i '
+            s/frontend_path="[^"]*"/frontend_path=os.environ["FRONTEND_PATH"]/
+            s/frontend_packages=\[[^]]*\]/&,\n    api_url=os.environ["API_URL"]/
+            ' rxconfig.py
+            cat rxconfig.py
+            {{- if not (empty .Values.backend.config.basehref) }}
+            grep -rl "/report/logo" | xargs sed -i "s|/report/logo|{{ .Values.backend.config.basehref }}/report/logo|g"
+            {{- end }}
             if [ -d alembic ]; then
               reflex db migrate
             fi
-            reflex run --env prod --backend-only --backend-port 8000
+            reflex run --env prod
         env:
           - name: TZ
             value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
         ports:
-        - containerPort: 8000
-          name: backend
+        - containerPort: 3000
+          name: {{ .Chart.Name }}
         volumeMounts:
         - name: report-ui-env
           mountPath: /app/.env
@@ -61,7 +69,7 @@ spec:
           failureThreshold: 3
           httpGet:
             path: /ping
-            port: 8000
+            port: 3000
           initialDelaySeconds: 5
           periodSeconds: 30
           successThreshold: 1

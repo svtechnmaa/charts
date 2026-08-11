@@ -4,34 +4,6 @@ global:
 
 timezone: Asia/Ho_Chi_Minh
 
-frontend:
-  replicaCount: 1
-  initJob:
-    image:
-      registry: ghcr.io
-      repository: svtechnmaa/svtech_report
-      tag: v1.2.1
-      pullPolicy: IfNotPresent
-  init:
-    image:
-      registry: ghcr.io
-      repository: svtechnmaa/busybox
-      tag: 1.33
-      pullPolicy: IfNotPresent
-  image:
-    registry: ghcr.io
-    repository: svtechnmaa/nginx
-    tag: 1.22.0
-    pullPolicy: IfNotPresent
-  service:
-    type: ClusterIP
-    port: 80
-    # loadBalancerIP:
-    # loadBalancerSourceRanges:
-    # - 10.10.10.0/24
-    # clusterIP: None
-
-
 backend:
   replicaCount: 2
   init:
@@ -47,7 +19,7 @@ backend:
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
-    port: 8000
+    port: 3000
     # loadBalancerIP:
     # loadBalancerSourceRanges:
     # - 10.10.10.0/24
@@ -78,7 +50,12 @@ backend:
     task_timeout: "3600"
     timeout: "600"
     worker: "5"
+    worker_lifetime: "600"
     use_granian: "True"  # Set to "True" to use Granian, "False" otherwise
+    rate_limit_times: "100"
+    rate_limit_seconds: "10"
+    max_concurrent_sessions: "100"
+    icinga_semaphore: "10"
 
 scheduler:
   replicaCount: 1
