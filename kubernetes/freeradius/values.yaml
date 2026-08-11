@@ -489,7 +489,7 @@ extraVolumeMounts:
 ##
 initContainers: 
 - name: initialize-radius-pvc
-  image: svtechnmaa/svtech_freeradius:v1.0.0
+  image: '{{ template "freeradius.image" . }}'
   command:
     - /bin/sh
     - -c
