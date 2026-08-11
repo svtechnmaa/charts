@@ -8,30 +8,19 @@ metadata:
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/server-snippet: |
-      location = /favicon.ico {
-        set $app_favicon "";
-        if ($http_referer ~* "{{ $basehref }}/report") {
-          set $app_favicon "{{ $basehref }}/report/favicon.ico";
-        }
-        if ($app_favicon = "") {
-          return 404;
-        }
-        rewrite ^ $app_favicon redirect;
-      }
 spec:
   ingressClassName: {{ .Release.Name }}
   rules:
   - http:
       paths:
       # Main application path
-      - path: "{{ $basehref }}/report(/|$)(.*)"
+      - path: "{{ $basehref }}/report/"
         pathType: Prefix
         backend:
           service:
-            name: {{ .Chart.Name }}-frontend
+            name: {{ .Chart.Name }}
             port:
-              number: {{ .Values.frontend.service.port }}
+              number: {{ .Values.backend.service.port }}
               
 ---
 apiVersion: networking.k8s.io/v1
@@ -50,7 +39,7 @@ spec:
       paths:
       - backend:
           service:
-            name: {{ .Chart.Name }}-backend
+            name: {{ .Chart.Name }}
             port:
               number: {{ .Values.backend.service.port }}
         path: "{{ $basehref }}/(_event|ping|_upload|_health|graphql|pingtrace)(/.*)?$"
