@@ -230,4 +230,4 @@ netforgeAppSecretEnv:
 conductorSecretEnv:
   # Dedicated PostgreSQL URL for Conductor. Keep the jdbc: prefix.
   # Credentials may be supplied as JDBC query parameters as shown below.
-  CONDUCTOR_DATABASE_URL: "jdbc:postgresql://conductor-postgres:5432/conductor?user=conductor&password=conductor_pass"
+  CONDUCTOR_DATABASE_URL: "jdbc:postgresql://conductor-postgres:5432/conductor?user=nw_user&password=nw_pass"
