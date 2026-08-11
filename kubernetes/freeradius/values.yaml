@@ -487,7 +487,27 @@ extraVolumeMounts:
     name: freeradius-dictionary
 ## @param initContainers Add additional init containers for the FreeRADIUS secondary pod(s)
 ##
-initContainers: []
+initContainers: 
+- name: initialize-radius-pvc
+  image: '{{ template "freeradius.image" . }}'
+  command:
+    - /bin/sh
+    - -c
+    - |
+      set -eu
+
+      if find /tmp/freeradius -maxdepth 1 -type f -name 'dictionary*' -print -quit | grep -q .; then
+        echo "[INIT] Dictionary files already exist, skipping copy"
+      else
+        echo "[INIT] No dictionary files found, copying defaults"
+        cp -a /usr/share/freeradius/. /tmp/freeradius/
+      fi
+  securityContext:
+      runAsUser: 0
+      runAsNonRoot: false
+  volumeMounts:
+    - name: freeradius-dictionary
+      mountPath: /tmp/freeradius
 ## @param sidecars Add additional sidecar containers for the FreeRADIUS secondary pod(s)
 ##
 sidecars:
