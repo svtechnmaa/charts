@@ -1,10 +1,9 @@
 {{- if .Values.conductor.enabled }}
 {{- $conductorWorkerName := printf "%s-conductor-worker" .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- $conductorWorkerHeadlessName := printf "%s-headless" $conductorWorkerName | trunc 63 | trimSuffix "-" }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $conductorWorkerHeadlessName }}
+  name: conductor-worker-headless
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: {{ $conductorWorkerName }}

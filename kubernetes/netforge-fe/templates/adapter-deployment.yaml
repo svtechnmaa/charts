@@ -1,22 +1,23 @@
 {{- if .Values.adapter.enabled }}
+{{- $adapterName := printf "%s-adapter" .Release.Name | trunc 63 | trimSuffix "-" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: adapter-manager
+  name: {{ $adapterName }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: adapter-manager
+    app.kubernetes.io/component: {{ $adapterName }}
 spec:
   replicas: {{ .Values.adapter.replicaCount }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: adapter-manager
+      app.kubernetes.io/component: {{ $adapterName }}
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: adapter-manager
+        app.kubernetes.io/component: {{ $adapterName }}
     spec:
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
