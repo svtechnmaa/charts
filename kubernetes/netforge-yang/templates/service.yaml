@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name:  yang-python
+  name: {{ include "common.names.name" . }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
   {{- if .Values.service.annotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.service.annotations "context" $) | nindent 4 }}

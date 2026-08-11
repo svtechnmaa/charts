@@ -1,9 +1,10 @@
 {{- if .Values.conductor.enabled }}
 {{- $conductorName := printf "%s-conductor" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- $conductorServiceName := printf "%s-conductor" (include "common.names.name" .) | trunc 63 | trimSuffix "-" }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: conductor
+  name: {{ $conductorServiceName }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: {{ $conductorName }}
