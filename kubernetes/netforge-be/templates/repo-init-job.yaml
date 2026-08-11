@@ -1,0 +1,118 @@
+{{- $repoInitName := printf "%s-repo-init-%v" .Release.Name .Release.Revision | trunc 63 | trimSuffix "-" }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $repoInitName }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: repo-init
+spec:
+  backoffLimit: {{ .Values.initRepo.backoffLimit | default 3 }}
+  ttlSecondsAfterFinished: {{ .Values.initRepo.ttlSecondsAfterFinished | default 300 }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: repo-init
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: repo-init
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              validate_repo() {
+                repo_path="$1"
+                git -c safe.directory="$repo_path" -C "$repo_path" \
+                  rev-parse --is-inside-work-tree
+              }
+
+              publish_completed() {
+                # Publish the readiness marker atomically so waiting init containers
+                # cannot observe "completed" before the repository is fully ready.
+                echo "true" > "$REPO_PATH/completed.tmp"
+                mv "$REPO_PATH/completed.tmp" "$REPO_PATH/completed"
+              }
+
+              if ! validate_repo "$REPO_SOURCE"; then
+                echo "$REPO_SOURCE is not a valid Git working tree" >&2
+                exit 1
+              fi
+
+              mkdir -p "$REPO_PATH"
+
+              if [ -d "$REPO_PATH/.git" ] && [ -f "$REPO_PATH/completed" ]; then
+                echo "$REPO_PATH is already initialized. Ignore"
+                exit 0
+              fi
+
+              if [ -f "$REPO_PATH/completed" ]; then
+                echo "$REPO_PATH contains completed but does not contain .git" >&2
+                exit 1
+              fi
+
+              # A previous Job may have completed the copy but stopped before
+              # publishing the marker. Validate that copy and safely resume.
+              if [ -d "$REPO_PATH/.git" ]; then
+                echo "$REPO_PATH contains .git without completed. Validate and resume"
+                if ! validate_repo "$REPO_PATH"; then
+                  echo "$REPO_PATH contains an invalid partial Git repository" >&2
+                  exit 1
+                fi
+                publish_completed
+                echo "Netforge repository initialization recovered"
+                exit 0
+              fi
+
+              unexpected_entry="$(find "$REPO_PATH" -mindepth 1 \
+                \( -path "$REPO_PATH/.stfolder" -o -path "$REPO_PATH/.stversions" \) -prune -o \
+                \( -type f -o -type l \) -print -quit)"
+              if [ -n "$unexpected_entry" ]; then
+                echo "$REPO_PATH contains unexpected data: $unexpected_entry" >&2
+                exit 1
+              fi
+
+              echo "Copy repository seed from $REPO_SOURCE into $REPO_PATH"
+              cp -a "$REPO_SOURCE/." "$REPO_PATH/"
+
+              if ! validate_repo "$REPO_PATH"; then
+                echo "$REPO_PATH is not a valid Git working tree after copy" >&2
+                exit 1
+              fi
+
+              publish_completed
+              echo "Netforge repository initialization completed"
+          env:
+            - name: REPO_SOURCE
+              value: {{ .Values.initRepo.sourcePath | default "/opt/netforge-seed" | quote }}
+            - name: REPO_PATH
+              value: /opt/netforge
+          {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+          volumeMounts:
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+      volumes:
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
