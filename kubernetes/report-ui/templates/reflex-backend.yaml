@@ -45,7 +45,9 @@ spec:
           - |
             cat rxconfig.py
             {{- if not (empty .Values.backend.config.basehref) }}
-            grep -rl "/report/logo" | xargs sed -i "s|/report/logo|{{ .Values.backend.config.basehref }}/report/logo|g"
+            while IFS= read -r file; do
+              sed -i "s|/report/logo|{{ .Values.backend.config.basehref }}/report/logo|g" "$file"
+            done < <(grep -rl "/report/logo" . || true)
             {{- end }}
             if [ -d alembic ]; then
               reflex db migrate
