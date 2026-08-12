@@ -1,0 +1,13 @@
+{{- if and .Values.conductor.enabled .Values.conductorEnv }}
+{{- $conductorConfigMapName := printf "%s-conductor-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $conductorConfigMapName }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  {{- range $key, $val := .Values.conductorEnv }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
+{{- end }}

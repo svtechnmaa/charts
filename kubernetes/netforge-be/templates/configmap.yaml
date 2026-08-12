@@ -1,8 +1,9 @@
 {{- if .Values.netforgeAppEnv }}
+{{- $netforgeAppConfigMapName := printf "%s-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: netforge-be-env
+  name: {{ $netforgeAppConfigMapName }}
 data:
   {{- range $key, $val := .Values.netforgeAppEnv }}
   {{ $key }}: {{ $val | quote }}

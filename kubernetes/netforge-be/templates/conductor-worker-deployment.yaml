@@ -1,5 +1,7 @@
 {{- if .Values.conductor.enabled }}
 {{- $conductorWorkerName := printf "%s-conductor-worker" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- $netforgeAppConfigMapName := printf "%s-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+{{- $netforgeAppSecretName := printf "%s-secret-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -44,11 +46,17 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
           envFrom:
+            {{- if .Values.netforgeAppEnv }}
             - configMapRef:
-                name: netforge-be-env
+                name: {{ $netforgeAppConfigMapName }}
+            {{- end }}
+            {{- if .Values.netforgeAppSecretEnv }}
             - secretRef:
-                name: netforge-be-secret-env
+                name: {{ $netforgeAppSecretName }}
+            {{- end }}
+          {{- end }}
           resources:
             {{- toYaml .Values.conductorWorker.resources | nindent 12 }}
           volumeMounts:

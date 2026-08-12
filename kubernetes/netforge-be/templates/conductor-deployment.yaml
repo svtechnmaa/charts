@@ -34,11 +34,17 @@ spec:
           env:
             - name: TZ
               value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
-            - name: CONFIG_PROP
-              value: config.properties
+          {{- if or .Values.conductorEnv .Values.conductorSecretEnv }}
           envFrom:
+            {{- if .Values.conductorEnv }}
+            - configMapRef:
+                name: {{ printf "%s-conductor-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+            {{- end }}
+            {{- if .Values.conductorSecretEnv }}
             - secretRef:
-                name: conductor-secret-env
+                name: {{ printf "%s-conductor-secret-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+            {{- end }}
+          {{- end }}
           ports:
             {{- range .Values.conductor.service.ports }}
             - name: {{ .name }}

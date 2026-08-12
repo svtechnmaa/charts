@@ -227,6 +227,9 @@ netforgeAppSecretEnv:
   INFLUX_USERNAME: "juniper"
   INFLUX_PASSWORD: "juniper@123"
 
+conductorEnv:
+  CONFIG_PROP: config.properties
+
 conductorSecretEnv:
   # Dedicated PostgreSQL URL for Conductor. Keep the jdbc: prefix.
   # Credentials may be supplied as JDBC query parameters as shown below.

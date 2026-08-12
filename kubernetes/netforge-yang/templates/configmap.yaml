@@ -1,8 +1,9 @@
 {{- if .Values.netforgeYangEnv }}
+{{- $netforgeYangConfigMapName := printf "%s-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: netforge-yang-env
+  name: {{ $netforgeYangConfigMapName }}
 data:
   {{- range $key, $val := .Values.netforgeYangEnv }}
   {{ $key }}: {{ $val | quote }}

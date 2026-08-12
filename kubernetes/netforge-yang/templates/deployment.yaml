@@ -1,3 +1,5 @@
+{{- $netforgeYangConfigMapName := printf "%s-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+{{- $netforgeYangSecretName := printf "%s-secret-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -73,12 +75,17 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- if or .Values.netforgeYangEnv .Values.netforgeYangSecretEnv }}
           envFrom:
+            {{- if .Values.netforgeYangEnv }}
             - configMapRef:
-                name: netforge-yang-env
-                optional: false
+                name: {{ $netforgeYangConfigMapName }}
+            {{- end }}
+            {{- if .Values.netforgeYangSecretEnv }}
             - secretRef:
-                name: netforge-yang-secret-env
+                name: {{ $netforgeYangSecretName }}
+            {{- end }}
+          {{- end }}
 
           {{- if .Values.livenessProbe }}
           livenessProbe:

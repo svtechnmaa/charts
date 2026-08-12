@@ -52,11 +52,19 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- with .Values.adapter.envFrom }}
+          {{- if or .configMap .secret }}
           envFrom:
+            {{- if .configMap }}
             - configMapRef:
-                name: {{ .Values.adapter.envFrom.configMap }}
+                name: {{ .configMap }}
+            {{- end }}
+            {{- if .secret }}
             - secretRef:
-                name: {{ .Values.adapter.envFrom.secret }}
+                name: {{ .secret }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
           livenessProbe:
             {{- toYaml .Values.adapter.livenessProbe | nindent 12 }}
           readinessProbe:

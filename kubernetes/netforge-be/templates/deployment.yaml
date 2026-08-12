@@ -1,3 +1,5 @@
+{{- $netforgeAppConfigMapName := printf "%s-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+{{- $netforgeAppSecretName := printf "%s-secret-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -72,11 +74,17 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
           envFrom:
+            {{- if .Values.netforgeAppEnv }}
             - configMapRef:
-                name: netforge-be-env
+                name: {{ $netforgeAppConfigMapName }}
+            {{- end }}
+            {{- if .Values.netforgeAppSecretEnv }}
             - secretRef:
-                name: netforge-be-secret-env
+                name: {{ $netforgeAppSecretName }}
+            {{- end }}
+          {{- end }}
 
           {{- if .Values.livenessProbe }}
           livenessProbe:
@@ -128,11 +136,17 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
           envFrom:
+            {{- if .Values.netforgeAppEnv }}
             - configMapRef:
-                name: netforge-be-env
+                name: {{ $netforgeAppConfigMapName }}
+            {{- end }}
+            {{- if .Values.netforgeAppSecretEnv }}
             - secretRef:
-                name: netforge-be-secret-env
+                name: {{ $netforgeAppSecretName }}
+            {{- end }}
+          {{- end }}
 
           {{- if .Values.livenessProbe }}
           livenessProbe:
@@ -179,11 +193,17 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
           envFrom:
+            {{- if .Values.netforgeAppEnv }}
             - configMapRef:
-                name: netforge-be-env
+                name: {{ $netforgeAppConfigMapName }}
+            {{- end }}
+            {{- if .Values.netforgeAppSecretEnv }}
             - secretRef:
-                name: netforge-be-secret-env
+                name: {{ $netforgeAppSecretName }}
+            {{- end }}
+          {{- end }}
 
           {{- if .Values.livenessProbe }}
           livenessProbe:
@@ -234,11 +254,17 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
           envFrom:
+            {{- if .Values.netforgeAppEnv }}
             - configMapRef:
-                name: netforge-be-env
+                name: {{ $netforgeAppConfigMapName }}
+            {{- end }}
+            {{- if .Values.netforgeAppSecretEnv }}
             - secretRef:
-                name: netforge-be-secret-env
+                name: {{ $netforgeAppSecretName }}
+            {{- end }}
+          {{- end }}
 
           {{- if .Values.livenessProbe }}
           livenessProbe:
