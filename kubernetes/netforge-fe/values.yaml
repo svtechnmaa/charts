@@ -14,7 +14,7 @@ replicaCount: 1
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   repository: svtechnmaa/netforge-fe 
-  tag: "v1.11.11" 
+  tag: "v1.11.14" 
   pullPolicy: IfNotPresent
 
 adapter:
@@ -22,7 +22,7 @@ adapter:
   replicaCount: 1
   image:
     repository: svtechnmaa/netforge-adapter
-    tag: "v1.11.11"
+    tag: "v1.11.14"
     pullPolicy: IfNotPresent
   env:
     ADAPTER_DIR: /adapters
