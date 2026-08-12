@@ -76,7 +76,7 @@ spec:
 
               unexpected_entry="$(find "$REPO_PATH" -mindepth 1 \
                 \( -path "$REPO_PATH/.stfolder" -o -path "$REPO_PATH/.stversions" \) -prune -o \
-                \( -type f -o -type l \) -print -quit)"
+                -print -quit)"
               if [ -n "$unexpected_entry" ]; then
                 echo "$REPO_PATH contains unexpected data: $unexpected_entry" >&2
                 exit 1
