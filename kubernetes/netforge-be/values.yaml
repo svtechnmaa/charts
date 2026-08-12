@@ -207,10 +207,10 @@ netforgeAppEnv:
   GIT_REPO: ""
   ANSIBLE_BASE_DIR: /opt/netforge/backend/ansible
   YANG_MANAGER_PATH: /opt/netforge/yang_manager/python-service
-  S3_ENDPOINT_URL: "http://seaweedfs:8333"
+  S3_ENDPOINT_URL: "http://seaweedfs-s3:8333"
   DEBUG_LOG_S3_ENABLED: "false"
   S3_LOG_BUCKET: "wf-debug-logs"
-  INFLUX_URL: "http://influxdb:8086"
+  INFLUX_URL: "http://influxdb-relay:9096"
   INFLUX_ORG: "netforge"
   INFLUX_BUCKET: "netforge"
   CONDUCTOR_API_URL: http://netforge-be-conductor:8080/api
@@ -224,8 +224,8 @@ netforgeAppSecretEnv:
   FLOWER_BASIC_AUTH: admin:flower
   S3_ACCESS_KEY: ""
   S3_SECRET_KEY: ""
-  INFLUX_USERNAME: "juniper"
-  INFLUX_PASSWORD: "juniper@123"
+  INFLUX_USERNAME: ""
+  INFLUX_PASSWORD: ""
 
 conductorEnv:
   CONFIG_PROP: config.properties
