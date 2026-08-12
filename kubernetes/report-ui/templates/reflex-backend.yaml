@@ -43,10 +43,6 @@ spec:
           - bash
           - -ec
           - |
-            sed -i '
-            s/frontend_path="[^"]*"/frontend_path=os.environ["FRONTEND_PATH"]/
-            s/frontend_packages=\[[^]]*\]/&,\n    api_url=os.environ["API_URL"]/
-            ' rxconfig.py
             cat rxconfig.py
             {{- if not (empty .Values.backend.config.basehref) }}
             grep -rl "/report/logo" | xargs sed -i "s|/report/logo|{{ .Values.backend.config.basehref }}/report/logo|g"
