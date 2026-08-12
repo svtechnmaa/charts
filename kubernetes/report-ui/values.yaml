@@ -10,7 +10,7 @@ frontend:
     image:
       registry: ghcr.io
       repository: svtechnmaa/svtech_report
-      tag: v1.2.0
+      tag: v1.2.1
       pullPolicy: IfNotPresent
   init:
     image:
@@ -43,7 +43,7 @@ backend:
   image:
     registry: ghcr.io
     repository: svtechnmaa/svtech_report
-    tag: v1.2.0
+    tag: v1.2.1
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -85,7 +85,7 @@ scheduler:
   image:
     registry: ghcr.io
     repository: svtechnmaa/svtech_report
-    tag: v1.2.0
+    tag: v1.2.1
     pullPolicy: IfNotPresent
 
 worker:
@@ -93,7 +93,7 @@ worker:
   image:
     registry: ghcr.io
     repository: svtechnmaa/svtech_report
-    tag: v1.2.0
+    tag: v1.2.1
     pullPolicy: IfNotPresent
 
 redis:
