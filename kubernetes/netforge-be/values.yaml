@@ -231,6 +231,6 @@ conductorEnv:
   CONFIG_PROP: config.properties
 
 conductorSecretEnv:
-  # Dedicated PostgreSQL URL for Conductor. Keep the jdbc: prefix.
-  # Credentials may be supplied as JDBC query parameters as shown below.
-  CONDUCTOR_DATABASE_URL: "jdbc:postgresql://postgres:5432/conductor?user=nw_user&password=nw_pass"
+  CONDUCTOR_DB_URL: "jdbc:postgresql://postgres:5432/conductor"
+  CONDUCTOR_DB_USERNAME: "nw_user"
+  CONDUCTOR_DB_PASSWORD: "nw_pass"
