@@ -16,6 +16,6 @@ spec:
             name: {{ .Chart.Name }}-dashboard
             port:
               number: {{ .Values.dashboard.service.port }}
-        path: /rq/
+        path: {{ .Values.backend.config.basehref }}/rq/
         pathType: Prefix
 {{- end }}
