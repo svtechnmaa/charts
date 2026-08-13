@@ -8,7 +8,7 @@ global:
     pvcName: yang-db
     storageSize: 5Gi
     path: /data
-    accessModes: ReadWriteOnce #ReadWriteMany
+    accessModes: ReadWriteMany
     shareFor:
       - netforge-yang
     storageClass: yang-db-hostpath
@@ -17,7 +17,7 @@ global:
     pvcName: yang-uploads
     storageSize: 10Gi
     path: /yang-files/uploads
-    accessModes: ReadWriteOnce #ReadWriteMany
+    accessModes: ReadWriteMany
     shareFor:
       - netforge-yang
     storageClass: yang-uploads-hostpath
@@ -26,7 +26,7 @@ global:
     pvcName: yang-device
     storageSize: 5Gi
     path: /yang-files/device
-    accessModes: ReadWriteOnce #ReadWriteMany
+    accessModes: ReadWriteMany
     shareFor:
       - netforge-yang
     storageClass: yang-device-hostpath
