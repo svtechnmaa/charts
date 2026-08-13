@@ -57,11 +57,6 @@ postgresql:
     repository: bitnamilegacy/postgresql
     tag: 17.2.0-debian-12-r3
     digest: ""
-  persistence:
-    storageClass: postgresql-standalone-postgresql
-    accessModes:
-      - ReadWriteOnce
-    size: 3Gi
   primary:
     persistence:
       storageClass: postgresql-standalone-postgresql
@@ -82,7 +77,6 @@ postgresql:
 
 persistence:
   # enabled: true
-  size: 3Gi
   # dynamicProvisioning: false
   # # storageClassName: storage-class-share
   # storageClassName: seaweedfs-storage
