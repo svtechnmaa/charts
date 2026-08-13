@@ -65,6 +65,11 @@ conductor:
         port: 5000
         targetPort: 5000
         protocol: TCP
+  volumeMounts:
+    - name: be-data
+      mountPath: /app/config/config.properties
+      subPath: conductor/config/config.properties
+      readOnly: true
   resources: {}
 
 conductorWorker:

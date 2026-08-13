@@ -54,12 +54,12 @@ spec:
           resources:
             {{- toYaml .Values.conductor.resources | nindent 12 }}
           volumeMounts:
+            {{- with .Values.conductor.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
             {{- if has $.Chart.Name .shareFor }}
-            - name: {{ .volumeName }}
-              mountPath: /app/config/config.properties
-              subPath: conductor/config/config.properties
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
             {{- end }}
