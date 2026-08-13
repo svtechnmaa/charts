@@ -6,7 +6,6 @@ metadata:
   name: {{ .Chart.Name }}-fe-ingress
   annotations:
     nginx.ingress.kubernetes.io/affinity: "cookie"
-    nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: {{ .Release.Name }}
