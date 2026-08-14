@@ -36,6 +36,34 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       - name: postgresql-runtime
         mountPath: /opt/bitnami/repmgr/logs
         subPath: repmgr-logs-dir
+    initContainers:
+      - name: prepare-postgresql-runtime
+        image: ghcr.io/svtechnmaa/os-shell:11
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          runAsUser: 1001
+          runAsGroup: 1001
+          runAsNonRoot: true
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        command:
+          - sh
+          - -ec
+          - |
+            mkdir -p \
+              /runtime/tmp-dir \
+              /runtime/postgresql-conf-dir/conf.d \
+              /runtime/postgresql-tmp-dir \
+              /runtime/repmgr-conf-dir \
+              /runtime/repmgr-tmp-dir \
+              /runtime/repmgr-logs-dir
+            chmod 1777 /runtime/tmp-dir
+        volumeMounts:
+          - name: postgresql-runtime
+            mountPath: /runtime
     image:
       registry: ghcr.io
       repository: svtechnmaa/postgresql-repmgr
