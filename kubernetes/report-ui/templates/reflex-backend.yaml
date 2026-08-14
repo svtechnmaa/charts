@@ -43,7 +43,6 @@ spec:
           - bash
           - -ec
           - |
-            cat rxconfig.py
             {{- if not (empty .Values.backend.config.basehref) }}
             while IFS= read -r file; do
               sed -i "s|/report/logo|{{ .Values.backend.config.basehref }}/report/logo|g" "$file"
