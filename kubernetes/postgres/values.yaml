@@ -48,6 +48,7 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       ##
       debug: false
     replicaCount: 3
+    headlessWithNotReadyAddresses: true
   pgpool:
     containerSecurityContext:
       enabled: true
