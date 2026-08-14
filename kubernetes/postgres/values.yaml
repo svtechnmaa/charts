@@ -14,6 +14,28 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       runAsUser: 1001
       runAsNonRoot: true
       readOnlyRootFilesystem: true
+    extraVolumes:
+      - name: postgresql-runtime
+        emptyDir: {}
+    extraVolumeMounts:
+      - name: postgresql-runtime
+        mountPath: /tmp
+        subPath: tmp-dir
+      - name: postgresql-runtime
+        mountPath: /opt/bitnami/postgresql/conf
+        subPath: postgresql-conf-dir
+      - name: postgresql-runtime
+        mountPath: /opt/bitnami/postgresql/tmp
+        subPath: postgresql-tmp-dir
+      - name: postgresql-runtime
+        mountPath: /opt/bitnami/repmgr/conf
+        subPath: repmgr-conf-dir
+      - name: postgresql-runtime
+        mountPath: /opt/bitnami/repmgr/tmp
+        subPath: repmgr-tmp-dir
+      - name: postgresql-runtime
+        mountPath: /opt/bitnami/repmgr/logs
+        subPath: repmgr-logs-dir
     image:
       registry: ghcr.io
       repository: svtechnmaa/postgresql-repmgr
@@ -32,6 +54,25 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       runAsUser: 1001
       runAsNonRoot: true
       readOnlyRootFilesystem: true
+    extraVolumes:
+      - name: pgpool-runtime
+        emptyDir: {}
+    extraVolumeMounts:
+      - name: pgpool-runtime
+        mountPath: /tmp
+        subPath: tmp-dir
+      - name: pgpool-runtime
+        mountPath: /opt/bitnami/pgpool/etc
+        subPath: pgpool-etc-dir
+      - name: pgpool-runtime
+        mountPath: /opt/bitnami/pgpool/conf
+        subPath: pgpool-conf-dir
+      - name: pgpool-runtime
+        mountPath: /opt/bitnami/pgpool/tmp
+        subPath: pgpool-tmp-dir
+      - name: pgpool-runtime
+        mountPath: /opt/bitnami/pgpool/logs
+        subPath: pgpool-logs-dir
     image:
       registry: ghcr.io
       repository: svtechnmaa/pgpool
