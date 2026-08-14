@@ -9,6 +9,11 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
     repmgrUsername: dummy
     repmgrPassword: "dummy@123"
     repmgrDatabase: "repmgr"
+    containerSecurityContext:
+      enabled: true
+      runAsUser: 1001
+      runAsNonRoot: true
+      readOnlyRootFilesystem: true
     image:
       registry: ghcr.io
       repository: svtechnmaa/postgresql-repmgr
@@ -22,6 +27,11 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       debug: false
     replicaCount: 3
   pgpool:
+    containerSecurityContext:
+      enabled: true
+      runAsUser: 1001
+      runAsNonRoot: true
+      readOnlyRootFilesystem: true
     image:
       registry: ghcr.io
       repository: svtechnmaa/pgpool
@@ -29,6 +39,12 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       digest: ""
       pullPolicy: IfNotPresent
       debug: false
+  metrics:
+    podSecurityContext:
+      enabled: true
+      runAsUser: 1001
+      runAsNonRoot: true
+      readOnlyRootFilesystem: true
       
   persistence:
     storageClass: postgresql-ha-postgresql
@@ -37,6 +53,9 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
     size: 3Gi
   volumePermissions:
     enabled: true
+    podSecurityContext:
+      runAsUser: 0
+      readOnlyRootFilesystem: true
     image:
       registry: ghcr.io
       repository: svtechnmaa/os-shell

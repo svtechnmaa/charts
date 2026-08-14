@@ -7,15 +7,15 @@ global:
   sharedVolume:
     enabled: true
   sharedPersistenceVolume: 
-  - volumeName: be-data
-    pvcName: be-pvc
+  - volumeName: netforge-data
+    pvcName: netforge-data-pvc
     storageSize: 2Gi
     path: /opt/netforge
-    accessModes: ReadWriteMany
+    accessModes: ReadWriteMany #ReadWriteOnce
     shareFor:
       - netforge-be
-    storageClass: netforge-be-hostpath
-    folderName: netforge-be-data # for syncthing
+    storageClass: netforge-data-hostpath
+    folderName: netforge-data # for syncthing
 
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -66,7 +66,7 @@ conductor:
         targetPort: 5000
         protocol: TCP
   volumeMounts:
-    - name: be-data
+    - name: netforge-data
       mountPath: /app/config/config.properties
       subPath: conductor/config/config.properties
       readOnly: true
