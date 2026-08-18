@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCounts.frontend "global" .Values.global) }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: frontend
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      initContainers:
+        - name: build-frontend
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.frontend "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - npm run build && cp -r dist/* /app-dist/ && find /app-dist/ -type f -mtime +7 -delete
+          workingDir: /app
+          env:
+            - name: VITE_BASE_PATH
+              value: {{ .Values.paths.userPortal | quote }}
+            - name: VITE_GRAPHQL_URI
+              value: {{ .Values.paths.backendGraphQl | quote }}
+            - name: VITE_MQTT_BROKER_PROTOCOL
+              value: {{ .Values.vite.mqttBrokerProtocol | quote }}
+            - name: VITE_MQTT_BROKER_HOST
+              value: {{ .Values.vite.mqttBrokerHost | quote }}
+            - name: VITE_MQTT_BROKER_PORT
+              value: {{ .Values.vite.mqttBrokerPort | quote }}
+            - name: VITE_MQTT_BROKER_PATH
+              value:  {{ .Values.vite.mqttBrokerPath | quote }}
+            - name: VITE_DEFAULT_LANG
+              value: {{ .Values.vite.defaultLang | quote }}
+          volumeMounts:
+            - name: app-dist-volume
+              mountPath: /app-dist
+      containers:
+        - name: frontend
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.frontend "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          volumeMounts:
+            - name: app-dist-volume
+              mountPath: /usr/share/nginx/html
+          env:
+            - name: VITE_BASE_PATH
+              value: {{ .Values.paths.userPortal | quote }}
+      volumes:
+        - name: app-dist-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.frontendDist.claimName }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

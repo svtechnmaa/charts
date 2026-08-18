@@ -1,0 +1,68 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: purge-retention-cronjob
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: purge-retention
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: "0 3 * * *"  # Every day at 3:00 AM
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: purge-retention
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "common.labels.standard" . | nindent 12 }}
+            app.kubernetes.io/component: purge-retention
+            {{- if .Values.commonLabels }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 12 }}
+            {{- end }}
+            {{- with .Values.podLabels }}
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+            {{- end }}
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: purge-retention
+              image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+              imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+              command: ["/bin/sh", "-c", "python manage.py purge_retention"]
+              volumeMounts:
+                - name: media-volume
+                  mountPath: {{ .Values.django.mediaRoot | quote }}
+              env:
+                - name: DB_ENGINE
+                  value: {{ .Values.django.dbEngine | quote }}
+                - name: MEDIA_ROOT
+                  value: {{ .Values.django.mediaRoot | quote }}
+                - name: TENANT_DB_NAMES
+                  value: {{ .Values.django.tenantDbNames | quote }}
+              envFrom:
+                - secretRef:
+                    name: django-db-secret
+          volumes:
+            - name: media-volume
+              persistentVolumeClaim:
+                claimName: {{ .Values.pvc.media.claimName }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

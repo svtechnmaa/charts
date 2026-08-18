@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-db-cronjob
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: backup-db
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: "0 2 * * *"  # Every day at 2:00 AM
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: backup-db
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "common.labels.standard" . | nindent 12 }}
+            app.kubernetes.io/component: backup-db
+            {{- if .Values.commonLabels }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 12 }}
+            {{- end }}
+            {{- with .Values.podLabels }}
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+            {{- end }}
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup-db
+              image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+              imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+              command: ["/bin/sh", "-c", "find /app/backup-db -type f -name '*.sql' -mtime +90 -delete && python manage.py backup_database"]
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: "/app/backup-db"
+              env:
+                - name: DB_ENGINE
+                  value: {{ .Values.django.dbEngine | quote }}
+              envFrom:
+                - secretRef:
+                    name: django-db-secret
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: {{ .Values.pvc.backupDb.claimName }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
