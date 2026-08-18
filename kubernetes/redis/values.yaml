@@ -1,18 +1,12 @@
 # Default values
 # Global values. Define shared volumes and persistence volumes. For example:
 global:
+  speedtest:
+    enabled: false
+    enableAOF: false
   sharedVolume:
     enabled: false
   sharedPersistenceVolume: []
-#     # snmp-manager volume
-#     - volumeName: snmp-manager-volume
-#       pvcName: snmp-manager-pvc
-#       storageSize: 10Mi
-#       path: /etc/snmptt/
-#       accessModes: ReadWriteOnce #ReadWriteMany
-#       shareFor:
-#         - snmp-manager
-#       storageClass: snmp-manager-hostpath
 
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -32,8 +26,6 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-
-
 podSecurityContext: {}
   # fsGroup: 2000
 
@@ -44,6 +36,9 @@ securityContext: {}
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
   # runAsUser: 1000
+
+# This is to additional arguments to the container. More information can be found here: https://redis.io/docs/manual/config/
+args: []
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
@@ -115,10 +110,34 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
+sharedPersistenceVolume:
+  volumeName: redis-data
+  pvcName: redis-data-pvc
+  storageSize: 1Gi
+  accessModes: ReadWriteMany
+  storageClass: seaweedfs-storage
+  path: /data
+
 # Additional volumes on the output Deployment definition.
-volumes: []
+volumes: |
+  {{- if .Values.global.speedtest.enabled }}
+  - name: {{ .Values.sharedPersistenceVolume.volumeName }}
+    persistentVolumeClaim:
+      claimName: {{ .Values.sharedPersistenceVolume.pvcName }}
+  - name: redis-config
+    configMap:
+      name: redis-config
+  {{- end }}
+
 # Additional volumeMounts on the output Deployment definition.
-volumeMounts: []
+volumeMounts: |
+  {{- if .Values.global.speedtest.enabled }}
+  - name: redis-data
+    mountPath: {{ .Values.sharedPersistenceVolume.path }}
+  - name: redis-config
+    mountPath: /etc/redis/redis.conf
+    subPath: redis.conf
+  {{- end }}
 
 
 nodeSelector: {}
@@ -140,3 +159,12 @@ affinity:
 
 timezone: Asia/Ho_Chi_Minh
 env: {}
+
+redisinsight:
+  replicaCount: 1
+  enabled: false
+  port: 15540
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/redisinsight
+    tag: latest
