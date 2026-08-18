@@ -9,61 +9,6 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
     repmgrUsername: dummy
     repmgrPassword: "dummy@123"
     repmgrDatabase: "repmgr"
-    containerSecurityContext:
-      enabled: true
-      runAsUser: 1001
-      runAsNonRoot: true
-      readOnlyRootFilesystem: true
-    extraVolumes:
-      - name: postgresql-runtime
-        emptyDir: {}
-    extraVolumeMounts:
-      - name: postgresql-runtime
-        mountPath: /tmp
-        subPath: tmp-dir
-      - name: postgresql-runtime
-        mountPath: /opt/bitnami/postgresql/conf
-        subPath: postgresql-conf-dir
-      - name: postgresql-runtime
-        mountPath: /opt/bitnami/postgresql/tmp
-        subPath: postgresql-tmp-dir
-      - name: postgresql-runtime
-        mountPath: /opt/bitnami/repmgr/conf
-        subPath: repmgr-conf-dir
-      - name: postgresql-runtime
-        mountPath: /opt/bitnami/repmgr/tmp
-        subPath: repmgr-tmp-dir
-      - name: postgresql-runtime
-        mountPath: /opt/bitnami/repmgr/logs
-        subPath: repmgr-logs-dir
-    initContainers:
-      - name: prepare-postgresql-runtime
-        image: ghcr.io/svtechnmaa/os-shell:11
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          runAsUser: 1001
-          runAsGroup: 1001
-          runAsNonRoot: true
-          readOnlyRootFilesystem: true
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-              - ALL
-        command:
-          - sh
-          - -ec
-          - |
-            mkdir -p \
-              /runtime/tmp-dir \
-              /runtime/postgresql-conf-dir/conf.d \
-              /runtime/postgresql-tmp-dir \
-              /runtime/repmgr-conf-dir \
-              /runtime/repmgr-tmp-dir \
-              /runtime/repmgr-logs-dir
-            chmod 1777 /runtime/tmp-dir
-        volumeMounts:
-          - name: postgresql-runtime
-            mountPath: /runtime
     image:
       registry: ghcr.io
       repository: svtechnmaa/postgresql-repmgr
@@ -76,32 +21,7 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       ##
       debug: false
     replicaCount: 3
-    headlessWithNotReadyAddresses: true
   pgpool:
-    containerSecurityContext:
-      enabled: true
-      runAsUser: 1001
-      runAsNonRoot: true
-      readOnlyRootFilesystem: true
-    extraVolumes:
-      - name: pgpool-runtime
-        emptyDir: {}
-    extraVolumeMounts:
-      - name: pgpool-runtime
-        mountPath: /tmp
-        subPath: tmp-dir
-      - name: pgpool-runtime
-        mountPath: /opt/bitnami/pgpool/etc
-        subPath: pgpool-etc-dir
-      - name: pgpool-runtime
-        mountPath: /opt/bitnami/pgpool/conf
-        subPath: pgpool-conf-dir
-      - name: pgpool-runtime
-        mountPath: /opt/bitnami/pgpool/tmp
-        subPath: pgpool-tmp-dir
-      - name: pgpool-runtime
-        mountPath: /opt/bitnami/pgpool/logs
-        subPath: pgpool-logs-dir
     image:
       registry: ghcr.io
       repository: svtechnmaa/pgpool
@@ -109,12 +29,6 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       digest: ""
       pullPolicy: IfNotPresent
       debug: false
-  metrics:
-    podSecurityContext:
-      enabled: true
-      runAsUser: 1001
-      runAsNonRoot: true
-      readOnlyRootFilesystem: true
       
   persistence:
     storageClass: postgresql-ha-postgresql
@@ -123,9 +37,6 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
     size: 3Gi
   volumePermissions:
     enabled: true
-    podSecurityContext:
-      runAsUser: 0
-      readOnlyRootFilesystem: true
     image:
       registry: ghcr.io
       repository: svtechnmaa/os-shell
