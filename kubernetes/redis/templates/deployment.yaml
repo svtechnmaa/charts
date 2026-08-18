@@ -53,6 +53,9 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.args "context" $) | nindent 12 }}
+          {{ end }}
           ports:
             {{- range .Values.service.ports }}
             - name: {{ .name }}
@@ -88,7 +91,7 @@ spec:
             {{- end }}
             # unshareVolume(volumeMount): define in the chart's values.yaml
             {{- if .Values.volumeMounts }}
-            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- tpl .Values.volumeMounts $ | nindent 12 }}
             {{- end }}
 
       volumes:
@@ -104,5 +107,5 @@ spec:
         {{- end }}
       # unshareVolume(volume): define in the chart's values.yaml
         {{- if .Values.volumes }}
-        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- tpl .Values.volumes $ | nindent 8 }}
         {{- end }}

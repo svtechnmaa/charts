@@ -1,0 +1,77 @@
+{{- if .Values.redisinsight.enabled }}
+{{- $redisPort := index .Values.service.ports 0 }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}-redisinsight
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: redisinsight
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.redisinsight.replicaCount "global" .Values.global) }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redisinsight
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: redisinsight
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: redisinsight
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.redisinsight.image "global" .Values.global) }}
+          ports:
+            - containerPort: {{ .Values.redisinsight.port }}
+          env:
+            - name: RI_APP_PORT
+              value: {{ .Values.redisinsight.port | quote }}
+            - name: RI_REDIS_HOST
+              value: {{ .Chart.Name }}
+            - name: RI_REDIS_PORT
+              value: {{ $redisPort.port | quote }}
+            - name: RI_REDIS_DB
+              value: "0"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redisinsight
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: redisinsight
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: {{ .Values.redisinsight.port }}
+      targetPort: {{ .Values.redisinsight.port }}
+  selector:
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redisinsight
+{{- end }}
