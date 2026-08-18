@@ -29,7 +29,7 @@ spec:
         - name: conductor
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.conductor.image) }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.conductor.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.conductor.image.pullPolicy }}
           env:
             - name: TZ
