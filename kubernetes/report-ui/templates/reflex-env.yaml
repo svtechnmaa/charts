@@ -8,7 +8,7 @@ metadata:
 stringData:
   .env: |
     {{- if .Values.global.externalIP }}
-    API_URL=http://{{ .Values.global.externalIP }}:8000{{ $basehref }}
+    API_URL=http://{{ .Values.global.externalIP }}:3000{{ $basehref }}
     {{- else }}
     API_URL=https://{{ .Values.global.frontendVip }}{{ $basehref }}
     {{- end }}
@@ -16,6 +16,7 @@ stringData:
     FRONTEND_PATH="{{ $basehref }}/report"
     REFLEX_CHECK_LATEST_VERSION="False"
     DB_URL=mysql+pymysql://{{ .Values.backend.config.db_user }}:{{ .Values.backend.config.db_password }}@{{ .Values.backend.config.db_host }}/{{ .Values.backend.config.db_database }}
+    ICINGA_SEMAPHORE={{ .Values.backend.config.icinga_semaphore | quote }}
     ICINGA_REDIS_DB={{ .Values.backend.config.icinga_redis_db | quote }}
     ICINGA_REDIS_HOST={{ .Values.backend.config.icinga_redis_host | quote }}
     ICINGA_REDIS_PORT={{ .Values.backend.config.icinga_redis_port | quote }}
@@ -37,4 +38,9 @@ stringData:
     TASK_TIMEOUT={{ .Values.backend.config.task_timeout | quote }}
     TIMEOUT={{ .Values.backend.config.timeout | quote }}
     GUNICORN_WORKERS={{ .Values.backend.config.worker | quote }}
+    GRANIAN_WORKERS_LIFETIME={{ .Values.backend.config.worker_lifetime | quote }}
     REFLEX_USE_GRANIAN={{ .Values.backend.config.use_granian | quote }}
+    #RATE LIMIT CONFIG
+    RATE_LIMIT_TIMES={{ .Values.backend.config.rate_limit_times | quote }}
+    RATE_LIMIT_SECONDS={{ .Values.backend.config.rate_limit_seconds | quote }}
+    MAX_CONCURRENT_SESSIONS={{ .Values.backend.config.max_concurrent_sessions | quote }}
