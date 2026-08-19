@@ -21,6 +21,15 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       ##
       debug: false
     replicaCount: 3
+    containerSecurityContext:
+      readOnlyRootFilesystem: true
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 180
+      periodSeconds: 20
+      timeoutSeconds: 20
+      successThreshold: 1
+      failureThreshold: 8
   pgpool:
     image:
       registry: ghcr.io
@@ -29,6 +38,8 @@ postgresql-ha: # Since we are using alias 'postgresql-ha' for the dependency
       digest: ""
       pullPolicy: IfNotPresent
       debug: false
+    containerSecurityContext:
+      readOnlyRootFilesystem: true
       
   persistence:
     storageClass: postgresql-ha-postgresql
