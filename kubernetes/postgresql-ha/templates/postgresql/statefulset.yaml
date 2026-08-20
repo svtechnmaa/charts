@@ -622,8 +622,8 @@ spec:
             name: {{ include "postgresql.metricsCM" . }}
         {{- end }}
         - name: scripts
-          configMap:
-            name: {{ printf "%s-scripts" (include "postgresql-ha.postgresql" .) }}
+          secret:
+            secretName: {{ printf "%s-scripts" (include "postgresql-ha.postgresql" .) }}
             defaultMode: 0755
         {{- if or .Values.postgresql.repmgrConfiguration .Values.postgresql.configuration .Values.postgresql.pgHbaConfiguration .Values.postgresql.configurationCM }}
         - name: postgresql-config
