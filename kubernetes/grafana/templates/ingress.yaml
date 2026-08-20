@@ -1,27 +1,11 @@
-############# SETTING FOR SPEEDTEST API PATH #############
-{{- $enableHttps := default false .Values.global.enableHttps -}}
-{{- $speedtest := default dict .Values.global.speedtest -}}
-{{- $speedtestPaths := default dict $speedtest.paths -}}
-{{- $speedtestBackendApiPath := default "/speedtest/api/" (default $speedtestPaths.backendApi $speedtest.backendApi) -}}
-{{- $speedtestBackendApiPath = tpl $speedtestBackendApiPath $ -}}
-{{- if not (hasSuffix "/" $speedtestBackendApiPath) -}}
-{{- $speedtestBackendApiPath = printf "%s/" $speedtestBackendApiPath -}}
-{{- end -}}
-##########################################################
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Chart.Name }}-ingress
   annotations:
-    nginx.ingress.kubernetes.io/affinity: "cookie"
-    {{- if $enableHttps }}
-    nginx.ingress.kubernetes.io/force-ssl-redirect: {{ $enableHttps | quote }}
-    {{- end }}
-    {{- if and (hasKey .Values.global "speedtest") .Values.global.speedtest.enabled }}
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-User
-    nginx.ingress.kubernetes.io/auth-url: {{ printf "%s://%s%sauth/grafana/" (ternary "https" "http" $enableHttps) .Values.global.frontendVip $speedtestBackendApiPath | quote }}
-    {{- end }}
+  {{- with .Values.ingress.annotations }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
+  {{- end }}
 spec:
   ingressClassName: {{ .Release.Name }}
   rules:

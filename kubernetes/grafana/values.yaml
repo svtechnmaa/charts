@@ -162,6 +162,11 @@ service:
     clientIP:
       timeoutSeconds: 7200
 
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+
 grafanaConfig:
   mysqlHost: "mariadb"
   mysqlPort: 3306
