@@ -3,14 +3,15 @@ kind: Ingress
 metadata:
   name: {{ .Chart.Name }}-ingress
   annotations:
-    nginx.ingress.kubernetes.io/affinity: "cookie"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  {{- with .Values.ingress.annotations }}
+    {{- tpl (toYaml .) $ | nindent 4 }}
+  {{- end }}
 spec:
   ingressClassName: {{ .Release.Name }}
   rules:
   - http:
       paths:
-      - path: /{{ .Chart.Name }}
+      - path: {{ .Values.grafanaConfig.subPath }}
         pathType: Prefix
         backend:
           service:

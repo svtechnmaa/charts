@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}-django-static
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: django-static
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCounts.djangoStatic "global" .Values.global) }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: django-static
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: django-static
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+        {{- with .Values.podLabels }}
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: django-static
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.nginx "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          ports:
+            - containerPort: 8080
+              name: django-static
+          volumeMounts:
+            - name: static-volume
+              mountPath: /opt/bitnami/nginx/html{{ .Values.paths.staticDjango }}
+            - name: media-volume
+              mountPath: /opt/bitnami/nginx/html{{ .Values.paths.mediaDjango }}
+      volumes:
+        - name: static-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.static.claimName }}
+        - name: media-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.media.claimName }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret

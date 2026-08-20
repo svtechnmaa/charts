@@ -8,6 +8,7 @@ global:
   frontendVip: ""
   mariadb-galera:
     enabled: true
+  enableHttps: true
 
 timezone: Asia/Ho_Chi_Minh
 
@@ -26,6 +27,7 @@ image:
   # debug: true
 
 renderer:
+  enabled: true
   image:
     registry: ghcr.io
     repository: svtechnmaa/grafana-image-renderer
@@ -36,6 +38,7 @@ renderer:
     type: ClusterIP
 
 chrome:
+  enabled: true
   image:
     registry: ghcr.io
     repository: svtechnmaa/headless-shell
@@ -159,6 +162,11 @@ service:
     clientIP:
       timeoutSeconds: 7200
 
+ingress:
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+
 grafanaConfig:
   mysqlHost: "mariadb"
   mysqlPort: 3306
@@ -167,8 +175,11 @@ grafanaConfig:
   mysqlPassword: juniper@123
   adminUser: admin
   adminPassword: admin
+  subPath: /grafana
+  env: []
 
 gdgConfig:
+  runInitDataJob: true
   contextName: main
   storageEngine: {}
 
