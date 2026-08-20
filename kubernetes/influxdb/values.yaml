@@ -212,7 +212,9 @@ influxdb:
   ##  - name: INFLUXDB_DATA_QUERY_LOG_ENABLED
   ##    value: "true"
   ##
-  # extraEnvVars:
+  extraEnvVars:
+    - name: INFLUXDB_HTTP_FLUX_ENABLED
+      value: "true"
 
   ## Number of InfluxDB(TM) replicas to deploy
   ##
