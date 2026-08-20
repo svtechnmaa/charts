@@ -1,8 +1,8 @@
-{{- if .Values.global.speedtest.enabled }}
+{{- if .Values.sharedPersistenceVolume.enabled }}
 apiVersion: v1
-kind: ConfigMap
+kind: PersistentVolumeClaim
 metadata:
-  name: redis-config
+  name: {{ .Values.sharedPersistenceVolume.pvcName }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: {{ .Chart.Name }}
@@ -12,22 +12,11 @@ metadata:
   {{- if .Values.commonAnnotations }}
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
-data:
-  redis.conf: |
-    dir /data
-
-    # Enable RDB persistence
-    save 900 1
-    save 300 10
-    save 60 10000
-    
-    # RDB filename
-    dbfilename dump.rdb
-    
-    # Enable AOF persistence
-{{- if .Values.global.speedtest.enableAOF }}
-    appendonly yes
-    appendfilename appendonly.aof
-    appendfsync always
-{{- end }}
+spec:
+  accessModes:
+    - {{ .Values.sharedPersistenceVolume.accessModes }}
+  resources:
+    requests:
+      storage: {{ .Values.sharedPersistenceVolume.storageSize }}
+  storageClassName: {{ .Values.sharedPersistenceVolume.storageClass }}
 {{- end }}

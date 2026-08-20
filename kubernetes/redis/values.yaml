@@ -111,34 +111,19 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 sharedPersistenceVolume:
-  volumeName: redis-data
-  pvcName: redis-data-pvc
-  storageSize: 1Gi
-  accessModes: ReadWriteMany
-  storageClass: seaweedfs-storage
-  path: /data
+  enabled: false
+  # volumeName: redis-data
+  # pvcName: redis-data-pvc
+  # storageSize: 1Gi
+  # accessModes: ReadWriteMany
+  # storageClass: seaweedfs-storage
+  # path: /data
 
 # Additional volumes on the output Deployment definition.
-volumes: |
-  {{- if .Values.global.speedtest.enabled }}
-  - name: {{ .Values.sharedPersistenceVolume.volumeName }}
-    persistentVolumeClaim:
-      claimName: {{ .Values.sharedPersistenceVolume.pvcName }}
-  - name: redis-config
-    configMap:
-      name: redis-config
-  {{- end }}
+volumes: []
 
 # Additional volumeMounts on the output Deployment definition.
-volumeMounts: |
-  {{- if .Values.global.speedtest.enabled }}
-  - name: redis-data
-    mountPath: {{ .Values.sharedPersistenceVolume.path }}
-  - name: redis-config
-    mountPath: /etc/redis/redis.conf
-    subPath: redis.conf
-  {{- end }}
-
+volumeMounts: []
 
 nodeSelector: {}
 
