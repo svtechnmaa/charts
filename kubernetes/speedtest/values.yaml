@@ -119,10 +119,11 @@ django:
   allowedHosts: "*"
   staticRoot: "/app/static/"
   mediaRoot: "/app/media/"
-  csrfTrustedOrigins: "https://10.98.98.110" # <= Comma-separated origins for your frontendVip or domain
+  chromeUrl: "http://chrome:9222"
+  csrfTrustedOrigins: "" # <= Comma-separated origins for your frontendVip or domain
   tenantDbNames: "" # <= Comma separated list of tenant database names if using multi-tenancy
   reportChartFrontendBaseUrl: "" # <= Defaults to http(s)://<global.frontendVip><paths.userPortal> when left empty
-  reportChartBackendBaseUrl: ""
+  reportChartBackendBaseUrl: "" # <= Defaults to http(s)://<global.frontendVip><paths.userPortal> when left empty
   reportChartScreenshotTimeoutMs: "30000"
   reportChartScreenshotSettleDelayBaseMs: "1000"
   reportChartScreenshotSettleDelayPerChartMs: "500"
