@@ -94,7 +94,7 @@ spec:
             # shareVolume: VolumeMount
             {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has $.Chart.Name .shareFor }}
+            {{- if and (has $.Chart.Name .shareFor) (ne .volumeName $.Values.adapter.sharedVolumeName) }}
             - name: {{ .volumeName }}
               mountPath: {{ .path }}
             {{- end }}
@@ -109,7 +109,7 @@ spec:
       # shareVolume(volume): define in the global values
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has $.Chart.Name .shareFor }}
+        {{- if and (has $.Chart.Name .shareFor) (ne .volumeName $.Values.adapter.sharedVolumeName) }}
         - name: {{ .volumeName }}
           persistentVolumeClaim:
             claimName: {{ .pvcName }}

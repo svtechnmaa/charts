@@ -35,6 +35,26 @@ spec:
         - name: ghcr-pull-secret
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.adapter.initCopy.enabled .Values.global.sharedVolume.enabled .Values.global.sharedPersistenceVolume }}
+      {{- range .Values.global.sharedPersistenceVolume }}
+      {{- if and (eq .volumeName $.Values.adapter.sharedVolumeName) (has $.Chart.Name .shareFor) }}
+      initContainers:
+        - name: copy-adapters
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: {{ include "common.images.image" (dict "imageRoot" $.Values.adapter.image "global" $.Values.global) }}
+          imagePullPolicy: {{ $.Values.adapter.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              cp -a {{ $.Values.adapter.initCopy.sourcePath | quote }}/. {{ $.Values.adapter.initCopy.volumeMountPath | quote }}/
+          volumeMounts:
+            - name: {{ .volumeName }}
+              mountPath: {{ $.Values.adapter.initCopy.volumeMountPath }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
       containers:
         - name: adapter-manager
           securityContext:
@@ -71,4 +91,23 @@ spec:
             {{- toYaml .Values.adapter.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.adapter.resources | nindent 12 }}
+          {{- if and .Values.global.sharedVolume.enabled .Values.global.sharedPersistenceVolume }}
+          volumeMounts:
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if and (eq .volumeName $.Values.adapter.sharedVolumeName) (has $.Chart.Name .shareFor) }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+      {{- if and .Values.global.sharedVolume.enabled .Values.global.sharedPersistenceVolume }}
+      volumes:
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if and (eq .volumeName $.Values.adapter.sharedVolumeName) (has $.Chart.Name .shareFor) }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
 {{- end }}

@@ -2,8 +2,17 @@
 # Global values. Define shared volumes and persistence volumes. For example:
 global:
   sharedVolume:
-    enabled: false
-  sharedPersistenceVolume: []
+    enabled: true
+  sharedPersistenceVolume:
+    - volumeName: netforge-adapters
+      pvcName: netforge-adapters-pvc
+      storageSize: 2Gi
+      path: /adapters
+      accessModes: ReadWriteMany
+      shareFor:
+        - netforge-fe
+      storageClass: netforge-adapters-hostpath
+      folderName: netforge-adapters
 
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -21,6 +30,11 @@ image:
 adapter:
   enabled: true
   replicaCount: 1
+  sharedVolumeName: netforge-adapters
+  initCopy:
+    enabled: true
+    sourcePath: /adapters
+    volumeMountPath: /tmp
   image:
     registry: ghcr.io
     repository: svtechnmaa/netforge-adapter
