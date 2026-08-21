@@ -48,7 +48,13 @@ spec:
             - /bin/sh
             - -ec
             - |
-              cp -a {{ $.Values.adapter.initCopy.sourcePath | quote }}/. {{ $.Values.adapter.initCopy.volumeMountPath | quote }}/
+              if find {{ $.Values.adapter.initCopy.volumeMountPath | quote }} -mindepth 1 -maxdepth 1 \
+                ! -name '.stfolder' ! -name '.stversions' -print -quit | grep -q .; then
+                echo "[INIT] Adapter data already exists, skipping copy"
+              else
+                echo "[INIT] No adapter data found, copying defaults"
+                cp -a {{ $.Values.adapter.initCopy.sourcePath | quote }}/. {{ $.Values.adapter.initCopy.volumeMountPath | quote }}/
+              fi
           volumeMounts:
             - name: {{ .volumeName }}
               mountPath: {{ $.Values.adapter.initCopy.volumeMountPath }}
