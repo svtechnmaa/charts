@@ -1,0 +1,30 @@
+{{- /*
+Copyright Broadcom, Inc. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.witness.pdb.create }}
+apiVersion: {{ include "postgresql-ha.v1compat.capabilities.policy.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ printf "%s-witness" (include "postgresql-ha.postgresql" .) }} 
+  namespace: {{ include "common.names.namespace" . | quote }}
+  labels: {{- include "postgresql-ha.v1compat.labels.standard" ( dict "customLabels" .Values.commonLabels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: postgresql
+    role: witness
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.witness.pdb.minAvailable }}
+  minAvailable: {{ .Values.witness.pdb.minAvailable }}
+  {{- end }}
+  {{- if or .Values.witness.pdb.maxUnavailable (not .Values.witness.pdb.minAvailable) }}
+  maxUnavailable: {{ .Values.witness.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  {{- $podLabels := include "postgresql-ha.v1compat.tplvalues.merge" ( dict "values" ( list .Values.postgresql.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "postgresql-ha.v1compat.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: postgresql
+      role: witness
+{{- end }}

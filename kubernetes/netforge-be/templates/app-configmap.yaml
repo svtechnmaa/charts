@@ -1,0 +1,13 @@
+{{- if .Values.netforgeAppEnv }}
+{{- $netforgeAppConfigMapName := printf "%s-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $netforgeAppConfigMapName }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  {{- range $key, $val := .Values.netforgeAppEnv }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}
+{{- end }}

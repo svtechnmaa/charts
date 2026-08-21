@@ -1,0 +1,259 @@
+# Default values
+# Global values. Define shared volumes and persistence volumes. For example:
+global:
+  imageRegistry: ""
+  basePath: /opt
+  frontendVip: "192.168.1.1"
+  sharedVolume:
+    enabled: true
+  sharedPersistenceVolume: 
+  - volumeName: netforge-data
+    pvcName: netforge-data-pvc
+    storageSize: 2Gi
+    path: /opt/netforge
+    accessModes: ReadWriteMany #ReadWriteOnce
+    shareFor:
+      - netforge-be
+    storageClass: netforge-data-hostpath
+    folderName: netforge-data # for syncthing
+
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+clusterDomain: cluster.local
+
+# This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+replicaCount: 1
+
+initRepo:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  sourcePath: /opt/netforge-seed
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/netforge-be
+  tag: "v1.11.14" 
+  pullPolicy: IfNotPresent
+
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+flower:
+  image:
+    registry: docker.io
+    repository: mher/flower
+    tag: "2.0" 
+    pullPolicy: IfNotPresent
+
+conductor:
+  enabled: true
+  replicaCount: 1
+  image:
+    registry: docker.io
+    repository: conductoross/conductor
+    tag: "3.31.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    ports:
+      - name: api
+        port: 8080
+        targetPort: 8080
+        protocol: TCP
+      - name: ui
+        port: 5000
+        targetPort: 5000
+        protocol: TCP
+  volumeMounts:
+    - name: netforge-data
+      mountPath: /app/config/config.properties
+      subPath: conductor/config/config.properties
+      readOnly: true
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  resources: {}
+
+conductorWorker:
+  replicaCount: 1
+  resources: {}
+
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  
+  nodePortEnabled: false # set to true if using NodePort and you want to specify ports
+
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  ports:
+    - name: netforge-be
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+      # nodePort: 30080
+    - name: flower
+      port: 5555
+      targetPort: 5555
+      protocol: TCP
+      # nodePort: 30080
+  
+  
+  loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
+  loadBalancerSourceRanges: [] # list of IP CIDRs allowed access to load balancer (if supported)
+
+
+  # externalIPs: ["10.98.0.143"]
+
+  ## Set the Cluster IP to use
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+  ##
+  # clusterIP: None
+
+  annotations: {}
+  
+  externalTrafficPolicy: Cluster
+
+  # Set the service SessionAffinity for session stickiness
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
+  # sessionAffinity: None
+
+  # Customize the SessionAntiAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
+  # sessionAffinityConfig:
+  #   clientIP:
+  #     timeoutSeconds: 7200
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+# livenessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+# readinessProbe:
+  # httpGet:
+  #   path: /
+  #   port: http
+
+#This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+  behavior: {}
+
+# Additional volumes on the output Deployment definition.
+# volumes:
+# - name: seed-configs
+#   projected:
+#     defaultMode: 493
+#     sources:
+#     - configMap:
+#         name: seed-configs
+#     - configMap:
+#         name: traefik-config
+# Additional volumeMounts on the output Deployment definition.
+# volumeMounts:
+# - name: seed-configs
+#   mountPath: /opt
+
+nodeSelector: {}
+
+tolerations: []
+
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+
+affinity:
+  # podAntiAffinity:
+  #   requiredDuringSchedulingIgnoredDuringExecution:
+  #   - labelSelector:
+  #       matchLabels:
+  #         app.kubernetes.io/name: traefik
+  #     topologyKey: kubernetes.io/hostname
+timezone: Asia/Ho_Chi_Minh
+env: {}
+
+netforgeAppEnv:
+  GOOGLE_REDIRECT_URI: http://netforge-be:8000/api/v1/auth/google/callback
+  FRONTEND_URL: http://netforge-fe:3000/netforge
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173", "http://netforge-fe:5173","http://netforge-fe:3000"]'
+  GIT_REPO_ROOT: /opt/netforge
+  GIT_REMOTE: origin
+  GIT_BRANCH: main
+  GIT_BASE_BRANCH: main
+  GIT_OWNER: ""
+  GIT_REPO: ""
+  ANSIBLE_BASE_DIR: /opt/netforge/backend/ansible
+  YANG_MANAGER_PATH: /opt/netforge/yang_manager/python-service
+  S3_ENDPOINT_URL: "http://seaweedfs-s3:8333"
+  DEBUG_LOG_S3_ENABLED: "false"
+  S3_LOG_BUCKET: "wf-debug-logs"
+  INFLUX_URL: "http://influxdb-relay:9096"
+  INFLUX_ORG: "netforge"
+  INFLUX_BUCKET: "netforge"
+  CONDUCTOR_API_URL: http://netforge-be-conductor:8080/api
+
+netforgeAppSecretEnv:
+  # Generate SECRET_KEY: openssl rand -hex 32
+  SECRET_KEY: ""
+  # Generate FERNET_KEY: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+  FERNET_KEY: ""
+  DATABASE_URL: postgresql://nw_user:nw_pass@postgres:5432/netforge
+  FLOWER_BASIC_AUTH: admin:flower
+  S3_ACCESS_KEY: ""
+  S3_SECRET_KEY: ""
+  INFLUX_USERNAME: ""
+  INFLUX_PASSWORD: ""
+
+conductorEnv:
+  CONFIG_PROP: config.properties
+
+conductorSecretEnv:
+  CONDUCTOR_DB_URL: "jdbc:postgresql://postgres:5432/conductor"
+  CONDUCTOR_DB_USERNAME: "nw_user"
+  CONDUCTOR_DB_PASSWORD: "nw_pass"
