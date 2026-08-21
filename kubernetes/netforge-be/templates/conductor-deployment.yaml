@@ -51,6 +51,14 @@ spec:
               containerPort: {{ .targetPort }}
               protocol: {{ .protocol | default "TCP" }}
             {{- end }}
+          {{- if .Values.conductor.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.conductor.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.conductor.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.conductor.readinessProbe | nindent 12 }}
+          {{- end }}
           resources:
             {{- toYaml .Values.conductor.resources | nindent 12 }}
           volumeMounts:
