@@ -328,15 +328,14 @@ postgresql:
   resourcesPreset: "micro"
   ## @param postgresql.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
-  ## resources:
-  ##   requests:
-  ##     cpu: 2
-  ##     memory: 512Mi
-  ##   limits:
-  ##     cpu: 3
-  ##     memory: 1024Mi
-  ##
-  resources: {}
+  resources:
+    requests:
+      cpu: 2
+      memory: 512Mi
+    limits:
+      cpu: 3
+      memory: 1024Mi
+
   ## @param postgresql.podManagementPolicy Sets the pod management policy
   ## ref: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#pod-management-policies
   ##
@@ -1350,15 +1349,13 @@ pgpool:
   resourcesPreset: "micro"
   ## @param pgpool.resources Set container requests and limits for different resources like CPU or memory (essential for production workloads)
   ## Example:
-  ## resources:
-  ##   requests:
-  ##     cpu: 2
-  ##     memory: 512Mi
-  ##   limits:
-  ##     cpu: 3
-  ##     memory: 1024Mi
-  ##
-  resources: {}
+  resources:
+    requests:
+      cpu: 2
+      memory: 512Mi
+    limits:
+      cpu: 3
+      memory: 1024Mi
   ## Pgpool-II container's liveness probe
   ## ref: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
   ## @param pgpool.livenessProbe.enabled Enable livenessProbe
