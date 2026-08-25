@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-configmap
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  pve.yml: |
+{{ include "pve-exporter.pve.yml" . | indent 4 }}
