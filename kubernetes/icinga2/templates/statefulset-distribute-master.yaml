@@ -204,6 +204,7 @@ spec:
               git init && \
               git config --global user.name icinga && \
               git config --global user.email icinga@localhost && \
+              git config --global safe.directory '*' && \
               git add -A && git commit -m "init config"
               # Add curl into post-commit
               log "Add post-commit script to reload icinga2 config and restart icinga2 process"

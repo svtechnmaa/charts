@@ -86,6 +86,7 @@ spec:
             - |
               git config --global user.name "icinga"
               git config --global user.email "icinga@localhost"
+              git config --global safe.directory '*'
               python3 /opt/SVTECH-Junos-Automation/module_utils/icinga2_rebalance.py \
                 --namespace {{ .Release.Namespace }} \
                 --master-headless-service {{ .Chart.Name }}-headless \
