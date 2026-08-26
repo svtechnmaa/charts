@@ -1,0 +1,119 @@
+{{- if .Values.adapter.enabled }}
+{{- $adapterName := printf "%s-adapter" .Release.Name | trunc 63 | trimSuffix "-" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $adapterName }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $adapterName }}
+spec:
+  replicas: {{ .Values.adapter.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $adapterName }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $adapterName }}
+    spec:
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and .Values.adapter.initCopy.enabled .Values.global.sharedVolume.enabled .Values.global.sharedPersistenceVolume }}
+      {{- range .Values.global.sharedPersistenceVolume }}
+      {{- if and (eq .volumeName $.Values.adapter.sharedVolumeName) (has $.Chart.Name .shareFor) }}
+      initContainers:
+        - name: copy-adapters
+          securityContext:
+            {{- toYaml $.Values.securityContext | nindent 12 }}
+          image: {{ include "common.images.image" (dict "imageRoot" $.Values.adapter.image "global" $.Values.global) }}
+          imagePullPolicy: {{ $.Values.adapter.image.pullPolicy }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              if find {{ $.Values.adapter.initCopy.volumeMountPath | quote }} -mindepth 1 -maxdepth 1 \
+                ! -name '.stfolder' ! -name '.stversions' -print -quit | grep -q .; then
+                echo "[INIT] Adapter data already exists, skipping copy"
+              else
+                echo "[INIT] No adapter data found, copying defaults"
+                cp -a {{ $.Values.adapter.initCopy.sourcePath | quote }}/. {{ $.Values.adapter.initCopy.volumeMountPath | quote }}/
+              fi
+          volumeMounts:
+            - name: {{ .volumeName }}
+              mountPath: {{ $.Values.adapter.initCopy.volumeMountPath }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+      containers:
+        - name: adapter-manager
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.adapter.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.adapter.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.adapter.service.targetPort }}
+              protocol: TCP
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
+            {{- range $key, $value := .Values.adapter.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- with .Values.adapter.envFrom }}
+          {{- if or .configMap .secret }}
+          envFrom:
+            {{- if .configMap }}
+            - configMapRef:
+                name: {{ .configMap }}
+            {{- end }}
+            {{- if .secret }}
+            - secretRef:
+                name: {{ .secret }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.adapter.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.adapter.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.adapter.resources | nindent 12 }}
+          {{- if and .Values.global.sharedVolume.enabled .Values.global.sharedPersistenceVolume }}
+          volumeMounts:
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if and (eq .volumeName $.Values.adapter.sharedVolumeName) (has $.Chart.Name .shareFor) }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+          {{- end }}
+      {{- if and .Values.global.sharedVolume.enabled .Values.global.sharedPersistenceVolume }}
+      volumes:
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if and (eq .volumeName $.Values.adapter.sharedVolumeName) (has $.Chart.Name .shareFor) }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+      {{- end }}
+{{- end }}

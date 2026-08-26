@@ -1,0 +1,30 @@
+{{- /*
+Copyright Broadcom, Inc. All Rights Reserved.
+SPDX-License-Identifier: APACHE-2.0
+*/}}
+
+{{- if .Values.pgpool.pdb.create }}
+apiVersion: {{ include "postgresql-ha.v1compat.capabilities.policy.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "postgresql-ha.pgpool" . }}
+  namespace: {{ include "common.names.namespace" . | quote }}
+  {{- $versionLabel := dict "app.kubernetes.io/version" ( include "postgresql-ha.v1compat.images.version" ( dict "imageRoot" .Values.pgpool.image "chart" .Chart ) ) }}
+  {{- $labels := include "postgresql-ha.v1compat.tplvalues.merge" ( dict "values" ( list .Values.commonLabels $versionLabel ) "context" . ) }}
+  labels: {{- include "postgresql-ha.v1compat.labels.standard" ( dict "customLabels" $labels "context" $ ) | nindent 4 }}
+    app.kubernetes.io/component: pgpool
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.pgpool.pdb.minAvailable }}
+  minAvailable: {{ .Values.pgpool.pdb.minAvailable }}
+  {{- end }}
+  {{- if or .Values.pgpool.pdb.maxUnavailable (not .Values.pgpool.pdb.minAvailable) }}
+  maxUnavailable: {{ .Values.pgpool.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  {{- $podLabels := include "postgresql-ha.v1compat.tplvalues.merge" ( dict "values" ( list .Values.pgpool.podLabels .Values.commonLabels ) "context" . ) }}
+  selector:
+    matchLabels: {{- include "postgresql-ha.v1compat.labels.matchLabels" ( dict "customLabels" $podLabels "context" $ ) | nindent 6 }}
+      app.kubernetes.io/component: pgpool
+{{- end }}
