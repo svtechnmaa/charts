@@ -1009,3 +1009,26 @@ jobs:
         run: |
           cd ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook # To get the correct path for ansible config
           ansible-playbook ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook/vm--cleanup_vms.yml -e "BUILD_VARS_PATH=${{ github.workspace }}"
+
+  check_job_results:
+    name: Check job results
+    if: always()
+    needs:
+      - check_charts
+      - create_vm
+      - install_nmaa_on_vm
+      - test_nmaa
+      - install_elk_on_vm
+      - test_elk
+      - install_tacgui_on_vm
+      - test_tacgui
+      - install_radius_on_vm
+      - test_radius
+      - release_helm_charts
+      - cleanup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        uses: svtechnmaa/.github/actions/check_job_results@main
+        with:
+          jobs: ${{ toJSON(needs) }}
