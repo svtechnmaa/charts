@@ -40,13 +40,6 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-flower:
-  image:
-    registry: docker.io
-    repository: mher/flower
-    tag: "2.0" 
-    pullPolicy: IfNotPresent
-
 conductor:
   enabled: true
   replicaCount: 1
@@ -119,13 +112,7 @@ service:
       targetPort: 8000
       protocol: TCP
       # nodePort: 30080
-    - name: flower
-      port: 5555
-      targetPort: 5555
-      protocol: TCP
-      # nodePort: 30080
-  
-  
+
   loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
   loadBalancerSourceRanges: [] # list of IP CIDRs allowed access to load balancer (if supported)
 
@@ -219,8 +206,6 @@ netforgeAppEnv:
   GOOGLE_REDIRECT_URI: http://netforge-be:8000/api/v1/auth/google/callback
   FRONTEND_URL: http://netforge-fe:3000/netforge
   REDIS_URL: redis://redis:6379/0
-  CELERY_BROKER_URL: redis://redis:6379/1
-  CELERY_RESULT_BACKEND: redis://redis:6379/2
   CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173", "http://netforge-fe:5173","http://netforge-fe:3000"]'
   GIT_REPO_ROOT: /opt/netforge
   GIT_REMOTE: origin
@@ -244,7 +229,6 @@ netforgeAppSecretEnv:
   # Generate FERNET_KEY: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
   FERNET_KEY: ""
   DATABASE_URL: postgresql://nw_user:nw_pass@postgres:5432/netforge
-  FLOWER_BASIC_AUTH: admin:flower
   S3_ACCESS_KEY: ""
   S3_SECRET_KEY: ""
   INFLUX_USERNAME: ""
