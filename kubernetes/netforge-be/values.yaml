@@ -44,8 +44,8 @@ conductor:
   enabled: true
   replicaCount: 1
   image:
-    registry: docker.io
-    repository: conductoross/conductor
+    registry: ghcr.io
+    repository: svtechnmaa/conductor
     tag: "3.31.0"
     pullPolicy: IfNotPresent
   service:
