@@ -10,53 +10,43 @@ metadata:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
-      if ($arg_user) {
-        set $user $arg_user;
+      set $grafana_session_cookie $cookie_ref_grafana_session;
+      if ($cookie_grafana_session != "") {
+        set $grafana_session_cookie $cookie_grafana_session;
       }
-      if ($arg_hostgroup) {
-        set $hostgroup $arg_hostgroup;
-      }
-      if ($arg_orgId) {
-        set $orgId $arg_orgId;
-      }
-      if ($arg_report) {
-        set $report $arg_report;
-      }
-      if ($user = "") {
+      if ($grafana_session_cookie = "") {
         return 401;
       }
-      if ($hostgroup = "") {
+      if ($arg_user = "") {
         return 401;
       }
-      if ($orgId = "") {
+      if ($arg_hostgroup = "") {
         return 401;
       }
-      if ($report = "") {
+      if ($arg_orgId = "") {
         return 401;
       }
-      if ($http_referer ~ "^https://(.*)/grafana/d/(.*)orgId=([0-9]+)(.*)") {
-        set $referer_orgId $3;
-        set $cookie_valid 1;
-      }
-      if ($referer_orgId != $orgId) {
-        set $cookie_valid 0;
+      if ($arg_report = "") {
         return 401;
       }
-      if ($cookie_valid = 1) {
-        add_header Set-Cookie "ref_grafana_path=$http_referer; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
-        add_header Set-Cookie "ref_grafana_user=$user; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
-        add_header Set-Cookie "ref_grafana_hostgroup=$hostgroup; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
-        add_header Set-Cookie "ref_grafana_orgId=$orgId; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
-        add_header Set-Cookie "ref_grafana_report=$report; Path=/; HttpOnly; Secure; Samesite=Lax; Max-Age=86400";
-        set $redirect_url "$scheme://$host{{ $grafanaReportPath }}/$report/";
-        return 302 $redirect_url;
+      set $ref_grafana_path "/grafana/d/$arg_report/$arg_report?orgId=$arg_orgId";
+      if ($http_referer != "") {
+        set $ref_grafana_path $http_referer;
       }
+      if ($grafana_session_cookie != "") {
+        add_header Set-Cookie "ref_grafana_path=$ref_grafana_path; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_user=$arg_user; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_hostgroup=$arg_hostgroup; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_orgId=$arg_orgId; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_report=$arg_report; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+      }
+      return 302 $scheme://$host{{ $grafanaReportPath }}/$arg_report/;
 spec:
-  ingressClassName: {{ .Values.ingress.className | default .Release.Name }}
+  ingressClassName: {{ .Release.Name }}
   rules:
   - http:
       paths:
-      - path: "{{ $basehref }}/grafana-redirect-report(/|$)(.*)"
+      - path: "{{ $basehref }}/grafana-redirect-report-nmaa(/|$)(.*)"
         pathType: ImplementationSpecific
         backend:
           service:
@@ -75,14 +65,11 @@ metadata:
     nginx.ingress.kubernetes.io/session-cookie-path: "{{ $grafanaReportPath }}/"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header X-GRAFANA-USER "$cookie_ref_grafana_user";
-      proxy_set_header X-GRAFANA-HOSTGROUP "$cookie_ref_grafana_hostgroup";
-      proxy_set_header X-GRAFANA-ORGID "$cookie_ref_grafana_orgId";
       if ($cookie_ref_grafana_session = "") {
         return 401;
       }
 spec:
-  ingressClassName: {{ .Values.ingress.className | default .Release.Name }}
+  ingressClassName: {{ .Release.Name }}
   rules:
   - http:
       paths:

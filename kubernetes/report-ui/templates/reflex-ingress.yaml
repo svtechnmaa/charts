@@ -41,9 +41,6 @@ metadata:
     nginx.ingress.kubernetes.io/rewrite-target: /$1$2
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
-      proxy_set_header X-GRAFANA-USER "$cookie_ref_grafana_user";
-      proxy_set_header X-GRAFANA-HOSTGROUP "$cookie_ref_grafana_hostgroup";
-      proxy_set_header X-GRAFANA-ORGID "$cookie_ref_grafana_orgId";
       set $report_grafana_api 0;
       if ($http_referer ~ "^https?://[^/]+{{ $grafanaReportPath }}/") {
         set $report_grafana_api 1;
