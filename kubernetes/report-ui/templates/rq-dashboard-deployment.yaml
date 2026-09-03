@@ -39,7 +39,7 @@ spec:
           - name: PORT
             value: "9181"
           - name: HREF
-            value: /rq
+            value: {{ .Values.backend.config.basehref }}/rq
         ports:
         - containerPort: 9181
           name: dashboard
