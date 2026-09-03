@@ -8,7 +8,7 @@ metadata:
 stringData:
   .env: |
     {{- if .Values.global.externalIP }}
-    API_URL=http://{{ .Values.global.externalIP }}:3000{{ $basehref }}
+    API_URL=http://{{ .Values.global.externalIP }}:{{ .Values.backend.service.port }}{{ $basehref }}
     {{- else }}
     API_URL=https://{{ .Values.global.frontendVip }}{{ $basehref }}
     {{- end }}
