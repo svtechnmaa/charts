@@ -95,10 +95,20 @@ spec:
               value: {{ include "admin.password" . }}
             - name: GF_SECURITY_ANGULAR_SUPPORT_ENABLED
               value: "true"
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: "true"
+            - name: GF_SECURITY_COOKIE_SECURE
+              value: "true"
+            - name: GF_SECURITY_COOKIE_SAMESITE
+              value: none
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_SERVER_ROOT_URL
               value: "https://{{ .Values.global.frontendVip }}/grafana"
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "true"
+            - name: GF_PANELS_DISABLE_SANITIZE_HTML
+              value: "true"
             - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
               value: icinga2-report-datasource,icinga2-report-panel,icinga2-report-panel-transposed,mahendrapaipuri-dashboardreporter-app
             - name: GF_LOG_FILTERS
