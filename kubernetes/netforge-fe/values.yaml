@@ -88,15 +88,13 @@ service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
   
-  nodePortEnabled: false # set to true if using NodePort and you want to specify ports
-
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
   ports:
     - name: netforge-fe 
       port: 3000
       targetPort: 3000
       protocol: TCP
-      # nodePort: 30080
+      nodePort: 30080
   
   
   loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
