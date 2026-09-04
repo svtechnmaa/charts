@@ -166,6 +166,18 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/auth-response-headers: "Set-Cookie"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($cookie_grafana_session != "") {
+        add_header Set-Cookie "ref_grafana_session=$cookie_grafana_session; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+      }
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 
 grafanaConfig:
   mysqlHost: "mariadb"

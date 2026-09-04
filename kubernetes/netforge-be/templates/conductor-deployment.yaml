@@ -1,0 +1,86 @@
+{{- if .Values.conductor.enabled }}
+{{- $conductorName := printf "%s-conductor" .Release.Name | trunc 63 | trimSuffix "-" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $conductorName }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $conductorName }}
+spec:
+  replicas: {{ .Values.conductor.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ $conductorName }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $conductorName }}
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        {{- include "netforge-be.repoWaitInitContainer" . | nindent 8 }}
+      containers:
+        - name: conductor
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.conductor.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.conductor.image.pullPolicy }}
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
+          {{- if or .Values.conductorEnv .Values.conductorSecretEnv }}
+          envFrom:
+            {{- if .Values.conductorEnv }}
+            - configMapRef:
+                name: {{ printf "%s-conductor-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+            {{- end }}
+            {{- if .Values.conductorSecretEnv }}
+            - secretRef:
+                name: {{ printf "%s-conductor-secret-env" .Chart.Name | trunc 63 | trimSuffix "-" }}
+            {{- end }}
+          {{- end }}
+          ports:
+            {{- range .Values.conductor.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          {{- if .Values.conductor.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.conductor.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.conductor.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.conductor.readinessProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.conductor.resources | nindent 12 }}
+          volumeMounts:
+            {{- with .Values.conductor.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+      volumes:
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+{{- end }}

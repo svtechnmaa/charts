@@ -1,0 +1,82 @@
+{{- $basehref := .Values.backend.config.basehref | default "" -}}
+{{- $grafanaReportPath := printf "%s/report/grafana" $basehref -}}
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-grafana-redirect-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      set $grafana_session_cookie $cookie_ref_grafana_session;
+      if ($cookie_grafana_session != "") {
+        set $grafana_session_cookie $cookie_grafana_session;
+      }
+      if ($grafana_session_cookie = "") {
+        return 401;
+      }
+      if ($arg_user = "") {
+        return 401;
+      }
+      if ($arg_hostgroup = "") {
+        return 401;
+      }
+      if ($arg_orgId = "") {
+        return 401;
+      }
+      if ($arg_report = "") {
+        return 401;
+      }
+      set $ref_grafana_path "/grafana/d/$arg_report/$arg_report?orgId=$arg_orgId";
+      if ($http_referer != "") {
+        set $ref_grafana_path $http_referer;
+      }
+      if ($grafana_session_cookie != "") {
+        add_header Set-Cookie "ref_grafana_path=$ref_grafana_path; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_user=$arg_user; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_hostgroup=$arg_hostgroup; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_orgId=$arg_orgId; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+        add_header Set-Cookie "ref_grafana_report=$arg_report; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=86400" always;
+      }
+      return 302 $scheme://$host{{ $grafanaReportPath }}/$arg_report/;
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+  - http:
+      paths:
+      - path: "{{ $basehref }}/grafana-redirect-report-nmaa(/|$)(.*)"
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: {{ .Chart.Name }}
+            port:
+              number: {{ .Values.backend.service.port }}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-grafana-fe-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/session-cookie-path: "{{ $grafanaReportPath }}/"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($cookie_ref_grafana_session = "") {
+        return 401;
+      }
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+  - http:
+      paths:
+      - path: "{{ $grafanaReportPath }}(/|$)(.*)"
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: {{ .Chart.Name }}
+            port:
+              number: {{ .Values.backend.service.port }}

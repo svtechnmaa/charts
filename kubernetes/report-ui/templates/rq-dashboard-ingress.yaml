@@ -1,4 +1,5 @@
 {{- if .Values.dashboard.enabled }}
+{{- $basehref := .Values.backend.config.basehref | default "" -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,6 +7,13 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/affinity: "cookie"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/preserve-trailing-slash: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      if ($uri = "{{ $basehref }}/rq") {
+        return 308 https://$http_host{{ $basehref }}/rq/$is_args$args;
+      }
+
 spec:
   ingressClassName: {{ .Release.Name }}
   rules:
@@ -16,6 +24,6 @@ spec:
             name: {{ .Chart.Name }}-dashboard
             port:
               number: {{ .Values.dashboard.service.port }}
-        path: /rq
-        pathType: Prefix
+        path: "{{ $basehref }}/rq(/|$)(.*)"
+        pathType: ImplementationSpecific
 {{- end }}
