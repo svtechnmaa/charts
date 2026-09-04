@@ -35,10 +35,10 @@ spec:
       {{- tpl .Values.config.data $ | nindent 6 }}
       {{- else }}
       listeners.ws.default {
-        websocket.mqtt_path = {{ .Values.mqtt.websocket.mqttPath | quote }}
+        websocket.mqtt_path = {{ .Values.global.emqx.mqtt.websocket.mqttPath | quote }}
       }
       listeners.wss.default {
-        websocket.mqtt_path = {{ .Values.mqtt.secureWebsocket.mqttPath | quote }}
+        websocket.mqtt_path = {{ .Values.global.emqx.mqtt.secureWebsocket.mqttPath | quote }}
       }
       {{- end }}
   {{- if .Values.updateStrategy }}
