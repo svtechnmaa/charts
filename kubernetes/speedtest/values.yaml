@@ -103,11 +103,11 @@ mqtt:
   username: "admin"
   password: "" # <= Change this to your MQTT broker password. This can be a random string
   maxConcurrency: 10
-  brokerPath: "/speedtest/ws-ep" # Must match paths.brokerWs
+  brokerPath: "/speedtest/ws-ep" # Must match brokerWs path of emqx
 vite:
   mqttBrokerPort: "80" #<= Change to "443" if using secure WebSocketSecure
   mqttBrokerProtocol: "ws" # <= Change to "wss" if using secure WebSocketSecure
-  mqttBrokerPath: "/speedtest/ws-ep" # Must match paths.brokerWs
+  mqttBrokerPath: "/speedtest/ws-ep" # Must match brokerWs path of emqx
   mqttBrokerHost: "" # <= Leave empty to use the global frontendVip
   defaultLang: "en"
 #####################################################
@@ -153,6 +153,4 @@ paths: # This can be used to change the paths of the admin and user portals, can
   mediaDjango: "/speedtest/media"
   backendApi: "/speedtest/api/"
   backendGraphQl: "/speedtest/graphql/"
-  brokerWs: "/speedtest/ws-ep"
-  brokerWss: "/speedtest/wss-ep"
   speedtestServer: "/speedtest/server/default"

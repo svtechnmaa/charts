@@ -81,8 +81,6 @@ All configuration is managed via `values.yaml`. Key sections:
    - `adminPortal`: Django admin portal (default: /speedtest/admin/)
    - `backendApi`: REST API endpoint (default: /speedtest/api/)
    - `backendGraphQl`: GraphQL endpoint (default: /speedtest/graphql/)
-   - `brokerWs`: MQTT over WebSocket path (default: /speedtest/ws-ep)
-   - `brokerWss`: MQTT over Secure WebSocket (default: /speedtest/wss-ep)
    - `userPortal`: Frontend application (default: /speedtest/)
    - `speedtestServer`: LibreSpeed server (default: /speedtest/server)
    - `emqxDashboard`: EMQX dashboard (default: /speedtest/emqx/)

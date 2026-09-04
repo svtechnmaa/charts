@@ -26,14 +26,14 @@ spec:
   rules:
     - http:
         paths:
-          - path: {{ .Values.mqtt.websocket.mqttPath }}
+          - path: {{ .Values.global.emqx.mqtt.websocket.mqttPath }}
             pathType: Prefix
             backend:
               service:
                 name: {{ include "common.names.fullname" . }}-listeners
                 port:
                   number: 8083
-          - path: {{ .Values.mqtt.secureWebsocket.mqttPath }}
+          - path: {{ .Values.global.emqx.mqtt.secureWebsocket.mqttPath }}
             pathType: Prefix
             backend:
               service:

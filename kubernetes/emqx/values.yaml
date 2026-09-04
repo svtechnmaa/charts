@@ -1,6 +1,12 @@
 global:
   imageRegistry: ""
   enableHttps: false
+  emqx:
+    mqtt:
+      websocket:
+        mqttPath: /speedtest/ws-ep
+      secureWebsocket:
+        mqttPath: /speedtest/wss-ep
 
 enabled: true
 
@@ -25,12 +31,6 @@ revisionHistoryLimit: 3
 config:
   mode: Merge
   data: ""
-
-mqtt:
-  websocket:
-    mqttPath: /speedtest/ws-ep
-  secureWebsocket:
-    mqttPath: /speedtest/wss-ep
 
 coreTemplate:
   replicaCount: 1
