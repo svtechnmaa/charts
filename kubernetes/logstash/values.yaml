@@ -2,7 +2,7 @@ global:
   externalIP: "" # externalIP for CICD
   elasticsearch:
     enabled: false
-    clusterName: mbf
+    clusterName: svtech
     version: 8.9.1
     k8sSvcSubfix: es-http # used in the boostrap index job
     adminUser:
@@ -13,6 +13,9 @@ global:
       name:
       - junos-log # ILM name, template name, rollover alias, index name
       - offline-log
+      - h3c-log
+      - huawei-log
+      - fortinet-log
       shard: 5
       replica: 1
   logstash:

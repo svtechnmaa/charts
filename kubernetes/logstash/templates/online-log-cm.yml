@@ -4,6 +4,18 @@
 {{- range .Values.global.elasticsearch.nodes -}}
   {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
 {{- end -}}
+{{- /* Select the Juniper index from global.elasticsearch.index.name (site names may be
+       customised, e.g. "Juniper-svtechlab-log"), so it always matches the ILM policy /
+       template / rollover alias created by the elasticsearch bootstrap-index job. */ -}}
+{{- $JuniperIndex := "" -}}
+{{- range .Values.global.elasticsearch.index.name -}}
+  {{- if hasPrefix "Juniper" . -}}
+    {{- $JuniperIndex = . -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $JuniperIndex -}}
+  {{- fail (printf "logstash/Juniper-cm.yml: global.elasticsearch.index.name has no entry with prefix \"Juniper\" (got %v)" .Values.global.elasticsearch.index.name) -}}
+{{- end -}}
 {{ $newArray }}
 
 ---
@@ -46,7 +58,7 @@ data:
         }
         else {
           grok {
-            match => { "message" => "<%{PRIORITYCODE:junos_priocode}>1 %{TIMESTAMP_ISO8601:junos_time} %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}|\-) (%{PROCESSID:junos_procsid}|\-) (%{EVENTNAME:junos_eventname}|\-) %{MESSAGE:junos_msg}" }
+            match => { "message" => "<%{PRIORITYCODE:junos_priocode}>1 %{TIMESTAMP_ISO8601:time} %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}|\-) (%{PROCESSID:junos_procsid}|\-) (%{EVENTNAME:junos_eventname}|\-) %{MESSAGE:junos_msg}" }
             patterns_dir => ["/etc/logstash/patterns"]
             patterns_files_glob => "structured_log"
           }
@@ -157,7 +169,7 @@ data:
         }
 
         date {
-          match => [ "junos_time", "ISO8601" ]
+          match => [ "time", "ISO8601" ]
         }
 
         if "USER" in [junos_facilityname] and "smid" in [junos_procsname] and "WARNING" in [junos_severityname] {
@@ -182,7 +194,7 @@ data:
       if "junos_log" in [tags] and "alert_watermark" not in [tags] {
         elasticsearch {
           hosts => ["{{ join "\", \"https://" $newArray }}"]
-          index => '{{ first  .Values.global.elasticsearch.index.name }}' # "junos-svtechlab-log"
+          index => '{{ $JuniperIndex }}'
           # cacert => "/etc/logstash/certs/NMS01.pem"
           user => '{{.Values.global.elasticsearch.adminUser.name}}' #{{.Values.global.user}}
           password => '{{.Values.global.elasticsearch.adminUser.pass}}'

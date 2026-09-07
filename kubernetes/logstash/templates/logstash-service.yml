@@ -10,6 +10,27 @@ spec:
   type:  {{ .Values.service.type }}
   selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
   ports:
+    - name: h3c-log-stream
+      protocol: UDP
+      port: 5513
+      targetPort: 5513
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+      nodePort: 30513
+  {{- end }}
+    - name: huawei-log-stream
+      protocol: UDP
+      port: 5514
+      targetPort: 5514
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+      nodePort: 30514
+  {{- end }}
+    - name: fortinet-log-stream
+      protocol: UDP
+      port: 5519
+      targetPort: 5519
+  {{- if and (eq .Values.service.type "LoadBalancer") (not (empty .Values.service.loadBalancerIP)) }}
+      nodePort: 30519
+  {{- end }}
     - name: svtech-lab-log-stream
       protocol: UDP
       port: 5515
