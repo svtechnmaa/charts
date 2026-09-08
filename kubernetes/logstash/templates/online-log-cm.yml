@@ -9,7 +9,7 @@
        template / rollover alias created by the elasticsearch bootstrap-index job. */ -}}
 {{- $JuniperIndex := "" -}}
 {{- range .Values.global.elasticsearch.index.name -}}
-  {{- if hasPrefix "Juniper" . -}}
+  {{- if hasPrefix "junos" . -}}
     {{- $JuniperIndex = . -}}
   {{- end -}}
 {{- end -}}

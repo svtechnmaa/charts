@@ -97,7 +97,6 @@ Three different mechanisms are in use — worth knowing before changing
 
 | Pipeline | Selection | Notes |
 |---|---|---|
-| `svtechlab` | `{{ first .Values.global.elasticsearch.index.name }}` | Depends on the Junos index being **first** in the list |
 | `h3c`, `huawei`, `fortinet` | `range` + `hasPrefix "<vendor>"` | Site-specific names such as `h3c-svtechlab-log` still resolve |
 | `offline` | literal `"offline-log"` | Ignores the values list entirely |
 
@@ -156,8 +155,9 @@ running Junos pipelines.
 
 | Parameter | Description | Default |
 |---|---|---|
-| `timezone` | `TZ` for the container; also the JVM default zone used by every `date` filter that has no explicit `timezone` | `Asia/Ho_Chi_Minh` |
-| `replicas` | Intended replica count — **see gotcha 1**, the Deployment reads `replicaCount` | `2` |
+| `timezone` | `TZ` for the container: wall-clock for Logstash's own logs, and the JVM default zone. Only a fallback for timestamp parsing — every `date` filter now sets its zone explicitly | `Asia/Ho_Chi_Minh` |
+| `device_timezone` | Zone the monitored devices report their local timestamps in, passed to the `h3c`, `huawei` and `fortinet` `date` filters. Decides the **instant stored** in `time`, not just its display. Falls back to `timezone` if unset | `Asia/Ho_Chi_Minh` |
+| `replicas` | Intended replica count — has no effect, the Deployment reads `replicaCount` (see [logstash.yml:15](templates/logstash.yml#L15)) | `2` |
 | `heapSize` | `-Xms` / `-Xmx` in `jvm.options` | `1001m` |
 | `init.image.registry` / `.repository` / `.tag` / `.pullPolicy` | initContainer image | `ghcr.io` / `svtechnmaa/busybox` / `1.33` / `IfNotPresent` |
 | `service.type` | Service type | `LoadBalancer` |
@@ -250,13 +250,17 @@ Supplied by the umbrella chart or the `elasticsearch` chart.
 
 1. Add any vendor-specific grok patterns to a new key in `templates/patterns-cm.yml`
    (skip if built-in patterns and inline named captures suffice).
-2. Create `templates/<vendor>-cm.yml`: copy the `$newArray` + index-selector preamble from
-   an existing vendor template and change the prefix and the `fail` message.
-3. Add a `- pipeline.id: <vendor>` entry to `templates/pipelines-cm.yml`.
-4. Add the volume and the `subPath` mount to `templates/logstash.yml`.
-5. Add the listener port to `templates/logstash-service.yml`.
-6. Add `<vendor>-log` to `global.elasticsearch.index.name` in **both**
+2. Create `templates/<vendor>-cm.yml`: copy the `$newArray` + index-selector + `$deviceTZ`
+   preamble from an existing vendor template and change the prefix and the `fail` message.
+3. Give the pipeline a `date` filter with `target => "time"` and
+   `timezone => "{{ $deviceTZ }}"` — device syslog carries no UTC offset, and the index
+   template maps `time` as `type: date`, so a raw timestamp string gets the whole document
+   rejected.
+4. Add a `- pipeline.id: <vendor>` entry to `templates/pipelines-cm.yml`.
+5. Add the volume and the `subPath` mount to `templates/logstash.yml`.
+6. Add the listener port to `templates/logstash-service.yml`.
+7. Add `<vendor>-log` to `global.elasticsearch.index.name` in **both**
    `kubernetes/logstash/values.yaml` and `kubernetes/elasticsearch/values.yaml`.
-7. Re-run the `bootstrap-es-index` Job so the ILM policy, index template and rollover
+8. Re-run the `bootstrap-es-index` Job so the ILM policy, index template and rollover
    alias exist before the first event arrives.
 

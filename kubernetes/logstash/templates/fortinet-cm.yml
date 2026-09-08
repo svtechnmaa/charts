@@ -16,6 +16,7 @@
 {{- if not $fortinetIndex -}}
   {{- fail (printf "logstash/fortinet-cm.yml: global.elasticsearch.index.name has no entry with prefix \"fortinet\" (got %v)" .Values.global.elasticsearch.index.name) -}}
 {{- end -}}
+{{- $deviceTZ := .Values.device_timezone | default .Values.timezone | default "UTC" -}}
 {{ $newArray }}
 ---
 apiVersion: v1
@@ -111,10 +112,6 @@ data:
                     end
                 '
             }
-
-            # Parse the time string into a separate field (NOT @timestamp).
-            # The fleet reports tz="-0500", which is America/Lima year-round
-            # (Peru has had no DST since 1994), so a fixed zone is safe.
             date {
                 match    => [ "time_raw",
                             "yyyy-MM-dd HH:mm:ss",    # FortiOS date= + time=
@@ -122,6 +119,7 @@ data:
                             "MMM  d HH:mm:ss",        # RFC3164, two spaces before single-digit day
                             "MMM d HH:mm:ss" ]        # RFC3164, one space
                 target   => "time"
+                timezone => "{{ $deviceTZ }}"
             }
 
             mutate {

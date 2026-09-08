@@ -16,6 +16,10 @@
 {{- if not $h3cIndex -}}
   {{- fail (printf "logstash/h3c-cm.yml: global.elasticsearch.index.name has no entry with prefix \"h3c\" (got %v)" .Values.global.elasticsearch.index.name) -}}
 {{- end -}}
+{{- /* Zone the H3C devices report their local timestamps in. Comware syslog carries no
+       UTC offset, so without this the date filter below would parse device time in the
+       container's own zone (.Values.timezone) and store the wrong instant. */ -}}
+{{- $deviceTZ := .Values.device_timezone | default .Values.timezone | default "UTC" -}}
 {{ $newArray }}
 
 ---
@@ -42,6 +46,9 @@ data:
             match => { "message" => "<%{PRIORITYCODE:priocode}>%{H3C_TIMESTAMP:time} %{JUNHOSTNAME:hostname} %%%{NUMBER:moduleid}%{H3C_MODULENAME:modulename}/%{NUMBER}/%{EVENTNAME:eventname}: %{MESSAGE:message}" }
             patterns_dir => ["/etc/logstash/patterns"]
             patterns_files_glob => "structured_log"
+        }
+        date {
+            timezone => "{{ $deviceTZ }}"
         }
         mutate {
             convert => { "priocode" => "integer" }
