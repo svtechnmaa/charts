@@ -196,7 +196,6 @@ def run_demote():
     # 3. Exit — new election attempt will happen when process/loop restarts
     #    (kubernetes leader election library exits after OnStoppedLeading callback)
     log.info("Demote complete, exiting election client")
-    sys.exit(0)
 
 
 def trigger_reload():
@@ -228,8 +227,8 @@ def main():
         onstarted_leading=run_promote,
         onstopped_leading=run_demote,
     )
-
-    leaderelection.LeaderElection(election_config).run()
+    while True:
+        leaderelection.LeaderElection(election_config).run()
 
 
 if __name__ == "__main__":
