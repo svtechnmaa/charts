@@ -14,7 +14,7 @@
   {{- end -}}
 {{- end -}}
 {{- if not $JuniperIndex -}}
-  {{- fail (printf "logstash/Juniper-cm.yml: global.elasticsearch.index.name has no entry with prefix \"Juniper\" (got %v)" .Values.global.elasticsearch.index.name) -}}
+  {{- fail (printf "logstash/Juniper-cm.yml: global.elasticsearch.index.name has no entry with prefix \"junos\" (got %v)" .Values.global.elasticsearch.index.name) -}}
 {{- end -}}
 {{ $newArray }}
 
