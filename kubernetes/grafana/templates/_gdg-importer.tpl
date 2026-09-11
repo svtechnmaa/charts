@@ -29,7 +29,7 @@ contexts:
     {{- $password := default .Values.global.adminPassword .Values.gdgConfig.mainContext.credentials.password | quote }}
     password: {{ include "admin.password" . }}
     storage: ""
-    url: {{ .Values.gdgConfig.mainContext.url | quote }}
+    url: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
     user_name: {{ include "admin.user" . }}
     user: null
 global:

@@ -1,3 +1,4 @@
+{{- if .Values.gdgConfig.runInitDataJob }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -103,10 +104,7 @@ spec:
           - name: GF_SECURITY_ADMIN_PASSWORD
             value: {{ include "admin.password" . }}
 
-      {{- if .Files.Glob "files/datasources/*" }}
         volumeMounts:
-          # - name: grafana-datasources
-          #   mountPath: /opt/grafana-entities/datasources
           {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
             {{- range .Values.global.sharedPersistenceVolume }}
 
@@ -132,8 +130,6 @@ spec:
             {{- end }}
             {{- end }}
             {{- end }}
-
-      {{- end }}
 
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
@@ -178,3 +174,4 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+{{- end }}

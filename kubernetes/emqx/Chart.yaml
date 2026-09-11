@@ -1,0 +1,11 @@
+apiVersion: v2
+name: emqx
+description: A Helm chart to deploy EMQX through EMQX Operator
+type: application
+version: 0.1.0
+appVersion: "5.8"
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: 1.x.x
