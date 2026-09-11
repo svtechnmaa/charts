@@ -285,8 +285,6 @@ spec:
             - name: influxdb-config
               mountPath: /opt/bitnami/influxdb/etc
             {{- end }}
-            - name: init-data
-              mountPath: /docker-entrypoint-initdb.d            
             {{- if or (.Files.Glob "files/docker-entrypoint-initdb.d/*.{sh,txt}") .Values.influxdb.initdbScripts .Values.influxdb.initdbScriptsCM }}
             - name: custom-init-scripts
               mountPath: /docker-entrypoint-initdb.d/
@@ -327,9 +325,6 @@ spec:
           secret:
             secretName: {{ include "influxdb.secretName" . }}
         {{- end }}
-        - name: init-data
-          configMap:
-            name: cq-and-retention-policy                  
       {{- if .Values.influxdb.extraVolumes }}
         {{- include "common.tplvalues.render" (dict "value" .Values.influxdb.extraVolumes "context" $) | nindent 8 }}
       {{- end }}
