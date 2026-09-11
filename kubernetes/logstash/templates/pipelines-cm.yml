@@ -11,3 +11,15 @@ data:
     - pipeline.id: offline
       pipeline.ecs_compatibility: disabled
       path.config: "/etc/logstash/conf.d/offline/offline-log.conf"
+    
+    - pipeline.id: h3c
+      pipeline.ecs_compatibility: disabled
+      path.config: "/etc/logstash/conf.d/h3c.conf"
+      
+    - pipeline.id: huawei
+      pipeline.ecs_compatibility: disabled
+      path.config: "/etc/logstash/conf.d/huawei.conf"
+
+    - pipeline.id: fortinet
+      pipeline.ecs_compatibility: disabled
+      path.config: "/etc/logstash/conf.d/fortinet.conf"

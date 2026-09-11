@@ -1,0 +1,159 @@
+################### fortinet device management pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{- /* Select the fortinet index from global.elasticsearch.index.name (site names may be
+       customised, e.g. "fortinet-svtechlab-log"), so it always matches the ILM policy /
+       template / rollover alias created by the elasticsearch bootstrap-index job. */ -}}
+{{- $fortinetIndex := "" -}}
+{{- range .Values.global.elasticsearch.index.name -}}
+  {{- if hasPrefix "fortinet" . -}}
+    {{- $fortinetIndex = . -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $fortinetIndex -}}
+  {{- fail (printf "logstash/fortinet-cm.yml: global.elasticsearch.index.name has no entry with prefix \"fortinet\" (got %v)" .Values.global.elasticsearch.index.name) -}}
+{{- end -}}
+{{- $deviceTZ := .Values.device_timezone | default .Values.timezone | default "UTC" -}}
+{{ $newArray }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fortinet
+data:
+  fortinet.conf: |
+    input {
+        udp {
+        port => 5519
+        type => syslog
+        tags => fortinet_log
+        }
+    }
+    filter {
+        # Must test the TAG, not [type]. The input sets type => syslog, so
+        # `if [type] == "fortinet_log"` never matches and the whole filter block
+        # is skipped -- events reach tagging_customers completely unparsed.
+        if "fortinet_log" in [tags] {
+        mutate {
+          add_field => [ "received_at", "%{@timestamp}" ]
+          add_field => [ "received_from", "%{host}" ]
+        }
+
+        # Peel off only the syslog envelope. Everything after it is FortiOS
+        # key=value payload, handed to the kv filter below.
+        # Alternatives are tried in order; first match wins.
+        grok {
+            match => {
+            "message" => [
+                # RFC5424 (set syslog-format rfc5424): <pri>VER TS HOST APP PROCID MSGID SD payload
+                "^<%{NUMBER:priocode}>%{NUMBER:syslog_version} (?<syslog_time_raw>%{TIMESTAMP_ISO8601}) (?<hostname>[^ ]+) (?:\S+ ){4}(?<kv_payload>\w+=.*)$",
+                # RFC3164 header, usually stamped by a relay or FortiAnalyzer
+                "^<%{NUMBER:priocode}>(?<syslog_time_raw>%{MONTH} +%{MONTHDAY} %{TIME}) (?<hostname>[^ ]+) (?<kv_payload>\w+=.*)$",
+                # FortiOS "syslog-format default" -- this is what the fleet sends
+                "^<%{NUMBER:priocode}>(?<kv_payload>\w+=.*)$",
+                # No priority at all (some collectors strip it)
+                "^(?<kv_payload>\w+=.*)$"
+            ]
+            }
+
+        }
+
+        # Nothing below is meaningful on a line grok could not parse, and running
+        # it anyway only stamps the event with _dateparsefailure. Let unparsed
+        # lines fall straight through to fail-log with message intact.
+        if "_grokparsefailure" not in [tags] {
+
+            kv {
+                source => "kv_payload"
+                target => "fortinet"
+                field_split => " "
+                value_split => "="
+                allow_empty_values => true
+            }
+
+            if [fortinet][devname] {
+                mutate {
+                    copy => { "[fortinet][devname]" => "hostname" }
+                }
+                mutate {
+                    copy => { "[fortinet][devname]" => "devname" }
+                }
+            }
+            # Traffic logs carry no msg key, only event/utm logs do.
+            if [fortinet][msg] {
+                mutate {
+                    copy => { "[fortinet][msg]" => "msg" }
+                }
+            }
+
+            # FortiOS date= + time= carries the year, so prefer it over the
+            # RFC3164 envelope timestamp (which does not).
+            if [fortinet][date] and [fortinet][time] {
+                mutate {
+                    replace => { "time_raw" => "%{[fortinet][date]} %{[fortinet][time]}" }
+                }
+            } else if [syslog_time_raw] {
+                mutate {
+                    copy => { "syslog_time_raw" => "time_raw" }
+                }
+            }
+
+            mutate {
+                convert => { "priocode" => "integer" }
+            }
+            ruby {
+                code => '
+                    pri = event.get("priocode")
+                    if pri
+                        event.set("facilitycode", pri / 8)
+                    end
+                '
+            }
+            date {
+                match    => [ "time_raw",
+                            "yyyy-MM-dd HH:mm:ss",    # FortiOS date= + time=
+                            "ISO8601",                # RFC5424 envelope
+                            "MMM  d HH:mm:ss",        # RFC3164, two spaces before single-digit day
+                            "MMM d HH:mm:ss" ]        # RFC3164, one space
+                target   => "time"
+                timezone => "{{ $deviceTZ }}"
+            }
+
+            mutate {
+                convert => {
+                    "[fortinet][srcport]"   => "integer"
+                    "[fortinet][dstport]"   => "integer"
+                    "[fortinet][proto]"     => "integer"
+                    "[fortinet][sentbyte]"  => "integer"
+                    "[fortinet][rcvdbyte]"  => "integer"
+                    "[fortinet][sentpkt]"   => "integer"
+                    "[fortinet][rcvdpkt]"   => "integer"
+                    "[fortinet][duration]"  => "integer"
+                    "[fortinet][sessionid]" => "integer"
+                    "[fortinet][policyid]"  => "integer"
+                }
+            }
+
+            mutate {
+                remove_field => [ "message", "kv_payload" ]
+            }
+        }
+        }
+    }
+    output {
+        if "_grokparsefailure" in [tags] or "_dateparsefailure" in [tags] {
+            file { path => "/var/log/logstash/fortinet_failed_log-%{+YYYY-MM}" }
+        }
+        else {
+            elasticsearch {
+              hosts => ["{{ join "\", \"https://" $newArray }}"]
+              index => '{{ $fortinetIndex }}'
+              user => '{{.Values.global.elasticsearch.adminUser.name}}'
+              password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+              ssl_certificate_verification => false
+            }
+        }
+    }

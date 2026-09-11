@@ -84,7 +84,15 @@ spec:
           - name: pipelines
             mountPath: /usr/share/logstash/config/pipelines.yml
             subPath: pipelines.yml
-
+          - mountPath: /etc/logstash/conf.d/h3c.conf
+            name: h3c
+            subPath: h3c.conf
+          - mountPath: /etc/logstash/conf.d/huawei.conf
+            name: huawei
+            subPath: huawei.conf
+          - mountPath: /etc/logstash/conf.d/fortinet.conf
+            name: fortinet
+            subPath: fortinet.conf
           # patterns and dictionary for junos device log
           - name: logstash-patterns
             mountPath: /etc/logstash/patterns/
@@ -150,6 +158,15 @@ spec:
       - name: svtech-lab-online
         configMap:
           name: online-log
+      - configMap:
+          name: h3c
+        name: h3c
+      - configMap:
+          name: huawei
+        name: huawei
+      - configMap:
+          name: fortinet
+        name: fortinet
 
       # config volumes for uploaded log from rundeck flow
       - name: offline-log

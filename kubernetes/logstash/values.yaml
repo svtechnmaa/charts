@@ -2,7 +2,7 @@ global:
   externalIP: "" # externalIP for CICD
   elasticsearch:
     enabled: false
-    clusterName: mbf
+    clusterName: svtech
     version: 8.9.1
     k8sSvcSubfix: es-http # used in the boostrap index job
     adminUser:
@@ -13,12 +13,18 @@ global:
       name:
       - junos-log # ILM name, template name, rollover alias, index name
       - offline-log
+      - h3c-log
+      - huawei-log
+      - fortinet-log
       shard: 5
       replica: 1
   logstash:
     enabled: false
     loadBalancerIP: 172.168.1.2
+# Container TZ: wall-clock for logstash's own logs, and the JVM default zone.
 timezone: Asia/Ho_Chi_Minh
+# The device_timezone is used in case the devices and the collector are in different timezones. The device_timezone is used to parse the device's local timestamp, so it can be stored correctly in Elasticsearch. If not set, the container's timezone is used.
+device_timezone: Asia/Ho_Chi_Minh
 replicas: 2
 heapSize: 1001m
 

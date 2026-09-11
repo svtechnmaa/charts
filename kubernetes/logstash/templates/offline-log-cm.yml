@@ -86,7 +86,7 @@ data:
           }
           grok {
             match => {
-              "message" => "<%{PRIORITYCODE:junos_priocode}>1 %{TIMESTAMP_ISO8601:junos_time} %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}|\-) (%{PROCESSID:junos_procsid}|\-) (%{EVENTNAME:junos_eventname}|\-) %{MESSAGE:junos_msg}"
+              "message" => "<%{PRIORITYCODE:junos_priocode}>1 %{TIMESTAMP_ISO8601:time} %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}|\-) (%{PROCESSID:junos_procsid}|\-) (%{EVENTNAME:junos_eventname}|\-) %{MESSAGE:junos_msg}"
             }
             patterns_dir => ["/etc/logstash/patterns"]
             patterns_files_glob => "structured_log"
@@ -125,7 +125,7 @@ data:
           }
           grok {
             match => {
-              "message" => "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  %{JUNHOSTNAME:junos_hostname} ((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(\:)) ((\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-%{EVENTNAME:junos_eventname}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-\:)) %{MESSAGE:junos_msg}"
+              "message" => "(%{DATESTAMP_FULL:time}|%{DATESTAMP_NOTYEAR:time})  %{JUNHOSTNAME:junos_hostname} ((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(\:)) ((\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-%{EVENTNAME:junos_eventname}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-\:)) %{MESSAGE:junos_msg}"
             }
             patterns_dir => ["/etc/logstash/patterns"]
             patterns_files_glob => "junos_offlog_explicit_priority"
@@ -143,7 +143,7 @@ data:
           if [log][file][name] =~ /\_chassisd/{
             grok {
               match => {
-                "message" => "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time}) %{GREEDYDATA:junos_msg}"
+                "message" => "(%{DATESTAMP_FULL:time}|%{DATESTAMP_NOTYEAR:time}) %{GREEDYDATA:junos_msg}"
               }
               patterns_dir => ["/etc/logstash/patterns"]
               patterns_files_glob => "junos_offlog_unstructured_log"
@@ -159,8 +159,8 @@ data:
             grok {
               match => {
                 "message" => [
-                  "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  (%{JUNHOSTNAME:junos_hostname} | )((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(%{PROCESSNAME:junos_procsname})) ((%{EVENTNAME:junos_eventname}\: %{MESSAGE:junos_msg})|%{MESSAGE:junos_msg})",
-                  "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  %{JUNHOSTNAME:junos_hostname} ((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(\:)) ((\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-%{EVENTNAME:junos_eventname}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-\:)) %{MESSAGE:junos_msg}"
+                  "(%{DATESTAMP_FULL:time}|%{DATESTAMP_NOTYEAR:time})  (%{JUNHOSTNAME:junos_hostname} | )((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(%{PROCESSNAME:junos_procsname})) ((%{EVENTNAME:junos_eventname}\: %{MESSAGE:junos_msg})|%{MESSAGE:junos_msg})",
+                  "(%{DATESTAMP_FULL:time}|%{DATESTAMP_NOTYEAR:time})  %{JUNHOSTNAME:junos_hostname} ((%{PROCESSNAME:junos_procsname}\[%{PROCESSID:junos_procsid}\]\:)|(%{PROCESSNAME:junos_procsname}\:)|(\:)) ((\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-%{EVENTNAME:junos_eventname}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\:)|(\%%{FACILITYNAME:junos_facilityname}\-%{SEVERITYCODE:junos_severitycode}\-\:)) %{MESSAGE:junos_msg}"
                 ]
               }
               patterns_dir => ["/etc/logstash/patterns"]
@@ -170,7 +170,7 @@ data:
             if "_grokparsefailure" in [tags] {
               ### BEGIN: Pattern fpc\d+ OR PFE\d+ exist AND pfed\: or pfe\: exists
               grok {
-                match => { "message" => [ "(%{DATESTAMP_FULL:junos_time}|%{DATESTAMP_NOTYEAR:junos_time})  %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}\: )?%{FPCNAME:junos_fpcname} %{GREEDYDATA:junos_msg}" ] }
+                match => { "message" => [ "(%{DATESTAMP_FULL:time}|%{DATESTAMP_NOTYEAR:time})  %{JUNHOSTNAME:junos_hostname} (%{PROCESSNAME:junos_procsname}\: )?%{FPCNAME:junos_fpcname} %{GREEDYDATA:junos_msg}" ] }
                 patterns_dir => ["/etc/logstash/patterns"]
                 patterns_files_glob => "junos_offlog_unstructured_log"
                 add_field => {
@@ -185,8 +185,8 @@ data:
         }
 
         date {
-          match => [ "junos_time", "MMM dd HH:mm:ss.SSS yyyy", "MMM  d HH:mm:ss.SSS yyyy","MMM dd HH:mm:ss yyyy", "MMM  d HH:mm:ss yyyy", "ISO8601", "MMM dd HH:mm:ss", "MMM  d HH:mm:ss", "MMM  d HH:mm:ss.SSS yyyy", "MMM dd HH:mm:ss.SSS"]
-          target => "junos_time"
+          match => [ "time", "MMM dd HH:mm:ss.SSS yyyy", "MMM  d HH:mm:ss.SSS yyyy","MMM dd HH:mm:ss yyyy", "MMM  d HH:mm:ss yyyy", "ISO8601", "MMM dd HH:mm:ss", "MMM  d HH:mm:ss", "MMM  d HH:mm:ss.SSS yyyy", "MMM dd HH:mm:ss.SSS"]
+          target => "time"
           timezone => "%{[@metadata][zone]}"
         }
         # date { match => [ "indexed_at", "MMM dd HH:mm:ss.SSS yyy", "MMM  d HH:mm:ss.SSS yyy","MMM dd HH:mm:ss yyy", "MMM  d HH:mm:ss yyy", "ISO8601", "MMM dd HH:mm:ss", "MMM  d HH:mm:ss" ] }

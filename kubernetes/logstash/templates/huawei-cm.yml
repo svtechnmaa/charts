@@ -1,0 +1,89 @@
+################### huawei device management pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{- /* Select the Huawei index from global.elasticsearch.index.name (site names may be
+       customised, e.g. "huawei-svtechlab-log"), so it always matches the ILM policy /
+       template / rollover alias created by the elasticsearch bootstrap-index job. */ -}}
+{{- $huaweiIndex := "" -}}
+{{- range .Values.global.elasticsearch.index.name -}}
+  {{- if hasPrefix "huawei" . -}}
+    {{- $huaweiIndex = . -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $huaweiIndex -}}
+  {{- fail (printf "logstash/huawei-cm.yml: global.elasticsearch.index.name has no entry with prefix \"huawei\" (got %v)" .Values.global.elasticsearch.index.name) -}}
+{{- end -}}
+{{- $deviceTZ := .Values.device_timezone | default .Values.timezone | default "UTC" -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: huawei
+data:
+  huawei.conf: |
+    input {
+        udp {
+        port => 5514
+        type => syslog
+        tags => huawei_log
+        }
+    }
+    filter {
+        if "huawei_log" in [tags] {
+        mutate {
+          add_field => [ "received_at", "%{@timestamp}" ]
+          add_field => [ "received_from", "%{host}" ]
+        }
+        # tag_on_failure is deliberately left at its default (_grokparsefailure): that is
+        # the tag the output branch routes on, so suppressing it would make the fail-log
+        # unreachable and index unparsed lines with no fields and no failure signal.
+        grok {
+            match => {
+            "message" => [
+                "^<%{NUMBER:priocode}>(?<time_raw>%{MONTH} +%{MONTHDAY} %{YEAR} %{TIME}) %{HOSTNAME:hostname} (?:%%)%{NUMBER:log_format_version}(?<module_name>[^/]+)/%{NUMBER:severitycode}/(?<brief_description>[^()]+)\((?<information_type>[a-z])\):(?:CID=%{NOTSPACE:CID}(?:-OID=%{NOTSPACE:alarm_ID})?;)?\s*(?<msg>.*)$"
+            ]
+            }
+        }
+
+        # Everything below only makes sense on a line grok actually parsed. Running the
+        # date filter on an unparsed event would tag the same line a second time, and
+        # translate would have no severitycode to look up.
+        if "_grokparsefailure" not in [tags] {
+            date {
+                match    => [ "time_raw",
+                            "MMM  d yyyy HH:mm:ss",   # two spaces before single-digit day
+                            "MMM d yyyy HH:mm:ss" ]   # one space
+                target   => "time"
+                timezone => "{{ $deviceTZ }}"
+            }
+            translate {
+                field => "[severitycode]"
+                destination => "[severityname]"
+                dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+            }
+        }
+
+        }
+    }
+    output {
+        # Quarantine every parse failure, not just grok's: a line that grokked but whose
+        # timestamp matched none of the date formats above is equally unusable, and
+        # "time" would be left as the raw string against a type: date mapping.
+        if "_grokparsefailure" in [tags] or "_dateparsefailure" in [tags] {
+            file { path => "/var/log/logstash/huawei_failed_log-%{+YYYY-MM}" }
+        }
+        else {
+            elasticsearch {
+              hosts => ["{{ join "\", \"https://" $newArray }}"]
+              index => '{{ $huaweiIndex }}'
+              user => '{{.Values.global.elasticsearch.adminUser.name}}'
+              password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+              ssl_certificate_verification => false
+            }
+        }
+    }

@@ -1,0 +1,98 @@
+################### H3C device management pipeline config ###################
+{{- $clusterName := .Values.global.elasticsearch.clusterName -}}
+{{- $newArray := list -}}
+{{- range .Values.global.elasticsearch.nodes -}}
+  {{- $newArray = append $newArray (printf "%s-es-%s" $clusterName .name) -}}
+{{- end -}}
+{{- /* Select the H3C index from global.elasticsearch.index.name (site names may be
+       customised, e.g. "h3c-svtechlab-log"), so it always matches the ILM policy /
+       template / rollover alias created by the elasticsearch bootstrap-index job. */ -}}
+{{- $h3cIndex := "" -}}
+{{- range .Values.global.elasticsearch.index.name -}}
+  {{- if hasPrefix "h3c" . -}}
+    {{- $h3cIndex = . -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $h3cIndex -}}
+  {{- fail (printf "logstash/h3c-cm.yml: global.elasticsearch.index.name has no entry with prefix \"h3c\" (got %v)" .Values.global.elasticsearch.index.name) -}}
+{{- end -}}
+{{- /* Zone the H3C devices report their local timestamps in. Comware syslog carries no
+       UTC offset, so without this the date filter below would parse device time in the
+       container's own zone (.Values.timezone) and store the wrong instant. */ -}}
+{{- $deviceTZ := .Values.device_timezone | default .Values.timezone | default "UTC" -}}
+{{ $newArray }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: h3c
+data:
+  h3c.conf: |
+    input {
+        udp {
+            port => 5513
+            type => syslog
+            tags => h3c_log
+        }
+    }
+    filter {
+        if "h3c_log" in [tags] {
+        mutate {
+            add_field => [ "received_at", "%{@timestamp}" ]
+            add_field => [ "received_from", "%{host}" ]
+        }
+        grok {
+            match => { "message" => "<%{PRIORITYCODE:priocode}>%{H3C_TIMESTAMP:time} %{JUNHOSTNAME:hostname} %%%{NUMBER:moduleid}%{H3C_MODULENAME:modulename}/%{NUMBER}/%{EVENTNAME:eventname}: %{MESSAGE:message}" }
+            patterns_dir => ["/etc/logstash/patterns"]
+            patterns_files_glob => "structured_log"
+        }
+        date {
+            timezone => "{{ $deviceTZ }}"
+        }
+        mutate {
+            convert => { "priocode" => "integer" }
+            convert => { "moduleid" => "integer" }
+        }
+        ruby {
+            code => '
+                val = event.get("priocode")
+                if val
+                    val = val.to_i
+                    event.set("facilitycode", val / 8)
+                    event.set("severitycode", val % 8)
+                end
+            '
+        }
+        # ruby {
+        #     code => 'event.set("facilitycode", event.get("riocode")/8)'
+        # }
+        # ruby {
+        #     code => 'event.set("severitycode", event.get("priocode")%8)'
+        # }
+        translate {
+            field => "[severitycode]"
+            destination => "[severityname]"
+            dictionary_path => "/etc/logstash/dictionary/severitycode.yml"
+        }
+        translate {
+            field => "[facilitycode]"
+            destination => "[facilityname]"
+            dictionary_path => "/etc/logstash/dictionary/facilitycode.yml"
+        }
+        }
+    }
+    output {
+        if "_grokparsefailure" in [tags] or "_dateparsefailure" in [tags] {
+            file { path => "/var/log/logstash/h3c_failed_log-%{+YYYY-MM}" }
+        }
+        else {
+            elasticsearch {
+              hosts => ["{{ join "\", \"https://" $newArray }}"]
+              index => '{{ $h3cIndex }}'
+              user => '{{.Values.global.elasticsearch.adminUser.name}}' 
+              password => '{{.Values.global.elasticsearch.adminUser.pass}}'
+              ssl_certificate_verification => false
+            }
+        }
+    }
