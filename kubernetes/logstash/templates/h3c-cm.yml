@@ -83,7 +83,7 @@ data:
         }
     }
     output {
-        if "_grokparsefailure" in [tags] {
+        if "_grokparsefailure" in [tags] or "_dateparsefailure" in [tags] {
             file { path => "/var/log/logstash/h3c_failed_log-%{+YYYY-MM}" }
         }
         else {

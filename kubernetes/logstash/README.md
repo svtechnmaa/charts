@@ -87,7 +87,7 @@ couplings constrain any renaming:
 
 `templates/online-log-cm.yml` captures the device timestamp as `time` and its `date`
 filter has no `target`, so it also promotes `@timestamp`. `templates/offline-log-cm.yml`
-still uses `junos_time` and its `date` filter targets `junos_time`, so `@timestamp` there
+still uses `time` and its `date` filter targets `time`, so `@timestamp` there
 stays at ingest time.
 
 ### Index selection
@@ -214,10 +214,7 @@ Supplied by the umbrella chart or the `elasticsearch` chart.
         ```
         kubectl logs deploy/logstash | grep -i "Pipeline started"
         ```
-    - Query the monitoring API (basic auth `logstash`, password in `general-config-cm.yml`)
-        ```
-        kubectl exec deploy/logstash -- curl -s -u logstash:PASS localhost:9600/_node/stats/pipelines?pretty
-        ```
+
     - Send a test event
         ```
         kubectl exec deploy/logstash -- bash -c 'echo "<190>Sep 25 09:20:34 2026 SW01 %%10SHELL/6/SHELL_LOGIN: test" > /dev/udp/127.0.0.1/5513'
@@ -226,10 +223,7 @@ Supplied by the umbrella chart or the `elasticsearch` chart.
         ```
         kubectl exec deploy/logstash -- ls -l /var/log/logstash/
         ```
-    - Confirm the target index is a rollover alias, not a concrete index
-        ```
-        curl -sk -u elastic:PASS https://CLUSTERNAME-es-http:9200/_alias/h3c-log
-        ```
+
 
 - Apply a pipeline change:
 

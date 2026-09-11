@@ -144,7 +144,7 @@ data:
         }
     }
     output {
-        if "_grokparsefailure" in [tags] {
+        if "_grokparsefailure" in [tags] or "_dateparsefailure" in [tags] {
             file { path => "/var/log/logstash/fortinet_failed_log-%{+YYYY-MM}" }
         }
         else {
