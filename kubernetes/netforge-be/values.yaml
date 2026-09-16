@@ -84,6 +84,11 @@ conductor:
 
 conductorWorker:
   replicaCount: 1
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/netforge-conductor-worker
+    tag: "v1.11.14"
+    pullPolicy: IfNotPresent
   resources: {}
 
 
