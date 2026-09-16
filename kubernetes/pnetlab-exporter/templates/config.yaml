@@ -1,9 +1,9 @@
 apiVersion: v1
-kind: ConfigMap
+kind: secret
 metadata:
-  name: {{ .Chart.Name }}-configmap
+  name: {{ .Chart.Name }}-config
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
 data:
   config.yaml: |
-{{ include "pnetlab-exporter.config.yaml" . | indent 4 }}
+{{ include "pnetlab-exporter.config.yaml" . | b64enc | indent 4 }}
