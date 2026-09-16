@@ -1,11 +1,11 @@
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
-  name: {{ .Chart.Name }}-configmap
+  name: {{ .Chart.Name }}-config
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
 data:
 {{- range $name, $block := .Values.config }}
   {{ $name }}.yml: |
-{{ include "redfish-exporter.config.yml" $block | indent 4 }}
+{{ include "redfish-exporter.config.yml" $block | b64enc | indent 4 }}
 {{- end }}

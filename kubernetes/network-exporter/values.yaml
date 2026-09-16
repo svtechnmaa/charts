@@ -48,11 +48,18 @@ serviceAccount:
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000        # match the image's non-root UID, or the exporter runs as root by default
+  seccompProfile:
+    type: RuntimeDefault
 
 securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
   capabilities:
+    drop: ["ALL"]
     add:
       - NET_ADMIN
       - NET_RAW

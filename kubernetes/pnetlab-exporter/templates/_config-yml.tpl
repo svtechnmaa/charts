@@ -14,8 +14,8 @@ databases:
   {{ .host }}:
     dsn:
       dialect: mysql
-      user: {{ .user | default "pnetlab" }}
-      password: {{ .password | default "pnetlab" }}
+      user: {{ .user | default "" }}
+      password: {{ .password | default "" }}
       host: {{ .host }}
       port: {{ .port | default 3306 }}
       database: {{ .dbname | default "pnetlab_db" }}
@@ -24,8 +24,8 @@ databases:
   default:
     dsn:
       dialect: mysql
-      user: pnetlab
-      password: pnetlab
+      user: ""
+      password: ""
       host: localhost
       port: 3306
       database: pnetlab_db
