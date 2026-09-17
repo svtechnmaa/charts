@@ -101,7 +101,7 @@ spec:
           {{- end -}}
           {{ with .Values.startupProbe }}
           startupProbe:
-            {{- toYaml .Values.startupProbe | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           # Resources required by the container. More information can be found here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
           resources:
