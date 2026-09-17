@@ -10,8 +10,8 @@ metadata:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  ingressClassName: {{ default .Release.Name .Values.ingress.className }}
-  {{- if .Values.ingress.defaultBackend }}
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
   {{- end }}
   {{- if .Values.ingress.tls }}
   tls:
@@ -26,17 +26,13 @@ spec:
   rules:
     - http:
         paths:
-          {{- range .Values.service.ports }}
-          {{- if .ingressPath }}
-          - path: {{ .ingressPath }}
-            {{- with .ingressPathType }}
-            pathType: {{ . }}
-            {{- end }}
+          {{- range .Values.ingress.paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "common.names.fullname" $ }}
+                name: {{ $.Chart.Name }}
                 port:
-                  number: {{ .port }}
-          {{- end }}
+                  number: {{ (first $.Values.service.ports).port }}
           {{- end }}
 {{- end }}

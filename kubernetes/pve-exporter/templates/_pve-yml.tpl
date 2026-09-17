@@ -4,7 +4,7 @@
 {{- range $name, $setting := .Values.config }}
 {{ $name }}:
   user: {{ $setting.user }}
-  password: {{ $setting.password }}
+  password: {{ $setting.password | quote }}
   verify_ssl: {{ $setting.verify_ssl }}
 {{- end }}
 {{ end }}

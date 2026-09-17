@@ -149,8 +149,8 @@ autoscaling:
 # Additional volumes on the output Deployment definition.
 volumes:
   - name: exporter-config-volume
-    configMap:
-      name: vmware-exporter-config
+    secret:
+      secretName: vmware-exporter-config
       items:
         - key: esx.yml
           path: esx.yml
