@@ -178,7 +178,7 @@ env: {}
 # Config for exporter.
 config:
   default:
-    vsphere_host: "vcenter"
+    # vsphere_host: "vcenter" # use list target in job config to scrape multiple vcenter
     vsphere_user: "user"
     vsphere_password: "password"
   # esx1:

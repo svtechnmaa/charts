@@ -46,8 +46,10 @@ spec:
     spec:
       imagePullSecrets:
       - name: ghcr-pull-secret
+      {{- if .Values.podSecurityContext }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
       # Affinity and nodeSelector are mutually exclusive. If you set one, the other will be ignored.
       {{- if ne $workloadType "DaemonSet" }}
       {{- with .Values.affinity }}
@@ -68,9 +70,12 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
+        # trivy:ignore:AVD-KSV-0014
         - name: {{ .Chart.Name }}
+          {{- if .Values.securityContext }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" | quote }}
           ports:
