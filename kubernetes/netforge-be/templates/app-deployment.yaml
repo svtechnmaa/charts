@@ -54,7 +54,7 @@ spec:
       # Containers config
       containers:
         # Server container
-        - name: {{ .Chart.Name }} # replace if needed
+        - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
@@ -111,165 +111,6 @@ spec:
             {{- toYaml .Values.volumeMounts | nindent 12 }}
             {{- end }}
 
-        # Worker container
-        - name: celery-worker # replace if needed
-          securityContext:
-            capabilities:
-              add:
-                - NET_RAW
-          # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              celery -A app.core.celery_app worker \
-              --loglevel=info \
-              --pool=threads \
-              --concurrency=16 \
-              -Q device_ops,audit,scheduled,workflows
-          env:
-            - name: TZ
-              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
-          envFrom:
-            {{- if .Values.netforgeAppEnv }}
-            - configMapRef:
-                name: {{ $netforgeAppConfigMapName }}
-            {{- end }}
-            {{- if .Values.netforgeAppSecretEnv }}
-            - secretRef:
-                name: {{ $netforgeAppSecretName }}
-            {{- end }}
-          {{- end }}
-
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-            # shareVolume: VolumeMount
-            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-            {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has $.Chart.Name .shareFor }}
-            - name: {{ .volumeName }}
-              mountPath: {{ .path }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
-            # unshareVolume(volumeMount): define in the chart's values.yaml
-            {{- if .Values.volumeMounts }}
-            {{- toYaml .Values.volumeMounts | nindent 12 }}
-            {{- end }}
-        
-
-        # Scheduler container
-        - name: celery-beat # replace if needed
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              celery -A app.core.celery_app beat --loglevel=info
-          env:
-            - name: TZ
-              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
-          envFrom:
-            {{- if .Values.netforgeAppEnv }}
-            - configMapRef:
-                name: {{ $netforgeAppConfigMapName }}
-            {{- end }}
-            {{- if .Values.netforgeAppSecretEnv }}
-            - secretRef:
-                name: {{ $netforgeAppSecretName }}
-            {{- end }}
-          {{- end }}
-
-          
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-            # shareVolume: VolumeMount
-            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-            {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has $.Chart.Name .shareFor }}
-            - name: {{ .volumeName }}
-              mountPath: {{ .path }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
-            # unshareVolume(volumeMount): define in the chart's values.yaml
-            {{- if .Values.volumeMounts }}
-            {{- toYaml .Values.volumeMounts | nindent 12 }}
-            {{- end }}
-        # Monitor container
-        - name: flower # replace if needed
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          # set to image: {{ include "common.images.image" ( dict "imageRoot" .Values.image ) }} if using docker.io as registry
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.flower.image ) }}
-          imagePullPolicy: {{ .Values.flower.image.pullPolicy }}
-          command:
-            - /bin/sh
-            - -c
-            - |
-              celery \
-              --broker=$CELERY_BROKER_URL \
-              flower \
-              --port=5555 \
-              --basic-auth=$FLOWER_BASIC_AUTH \
-              --persistent=true \
-              --db=/data/flower.db 
-          env:
-            - name: TZ
-              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-            {{- range $key, $value := .Values.env }}
-            - name: {{ $key }}
-              value: {{ $value | quote }}
-            {{- end }}
-          {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
-          envFrom:
-            {{- if .Values.netforgeAppEnv }}
-            - configMapRef:
-                name: {{ $netforgeAppConfigMapName }}
-            {{- end }}
-            {{- if .Values.netforgeAppSecretEnv }}
-            - secretRef:
-                name: {{ $netforgeAppSecretName }}
-            {{- end }}
-          {{- end }}
-
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-            # shareVolume: VolumeMount
-            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-            {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has $.Chart.Name .shareFor }}
-            - name: {{ .volumeName }}
-              mountPath: {{ .path }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
-            - name: flower-data
-              mountPath: /data
-            # unshareVolume(volumeMount): define in the chart's values.yaml
-            {{- if .Values.volumeMounts }}
-            {{- toYaml .Values.volumeMounts | nindent 12 }}
-            {{- end }}
-
       volumes:
       # shareVolume(volume): define in the global values
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
@@ -285,6 +126,3 @@ spec:
         {{- if .Values.volumes }}
         {{- toYaml .Values.volumes | nindent 8 }}
         {{- end }}
-        - name: flower-data
-          persistentVolumeClaim:
-            claimName: flower-data

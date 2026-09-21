@@ -60,6 +60,7 @@ jobs:
       check_nmaa: ${{ steps.check_nmaa.outputs.need_check || 'false' }}
       check_elk: ${{ steps.check_elk.outputs.need_check || 'false' }}
       check_tacgui: ${{ steps.check_tacgui.outputs.need_check || 'false' }}
+      check_netforge: ${{ steps.check_netforge.outputs.need_check || 'false' }}
       check_radius: ${{ steps.check_radius.outputs.need_check || 'false' }}
       changed_charts: ${{ steps.get_changed_charts.outputs.changed_charts || '' }}
     steps:
@@ -111,9 +112,10 @@ jobs:
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
-            echo "Checking if '$item' exists in $mappingFile"
-            if { [ -f "$mappingFile" ] &&  grep -q "$item" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -q "$item" "$dependencyFile"; };  then
-                echo "Found '$item' in $mappingFile"
+            chartPattern="(^|[^[:alnum:]_-])${item}([^[:alnum:]_-]|$)"
+            echo "Checking if chart '$item' exists in $mappingFile or $dependencyFile"
+            if { [ -f "$mappingFile" ] && grep -Eq "$chartPattern" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -Eq "$chartPattern" "$dependencyFile"; }; then
+                echo "Found chart '$item' in the NMAA stacked_charts"
                 found=1
                 break
             fi
@@ -136,9 +138,10 @@ jobs:
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
-            echo "Checking if '$item' exists in $mappingFile"
-            if { [ -f "$mappingFile" ] &&  grep -q "$item" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -q "$item" "$dependencyFile"; };  then
-                echo "Found '$item' in $mappingFile"
+            chartPattern="(^|[^[:alnum:]_-])${item}([^[:alnum:]_-]|$)"
+            echo "Checking if chart '$item' exists in $mappingFile or $dependencyFile"
+            if { [ -f "$mappingFile" ] && grep -Eq "$chartPattern" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -Eq "$chartPattern" "$dependencyFile"; }; then
+                echo "Found chart '$item' in the ELK stacked_charts"
                 found=1
                 break
             fi
@@ -161,9 +164,10 @@ jobs:
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
-            echo "Checking if '$item' exists in $mappingFile"
-            if { [ -f "$mappingFile" ] &&  grep -q "$item" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -q "$item" "$dependencyFile"; };  then
-                echo "Found '$item' in $mappingFile"
+            chartPattern="(^|[^[:alnum:]_-])${item}([^[:alnum:]_-]|$)"
+            echo "Checking if chart '$item' exists in $mappingFile or $dependencyFile"
+            if { [ -f "$mappingFile" ] && grep -Eq "$chartPattern" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -Eq "$chartPattern" "$dependencyFile"; }; then
+                echo "Found chart '$item' in the RADIUS stacked_charts"
                 found=1
                 break
             fi
@@ -186,9 +190,10 @@ jobs:
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
-            echo "Checking if '$item' exists in $mappingFile"
-            if { [ -f "$mappingFile" ] &&  grep -q "$item" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -q "$item" "$dependencyFile"; };  then
-                echo "Found '$item' in $mappingFile"
+            chartPattern="(^|[^[:alnum:]_-])${item}([^[:alnum:]_-]|$)"
+            echo "Checking if chart '$item' exists in $mappingFile or $dependencyFile"
+            if { [ -f "$mappingFile" ] && grep -Eq "$chartPattern" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -Eq "$chartPattern" "$dependencyFile"; }; then
+                echo "Found chart '$item' in the TACGUI stacked_charts"
                 found=1
                 break
             fi
@@ -200,9 +205,36 @@ jobs:
         else
             echo "No charts found in the TACGUI stacked_charts."
         fi
+
+    - name: "Check stacked charts: NETFORGE"
+      id: check_netforge
+      if: ${{ steps.check_no_ci.outputs.no_ci != 'true' && steps.get_changed_charts.outputs.changed_charts != '' }}
+      run: |
+        echo "Changed charts: ${{ steps.get_changed_charts.outputs.changed_charts}}"
+        changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
+        mappingFile="${{ github.workspace }}/stacked_charts/kubernetes/netforge/image_chart_mapping.yml"
+        dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/netforge/Chart.yaml"
+        found=0
+        IFS=',' read -ra items <<< "$changed_charts"
+        for item in "${items[@]}"; do
+            chartPattern="(^|[^[:alnum:]_-])${item}([^[:alnum:]_-]|$)"
+            echo "Checking if chart '$item' exists in $mappingFile or $dependencyFile"
+            if { [ -f "$mappingFile" ] && grep -Eq "$chartPattern" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -Eq "$chartPattern" "$dependencyFile"; }; then
+                echo "Found chart '$item' in the NETFORGE stacked_charts"
+                found=1
+                break
+            fi
+        done
+        if [ "$found" -eq 1 ]; then
+            echo "At least one chart was found in the NETFORGE stacked_charts."
+            echo "need_check=true" >> $GITHUB_OUTPUT
+            echo 'NETFORGE:' >> ${{ github.workspace }}/result.conf
+        else
+            echo "No charts found in the NETFORGE stacked_charts."
+        fi
     
   create_vm:
-    if: ${{ needs.check_charts.outputs.no_ci != 'true' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true' || needs.check_charts.outputs.check_tacgui == 'true' || needs.check_charts.outputs.check_radius == 'true') }}
+    if: ${{ needs.check_charts.outputs.no_ci != 'true' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true' || needs.check_charts.outputs.check_tacgui == 'true' || needs.check_charts.outputs.check_netforge == 'true' || needs.check_charts.outputs.check_radius == 'true') }}
     needs: check_charts
     runs-on: ansible-dind
     permissions:
@@ -679,13 +711,124 @@ jobs:
         with:
           name: robot-tacgui-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
+
+  install_netforge_on_vm:
+    if: ${{ always() && !cancelled() && needs.create_vm.result == 'success' && needs.check_charts.outputs.no_ci != 'true' && needs.check_charts.outputs.check_netforge == 'true' }}
+    needs:
+      - check_charts
+      - create_vm
+      - test_tacgui
+    runs-on: ansible-dind
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.COMMIT_FULL_ID }}
+        path: charts
+
+    - name: Checkout SVTECH_CICD_Utilities
+      uses: actions/checkout@v4
+      with:
+        repository: '${{ github.repository_owner }}/SVTECH_CICD_Utilities'
+        token: ${{ secrets.PUSH_TOKEN }}
+        path: SVTECH_CICD_Utilities
+        ref: ${{ env.CICD_UTILITIES_BRANCH }}
+
+    - name: Checkout SVTECH-installation-automation
+      uses: actions/checkout@v4
+      with:
+        repository: '${{ github.repository_owner }}/SVTECH-installation-automation'
+        token: ${{ secrets.PUSH_TOKEN }}
+        path: SVTECH-installation-automation
+        ref: ${{ env.INSTALLATION_BRANCH }}
+
+    - name: Checkout stacked_charts
+      uses: actions/checkout@v4
+      with:
+        repository: '${{ github.repository_owner }}/stacked_charts'
+        token: ${{ secrets.PUSH_TOKEN }}
+        path: stacked_charts
+        ref: ${{ env.STACKED_CHARTS_BRANCH }}
+
+    - name: Download build_vars artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: vm_vars
+        path: ${{ github.workspace }}
+
+    - name: Create inventory file for NetForge Stack
+      run: |
+        export ANSIBLE_HOST_KEY_CHECKING=False
+        cd ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook
+        ansible-playbook ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook/create_inventory_file.yml \
+            -e "BUILD_VARS_PATH=${{ github.workspace }} \
+            template_file=${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook/templates/inventory_k8s_netforge.j2 \
+            STACKED_CHARTS_BRANCH=${{ env.STACKED_CHARTS_BRANCH }} \
+            STACKED_CHARTS_COMMIT_ID='${{ env.STACKED_CHARTS_COMMIT_ID }}' \
+            AUTOMATION_BRANCH=${{ env.JUNOS_BRANCH }} \
+            STACK=netforge"
+
+    - name: Deploy NetForge Stack
+      run: |
+        export ANSIBLE_HOST_KEY_CHECKING=False
+        cd ${{ github.workspace }}/SVTECH-installation-automation
+        ansible-playbook ${{ github.workspace }}/SVTECH-installation-automation/k8s_netforge_for_ci.yml \
+                    -e @${{ github.workspace }}/stacked_charts/kubernetes/netforge/image_chart_mapping.yml \
+                    -e "GH_TOKEN=${{ secrets.PUSH_TOKEN }}" \
+                    -e "GH_FG_TOKEN=${{ secrets.PUSH_TOKEN }}" \
+                    -e "GH_USERNAME=svtechnmaa" \
+                    -e "REPO_PATH=${{ github.workspace }}" \
+                    -i ${{ github.workspace }}/netforge_inventory
+
+    - name: Upload artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: netforge_build_vars
+        path: ${{ github.workspace }}/build_vars.yml
+
+  test_netforge:
+    if: ${{ always() && !cancelled() && needs.install_netforge_on_vm.result == 'success' && needs.check_charts.outputs.no_ci != 'true' && needs.check_charts.outputs.check_netforge == 'true' }}
+    runs-on: robot-dind
+    needs:
+      - check_charts
+      - install_netforge_on_vm
+    steps:
+      - name: Checkout SVTECH_CICD_Utilities
+        uses: actions/checkout@v4
+        with:
+          repository: '${{ github.repository_owner }}/SVTECH_CICD_Utilities'
+          token: ${{ secrets.PUSH_TOKEN }}
+          path: SVTECH_CICD_Utilities
+          ref: ${{ env.CICD_UTILITIES_BRANCH }}
+
+      - name: Download build_vars artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: netforge_build_vars
+          path: ${{ github.workspace }}
+
+      - name: Run NetForge integration tests
+        if: always() && !cancelled()
+        run: |
+          sh "${{ github.workspace }}/SVTECH_CICD_Utilities/integration-test/netforge/run_testcase.sh" -D "${{ github.workspace }}" -I .
+
+      - name: Upload Test result
+        if: always()
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: robot-netforge-result-#${{ github.run_number }}
+          path: ${{ github.workspace }}/test_result
         
   install_radius_on_vm:
     runs-on: ansible-dind
     needs: 
       - check_charts
       - create_vm
-      - test_tacgui
+      - test_netforge
     if: ${{always() && !cancelled() && needs.create_vm.result == 'success' && needs.check_charts.outputs.check_radius == 'true' && needs.check_charts.outputs.no_ci != 'true' }}
     steps:
       - name: Clone repos
@@ -795,6 +938,7 @@ jobs:
       - test_nmaa 
       - test_elk
       - test_tacgui
+      - test_netforge
       - test_radius
     steps:
       - name: Checkout SVTECH_CICD_Utilities 
@@ -884,8 +1028,9 @@ jobs:
       - test_nmaa
       - test_elk
       - test_tacgui
+      - test_netforge
       - test_radius
-    if: always() && !cancelled() && needs.check_charts.outputs.no_ci != 'true' && needs.create_vm.result == 'success' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true' || needs.check_charts.outputs.check_tacgui == 'true' || needs.check_charts.outputs.check_radius == 'true')
+    if: always() && !cancelled() && needs.check_charts.outputs.no_ci != 'true' && needs.create_vm.result == 'success' && ( needs.check_charts.outputs.check_nmaa == 'true' || needs.check_charts.outputs.check_elk == 'true' || needs.check_charts.outputs.check_tacgui == 'true' || needs.check_charts.outputs.check_netforge == 'true' || needs.check_charts.outputs.check_radius == 'true')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -923,7 +1068,7 @@ jobs:
           echo "COMMITTER_EMAIL: $COMMITTER_EMAIL"
         
       - name: Send mail to committer to notify failure
-        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success')
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_netforge == 'true' && needs.test_netforge.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success')
         continue-on-error: true
         uses: dawidd6/action-send-mail@v6
         with:
@@ -954,7 +1099,7 @@ jobs:
 
 
       - name: Wait before cleanup
-        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success')
+        if: (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_netforge == 'true' && needs.test_netforge.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success')
         continue-on-error: true
         run: |
           if [ ${{ env.WAIT_SECONDS }} -gt 3600 ]; then
@@ -973,7 +1118,7 @@ jobs:
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
 
       - name: Send mail to committer to notify success
-        if: ${{ ! ( (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success') ) }}
+        if: ${{ ! ( (needs.check_charts.outputs.check_elk == 'true' && needs.test_elk.result != 'success') || (needs.check_charts.outputs.check_nmaa == 'true' && needs.test_nmaa.result != 'success') || (needs.check_charts.outputs.check_tacgui == 'true' && needs.test_tacgui.result != 'success') || (needs.check_charts.outputs.check_netforge == 'true' && needs.test_netforge.result != 'success') || (needs.check_charts.outputs.check_radius == 'true' && needs.test_radius.result != 'success') ) }}
         continue-on-error: true
         uses: dawidd6/action-send-mail@v6
         with:
@@ -1022,6 +1167,8 @@ jobs:
       - test_elk
       - install_tacgui_on_vm
       - test_tacgui
+      - install_netforge_on_vm
+      - test_netforge
       - install_radius_on_vm
       - test_radius
       - release_helm_charts
