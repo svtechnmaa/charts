@@ -41,6 +41,8 @@ spec:
           ports:
             - containerPort: 8989
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: URL_BASE
               value:  {{ .Values.paths.speedtestServer | quote }}
       {{- with .Values.imagePullSecrets }}

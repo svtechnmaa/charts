@@ -1,6 +1,6 @@
 # EMQX Helm Chart
 
-This chart renders an `apps.emqx.io/v2beta1` `EMQX` custom resource for EMQX Operator. It is intended for stacks that want to reuse EMQX instead of keeping the EMQX object inside an application chart such as Speedtest.
+This chart renders an `apps.emqx.io/v2` `EMQX` custom resource for EMQX Operator. It is intended for stacks that want to reuse EMQX instead of keeping the EMQX object inside an application chart such as Speedtest.
 
 ## Prerequisites
 
@@ -35,50 +35,21 @@ kubectl wait --for=condition=Ready pods \
   -n emqx-operator-system
 ```
 
-## Install
-
-```sh
-helm upgrade --install emqx . --namespace speedtest --create-namespace
-```
-
-For the Speedtest stack, keep the EMQX custom resource name as `emqx` so the operator-created services are named `emqx-listeners` and `emqx-dashboard`, matching the current Speedtest defaults:
-
-```yaml
-fullnameOverride: emqx
-
-mqtt:
-  websocket:
-    mqttPath: /speedtest/ws-ep
-  secureWebsocket:
-    mqttPath: /speedtest/wss-ep
-
-ingress:
-  enabled: true
-  className: speedtest
-  listeners:
-    websocket:
-      path: /speedtest/ws-ep
-    secureWebsocket:
-      path: /speedtest/wss-ep
-  dashboard:
-    path: /speedtest/emqx/(.*)
-```
-
 ## Common Values
 
 | Value | Description | Default |
 | --- | --- | --- |
 | `image.registry` | Image registry | `ghcr.io` |
 | `image.repository` | EMQX image repository | `svtechnmaa/emqx` |
-| `image.tag` | EMQX image tag | `latest` |
+| `image.tag` | EMQX image tag | `6` |
 | `imagePullSecrets` | Pull secrets passed to EMQX pods | `[{name: ghcr-pull-secret}]` |
 | `config.mode` | EMQX Operator config mode | `Merge` |
-| `config.data` | Raw EMQX HOCON config. When empty, the chart renders websocket paths from `mqtt.*` | `""` |
-| `mqtt.websocket.mqttPath` | WebSocket MQTT path | `/speedtest/ws-ep` |
-| `mqtt.secureWebsocket.mqttPath` | Secure WebSocket MQTT path | `/speedtest/wss-ep` |
+| `config.data` | Raw EMQX HOCON config. When empty, the chart renders websocket paths from `global.emqx.mqtt.*` | `""` |
+| `global.emqx.mqtt.websocket.mqttPath` | WebSocket MQTT path | `/speedtest/ws-ep` |
+| `global.emqx.mqtt.secureWebsocket.mqttPath` | Secure WebSocket MQTT path | `/speedtest/wss-ep` |
 | `coreTemplate.replicaCount` | Core node replica count | `1` |
 | `coreTemplate.persistence.enabled` | Enable core node PVC template | `true` |
-| `coreTemplate.persistence.storageClass` | PVC storage class | `seaweedfs-storage` |
+| `coreTemplate.persistence.storageClass` | PVC storage class | `local-path` |
 | `coreTemplate.persistence.size` | PVC size | `1Gi` |
 
 ## Custom EMQX Config
@@ -92,6 +63,12 @@ config:
     listeners.ws.default {
       websocket.mqtt_path = "/mqtt"
     }
+```
+
+## Install
+
+```sh
+helm upgrade --install emqx . --namespace speedtest --create-namespace
 ```
 
 ## Check Status

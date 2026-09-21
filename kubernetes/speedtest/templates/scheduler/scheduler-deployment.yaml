@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}-mqtt-logger
+  name: {{ include "common.names.fullname" . }}-scheduler
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: mqtt-logger
+    app.kubernetes.io/component: scheduler
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
@@ -13,16 +13,16 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCounts.mqttLogger "global" .Values.global) }}
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCounts.scheduler "global" .Values.global) }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: mqtt-logger
+      app.kubernetes.io/component: scheduler
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: mqtt-logger
+        app.kubernetes.io/component: scheduler
         {{- if .Values.commonLabels }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
         {{- end }}
@@ -35,22 +35,13 @@ spec:
       {{- end }}
     spec:
       containers:
-        - name: mqtt-logger
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.mqttLogger "global" .Values.global) }}
+        - name: scheduler
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.scheduler "global" .Values.global) }}
           imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command: ["python", "manage.py", "rqscheduler", "--interval", "5"]
           env:
-            - name: MAX_CONCURRENT_PER_SERVER
-              value: {{ .Values.mqtt.maxConcurrency | quote }}
-            - name: MQTT_BROKER_HOST
-              value: {{ .Values.mqtt.brokerHost | quote }}
-            - name: MQTT_BROKER_PORT
-              value: {{ .Values.mqtt.brokerPort | quote }}
-            - name: MQTT_BROKER_PATH
-              value: {{ .Values.mqtt.brokerPath | quote }}
-            - name: MQTT_BROKER_USERNAME
-              value: {{ .Values.mqtt.username | quote }}
-            - name: MQTT_BROKER_PASSWORD
-              value: {{ .Values.mqtt.password | quote }}
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: REDIS_HOST
               value: {{ .Values.redis.host | quote }}
             - name: REDIS_PORT

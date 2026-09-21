@@ -39,6 +39,8 @@ spec:
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.worker "global" .Values.global) }}
           imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: NUM_WORKERS
               value: {{ .Values.worker.numWorkers | quote }}
             - name: MQTT_BROKER_HOST
@@ -47,10 +49,7 @@ spec:
               value: {{ .Values.mqtt.brokerPort | quote }}
             - name: MQTT_BROKER_PATH
               value: {{ .Values.mqtt.brokerPath | quote }}
-            - name: MQTT_BROKER_USERNAME
-              value: {{ .Values.mqtt.username | quote }}
-            - name: MQTT_BROKER_PASSWORD
-              value: {{ .Values.mqtt.password | quote }}
+            {{- include "speedtest.mqttAuthEnv" . | nindent 12 }}
             - name: REDIS_HOST
               value: {{ .Values.redis.host | quote }}
             - name: REDIS_PORT
@@ -61,9 +60,7 @@ spec:
               value: {{ .Values.django.dbEngine | quote }}
             - name: MAX_CONCURRENT_PER_SERVER
               value: {{ .Values.mqtt.maxConcurrency | quote }}
-          envFrom:
-            - secretRef:
-                name: django-db-secret
+            {{- include "speedtest.databaseEnv" . | nindent 12 }}
           volumeMounts:
             - name: logs-volume
               mountPath: "/app/logs"

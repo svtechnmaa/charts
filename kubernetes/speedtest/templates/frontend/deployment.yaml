@@ -43,6 +43,8 @@ spec:
             - npm run build && cp -r dist/* /app-dist/ && find /app-dist/ -type f -mtime +7 -delete
           workingDir: /app
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: VITE_BASE_PATH
               value: {{ .Values.paths.userPortal | quote }}
             - name: VITE_GRAPHQL_URI
@@ -68,6 +70,8 @@ spec:
             - name: app-dist-volume
               mountPath: /usr/share/nginx/html
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: VITE_BASE_PATH
               value: {{ .Values.paths.userPortal | quote }}
       volumes:

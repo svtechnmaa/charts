@@ -39,7 +39,11 @@ spec:
             - /bin/sh
             - -c
             - |
-              until nc -zvw5 {{ .Values.db.host }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+              until nc -zvw5 "${DB_HOST}" "${DB_PORT}"; do echo "Waiting for MariaDB..."; sleep 2; done
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+            {{- include "speedtest.databaseEnv" . | nindent 12 }}
 
       containers:
         - name: migrate
@@ -47,23 +51,18 @@ spec:
           imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: [ "python", "manage.py", "init_data" ]
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: DB_ENGINE
               value: {{ .Values.django.dbEngine | quote }}
-            - name: DJANGO_SUPERUSER_USERNAME
-              value: {{ .Values.django.superUserUsername | quote }}
-            - name: DJANGO_SUPERUSER_EMAIL
-              value: {{ .Values.django.superUserEmail | quote }}
-            - name: DJANGO_SUPERUSER_PASSWORD
-              value: {{ .Values.django.superUserPassword | quote }}
+            {{- include "speedtest.djangoAuthEnv" . | nindent 12 }}
             - name: TEST_SERVER_HOST
               value: {{ .Values.global.frontendVip | quote }}
             - name: TEST_SERVER_URL_BASE
               value: {{ .Values.paths.speedtestServer | quote }}
             - name: ENABLE_HTTPS
               value: {{ .Values.global.enableHttps | quote }}
-          envFrom:
-            - secretRef:
-                name: django-db-secret
+            {{- include "speedtest.databaseEnv" . | nindent 12 }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
