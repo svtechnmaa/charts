@@ -84,6 +84,11 @@ conductor:
 
 conductorWorker:
   replicaCount: 1
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/netforge-conductor-worker
+    tag: "v1.11.14"
+    pullPolicy: IfNotPresent
   resources: {}
 
 
@@ -226,7 +231,10 @@ netforgeAppEnv:
 netforgeAppSecretEnv:
   # Generate SECRET_KEY: openssl rand -hex 32
   SECRET_KEY: ""
-  # Generate FERNET_KEY: python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+  # Optional. When empty, netforge-be generates a Fernet key on first install
+  # and reuses the key stored in its Kubernetes Secret on upgrades. To provide
+  # your own key, generate it once with:
+  # python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
   FERNET_KEY: ""
   DATABASE_URL: postgresql://nw_user:nw_pass@postgres:5432/netforge
   S3_ACCESS_KEY: ""

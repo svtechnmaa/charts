@@ -33,8 +33,8 @@ spec:
             capabilities:
               add:
                 - NET_RAW
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.conductorWorker.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.conductorWorker.image.pullPolicy }}
           command:
             - /bin/sh
             - -c
