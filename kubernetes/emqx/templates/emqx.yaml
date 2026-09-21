@@ -1,4 +1,4 @@
-apiVersion: apps.emqx.io/v2
+apiVersion: apps.emqx.io/v2beta1
 kind: EMQX
 metadata:
   name: {{ include "common.names.fullname" . }}

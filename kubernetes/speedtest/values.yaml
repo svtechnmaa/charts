@@ -8,7 +8,8 @@ global:
     subPath: "/speedtest/grafana"
   speedtest:
     runInitDataJob: false # <= Set to true if you want to run the init data job
-
+######################################################
+timezone: Asia/Ho_Chi_Minh
 nameOverride: ""
 fullnameOverride: ""
 commonLabels: {}
@@ -22,7 +23,6 @@ imagePullSecrets:
 replicaCounts:
   django: 1
   frontend: 1
-  subscribeResult: 1
   testerServer: 1
   mqttLogger: 1
   djangoStatic: 1
@@ -86,15 +86,18 @@ pvc:
     storageClass: seaweedfs-storage
     size: 1Gi
 ####################################################
+auth:
+  # Existing Secret can be a name or an object with name and keyMapping.
+  # It must contain all DB, MQTT, and Django bootstrap credential keys.
+  existingSecret: null
+####################################################
 # Change this if you use a different service/IP
 db:
-  enable: false # <= External MariaDB is expected; this chart does not render MariaDB resources
   name: "speedtest"
-  user: "speedtest"
-  password: "speedtest@123"
+  user: ""
+  password: ""
   host: "mariadb" # <= Change this to your MariaDB service name
   port: "3306"
-  rootPassword: "root@$123" # <= Change this to your MariaDB root password
 ####################################################
 # Change this if you use a different service/IP
 mqtt:
@@ -113,9 +116,9 @@ vite:
 #####################################################
 django:
   dbEngine: "mariadb"
-  superUserUsername: "admin"
-  superUserEmail: "admin@example.com"
-  superUserPassword: "admin@123"
+  superUserUsername: ""
+  superUserEmail: ""
+  superUserPassword: ""
   allowedHosts: "*"
   staticRoot: "/app/static/"
   mediaRoot: "/app/media/"

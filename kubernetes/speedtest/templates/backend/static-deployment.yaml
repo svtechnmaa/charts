@@ -1,11 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}-scheduler
+  name: {{ include "common.names.fullname" . }}-django-static
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: scheduler
+    app.kubernetes.io/component: django-static
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
@@ -13,16 +13,16 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCounts.scheduler "global" .Values.global) }}
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCounts.djangoStatic "global" .Values.global) }}
   selector:
     matchLabels:
       {{- include "common.labels.matchLabels" . | nindent 6 }}
-      app.kubernetes.io/component: scheduler
+      app.kubernetes.io/component: django-static
   template:
     metadata:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
-        app.kubernetes.io/component: scheduler
+        app.kubernetes.io/component: django-static
         {{- if .Values.commonLabels }}
         {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
         {{- end }}
@@ -35,25 +35,26 @@ spec:
       {{- end }}
     spec:
       containers:
-        - name: scheduler
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.scheduler "global" .Values.global) }}
+        - name: django-static
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.nginx "global" .Values.global) }}
           imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
-          command: ["python", "manage.py", "rqscheduler", "--interval", "5"]
           env:
-            - name: REDIS_HOST
-              value: {{ .Values.redis.host | quote }}
-            - name: REDIS_PORT
-              value: {{ .Values.redis.port | quote }}
-            - name: REDIS_DB
-              value: "0"
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+          ports:
+            - containerPort: 8080
+              name: django-static
           volumeMounts:
-            - name: logs-volume
-              mountPath: "/app/logs"
+            - name: static-volume
+              mountPath: /opt/bitnami/nginx/html{{ .Values.paths.staticDjango }}
+            - name: media-volume
+              mountPath: /opt/bitnami/nginx/html{{ .Values.paths.mediaDjango }}
       volumes:
-        - name: logs-volume
+        - name: static-volume
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.mqttLogs.claimName }}
-      {{- with .Values.imagePullSecrets }}
+            claimName: {{ .Values.pvc.static.claimName }}
+        - name: media-volume
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.media.claimName }}
       imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+        - name: ghcr-pull-secret

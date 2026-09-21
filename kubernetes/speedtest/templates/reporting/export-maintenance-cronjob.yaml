@@ -50,6 +50,8 @@ spec:
                 - name: media-volume
                   mountPath: {{ .Values.django.mediaRoot | quote }}
               env:
+                - name: TZ
+                  value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
                 - name: DB_ENGINE
                   value: {{ .Values.django.dbEngine | quote }}
                 - name: MEDIA_ROOT
@@ -60,9 +62,7 @@ spec:
                   value: {{ .Values.django.reportExportFileTtlSeconds | quote }}
                 - name: REPORT_EXPORT_STALE_HEARTBEAT_SECONDS
                   value: {{ .Values.django.reportExportStaleHeartbeatSeconds | quote }}
-              envFrom:
-                - secretRef:
-                    name: django-db-secret
+                {{- include "speedtest.databaseEnv" . | nindent 16 }}
           volumes:
             - name: media-volume
               persistentVolumeClaim:

@@ -46,6 +46,8 @@ spec:
             - name: logs-volume
               mountPath: "/app/logs"
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: NUM_WORKERS
               value: {{ .Values.django.reportExportNumWorkers | quote }}
             - name: DB_ENGINE
@@ -94,9 +96,7 @@ spec:
               value: {{ .Values.django.reportExportPdfRenderBatchSize | quote }}
             - name: REPORT_EXPORT_PDF_RENDER_ATTEMPTS
               value: {{ .Values.django.reportExportPdfRenderAttempts | quote }}
-          envFrom:
-            - secretRef:
-                name: django-db-secret
+            {{- include "speedtest.databaseEnv" . | nindent 12 }}
       volumes:
         - name: media-volume
           persistentVolumeClaim:
