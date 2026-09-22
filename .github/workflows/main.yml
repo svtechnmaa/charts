@@ -1173,7 +1173,7 @@ jobs:
       - test_radius
       - release_helm_charts
       - cleanup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-dind
     steps:
       - name: Check job results
         uses: svtechnmaa/.github/actions/check_job_results@main
