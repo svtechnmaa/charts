@@ -28,7 +28,7 @@ replicaCount: 1
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   registry: ghcr.io
-  repository: svtechnmaa/svtech_topology_visualizer_be # CHANGE THIS TO YOUR IMAGE
+  repository: svtechnmaa/topology-visualizer-be # CHANGE THIS TO YOUR IMAGE
   tag: "v1.0.0"
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
@@ -136,7 +136,6 @@ volumeMounts:
   mountPath: /opt
 
 nodeSelector: {}
-
 tolerations: []
 
 nodeAffinityPreset:
