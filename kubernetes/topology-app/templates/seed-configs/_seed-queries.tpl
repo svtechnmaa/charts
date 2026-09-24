@@ -128,7 +128,7 @@
       "Name": "default_performance_data",
       "DatasourceID": 4,
       "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
-      "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i] || '{}');\n\n    var hard_state = obj['hard_state'];\n    var performanceData = obj['output'] || '';\n\n    var status = hard_state;\n\n    if (performanceData.indexOf(', DOWN,') !== -1) {\n      status = 4;\n    } else if (performanceData.indexOf('has exceeded CRIT threshold') !== -1) {\n      status = 10;\n    } else if (performanceData.indexOf('has exceeded WARN threshold') !== -1) {\n      status = 7;\n    }\n\n    emit(k, {\n      status: status,\n      output: performanceData\n    });\n  });\n}",
+      "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i] || '{}');\n\n    var hard_state = obj['hard_state'];\n    var performanceData = obj['output'] || '';\n\n    emit(k, {\n      status: hard_state,\n      output: performanceData\n    });\n  });\n}",
       "Schedule": "@every 90s"
     }
   ]
