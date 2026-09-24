@@ -7,8 +7,8 @@
       "ParentDatasourceName": "Grafana",
       "DatasourceName": "IcingaDB",
       "Content": "SELECT name, address, LOWER(HEX(id)) FROM host;",
-      "ResultMapper": "//function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var host_id = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), { host_id: host_id}) }) }\nfunction(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var host_id = result.results.A.frames[0].data.values[2][index]; emit([hostname, address].join('|'), host_id) })}",
-      "Schedule": "@every 5m"
+      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    var host_id = result.results.A.frames[0].data.values[2][index];\n\n    emit([hostname, address].join('|'), host_id);\n    emit(hostname, host_id);\n  });\n}",
+      "Schedule": "@every 2m"
     },
     {
       "ID": 2,
@@ -16,8 +16,8 @@
       "ParentDatasourceName": "Grafana",
       "DatasourceName": "IcingaDB",
       "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, LOWER(HEX((t2.id))) as service_id FROM host t1 JOIN service t2 ON t1.id = t2.host_id",
-      "ResultMapper": "function(result) { _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) { var address = result.results.A.frames[0].data.values[1][index]; var servicename = result.results.A.frames[0].data.values[2][index]; var service_id = result.results.A.frames[0].data.values[3][index]; emit([hostname, address, servicename].join('|'), service_id) }) }",
-      "Schedule": "@every 5m"
+      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    var servicename = result.results.A.frames[0].data.values[2][index];\n    var service_id = result.results.A.frames[0].data.values[3][index];\n    emit([hostname, address, servicename].join('|'), service_id);\n    emit([hostname, servicename].join('/'), service_id);\n  });\n}",
+      "Schedule": "@every 2m"
     },
     {
       "ID": 3,
@@ -25,7 +25,7 @@
       "DatasourceID": 4,
       "Content": "local ks = redis.call('HKEYS', 'icinga:host:state')\nlocal ts = redis.call('HVALS', 'icinga:host:state')\nreturn {ks, ts}",
       "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i])\n    emit(k, obj['hard_state'])\n  })\n}                                                                                  ",
-      "Schedule": "@every 5m"
+      "Schedule": "@every 1m"
     },
     {
       "ID": 4,
@@ -111,7 +111,7 @@
       "ParentDatasourceName": "Grafana",
       "DatasourceName": "IcingaDB",
       "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS servicename, t3.hard_state AS red_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_RedAlarm';",
-      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var red_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert to integer safely\n    var number_red_alarm = parseInt(red_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_red_alarm: number_red_alarm\n    });\n  });\n}\n",
+      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    var red_alarm_status_raw = result.results.A.frames[0].data.values[3][index];\n\n    var red_alarm_status;\n\n    // Check null / undefined / empty\n    if (red_alarm_status_raw === null || red_alarm_status_raw === undefined || red_alarm_status_raw === '') {\n      red_alarm_status = \"Unknown\";\n    } else {\n      var state = parseInt(red_alarm_status_raw, 10);\n\n      if (state === 2) {\n        red_alarm_status = \"Yes\";        // CRITICAL → có alarm\n      } else if (state === 0) {\n        red_alarm_status = \"No\";         // OK → không alarm\n      } else {\n        red_alarm_status = \"Unknown\";    // UNKNOWN (3) hoặc giá trị khác\n      }\n    }\n    emit([hostname, address].join('|'),red_alarm_status);\n    emit(hostname,red_alarm_status);\n  });\n}",
       "Schedule": "@every 15m"
     },
     {
@@ -120,8 +120,16 @@
       "ParentDatasourceName": "Grafana",
       "DatasourceName": "IcingaDB",
       "Content": "SELECT t1.name AS hostname, t1.address, t2.name AS service_name, t3.hard_state AS yellow_alarm_count FROM host t1 JOIN service t2 ON t1.id = t2.host_id JOIN service_state t3 ON t2.id = t3.service_id WHERE t2.name = 'Juniper_YellowAlarm';",
-      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    // var servicename = result.results.A.frames[0].data.values[2][index];\n    var yellow_alarm_count = result.results.A.frames[0].data.values[3][index];\n\n    // Convert safely to integer\n    var number_yellow_alarm = parseInt(yellow_alarm_count, 10) || 0;\n\n    emit([hostname, address].join('|'), {\n      number_yellow_alarm: number_yellow_alarm\n    });\n  });\n}\n",
+      "ResultMapper": "function(result) {\n  _.forEach(result.results.A.frames[0].data.values[0], function(hostname, index) {\n    var address = result.results.A.frames[0].data.values[1][index];\n    var yellow_alarm_status_raw = result.results.A.frames[0].data.values[3][index];\n\n    var yellow_alarm_status;\n\n    // Check null / undefined / empty\n    if (yellow_alarm_status_raw === null || yellow_alarm_status_raw === undefined || yellow_alarm_status_raw === '') {\n      yellow_alarm_status = \"Unknown\";\n    } else {\n      var state = parseInt(yellow_alarm_status_raw, 10);\n\n      if (state === 1) {\n        yellow_alarm_status = \"Yes\";       // WARNING → có alarm\n      } else if (state === 0) {\n        yellow_alarm_status = \"No\";        // OK → không alarm\n      } else {\n        yellow_alarm_status = \"Unknown\";   // UNKNOWN (3) hoặc giá trị khác\n      }\n    }\n    emit([hostname, address].join('|'),yellow_alarm_status);\n    emit(hostname,yellow_alarm_status);\n  });\n}",
       "Schedule": "@every 15m"
+    },
+    {
+      "ID": 15,
+      "Name": "default_performance_data",
+      "DatasourceID": 4,
+      "Content": "local ks = redis.call('HKEYS', 'icinga:service:state')\nlocal ts = redis.call('HVALS', 'icinga:service:state')\nreturn {ks, ts}",
+      "ResultMapper": "function(result) {\n  result[0].forEach(function(k, i) {\n    var obj = JSON.parse(result[1][i] || '{}');\n\n    var hard_state = obj['hard_state'];\n    var performanceData = obj['output'] || '';\n\n    var status = hard_state;\n\n    if (performanceData.indexOf(', DOWN,') !== -1) {\n      status = 4;\n    } else if (performanceData.indexOf('has exceeded CRIT threshold') !== -1) {\n      status = 10;\n    } else if (performanceData.indexOf('has exceeded WARN threshold') !== -1) {\n      status = 7;\n    }\n\n    emit(k, {\n      status: status,\n      output: performanceData\n    });\n  });\n}",
+      "Schedule": "@every 90s"
     }
   ]
 }
