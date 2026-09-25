@@ -1,0 +1,9 @@
+Trivy server is available inside the cluster at:
+
+  http://{{ .Values.trivy.fullnameOverride }}.{{ .Release.Namespace }}.svc:{{ .Values.trivy.service.port }}
+
+Authentication token is disabled. Keep the Trivy Service internal.
+
+Redis is internal at:
+
+  {{ .Chart.Name }}-redis:{{ .Values.redis.service.port }}
