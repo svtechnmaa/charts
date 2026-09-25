@@ -24,7 +24,7 @@ replicaCount: 1
 image:
   registry: ghcr.io
   repository: svtechnmaa/netforge-fe 
-  tag: v1.20.18
+  tag: v1.20.19
   pullPolicy: IfNotPresent
 
 adapter:
@@ -38,7 +38,7 @@ adapter:
   image:
     registry: ghcr.io
     repository: svtechnmaa/netforge-adapter
-    tag: v1.20.18
+    tag: v1.20.19
     pullPolicy: IfNotPresent
   env:
     ADAPTER_DIR: /adapters
