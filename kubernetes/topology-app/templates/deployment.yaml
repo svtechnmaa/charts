@@ -1,4 +1,4 @@
-{{- $grafana_uri := ternary (printf "http://%s:3000" .Values.global.externalIP) (printf "https://%s" .Values.global.frontendVip) .Values.global.ci -}}
+{{- $grafana_uri := ternary (printf "http://%s" .Values.global.externalIP) (printf "https://%s" .Values.global.frontendVip) .Values.global.ci -}}
 
 apiVersion: apps/v1
 kind: Deployment
