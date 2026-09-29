@@ -59,10 +59,12 @@ conductor:
         port: 5000
         targetPort: 5000
         protocol: TCP
+  # Override the bundled config/conductor/config.properties when non-empty.
+  configProperties: ""
   volumeMounts:
-    - name: netforge-data
+    - name: conductor-config
       mountPath: /app/config/config.properties
-      subPath: conductor/config/config.properties
+      subPath: config.properties
       readOnly: true
   livenessProbe:
     httpGet:
