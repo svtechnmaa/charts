@@ -1,6 +1,6 @@
 {{- if .Values.conductor.enabled }}
 {{- $conductorName := printf "%s-conductor" .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- $conductorServiceName := printf "%s-conductor" (include "common.names.name" .) | trunc 63 | trimSuffix "-" }}
+{{- $conductorServiceName := include "netforge-be.conductorServiceName" . }}
 apiVersion: v1
 kind: Service
 metadata:

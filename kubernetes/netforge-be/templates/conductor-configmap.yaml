@@ -21,5 +21,9 @@ metadata:
     {{- include "common.labels.standard" . | nindent 4 }}
 data:
   config.properties: |
-    {{- default (.Files.Get "config/conductor/config.properties") .Values.conductor.configProperties | nindent 4 }}
+    {{- if .Values.conductor.configProperties }}
+    {{- .Values.conductor.configProperties | nindent 4 }}
+    {{- else }}
+    {{- tpl (.Files.Get "config/conductor/config.properties") . | nindent 4 }}
+    {{- end }}
 {{- end }}
