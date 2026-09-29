@@ -16,7 +16,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/conductor-config: {{ include (print $.Template.BasePath "/conductor-properties-configmap.yaml") . | sha256sum }}
+        checksum/conductor-config: {{ include (print $.Template.BasePath "/conductor-configmap.yaml") . | sha256sum }}
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ $conductorName }}
@@ -62,6 +62,10 @@ spec:
           resources:
             {{- toYaml .Values.conductor.resources | nindent 12 }}
           volumeMounts:
+            - name: conductor-config
+              mountPath: /app/config/config.properties
+              subPath: config.properties
+              readOnly: true
             {{- with .Values.conductor.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

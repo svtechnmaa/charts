@@ -61,11 +61,7 @@ conductor:
         protocol: TCP
   # Override the bundled config/conductor/config.properties when non-empty.
   configProperties: ""
-  volumeMounts:
-    - name: conductor-config
-      mountPath: /app/config/config.properties
-      subPath: config.properties
-      readOnly: true
+  volumeMounts: []
   livenessProbe:
     httpGet:
       path: /health
