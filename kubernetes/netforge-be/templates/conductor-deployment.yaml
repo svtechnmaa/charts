@@ -15,6 +15,8 @@ spec:
       app.kubernetes.io/component: {{ $conductorName }}
   template:
     metadata:
+      annotations:
+        checksum/conductor-config: {{ include (print $.Template.BasePath "/conductor-configmap.yaml") . | sha256sum }}
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ $conductorName }}
@@ -23,8 +25,6 @@ spec:
         - name: ghcr-pull-secret
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      initContainers:
-        {{- include "netforge-be.repoWaitInitContainer" . | nindent 8 }}
       containers:
         - name: conductor
           securityContext:
@@ -62,25 +62,15 @@ spec:
           resources:
             {{- toYaml .Values.conductor.resources | nindent 12 }}
           volumeMounts:
+            - name: conductor-config
+              mountPath: /app/config/config.properties
+              subPath: config.properties
+              readOnly: true
             {{- with .Values.conductor.volumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
-            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-            {{- range .Values.global.sharedPersistenceVolume }}
-            {{- if has $.Chart.Name .shareFor }}
-            - name: {{ .volumeName }}
-              mountPath: {{ .path }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
       volumes:
-        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
-        {{- range .Values.global.sharedPersistenceVolume }}
-        {{- if has $.Chart.Name .shareFor }}
-        - name: {{ .volumeName }}
-          persistentVolumeClaim:
-            claimName: {{ .pvcName }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
+        - name: conductor-config
+          configMap:
+            name: {{ printf "%s-conductor-config" .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end }}

@@ -11,3 +11,19 @@ data:
   {{ $key }}: {{ $val | quote }}
   {{- end }}
 {{- end }}
+{{- if .Values.conductor.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-conductor-config" .Release.Name | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  config.properties: |
+    {{- if .Values.conductor.configProperties }}
+    {{- .Values.conductor.configProperties | nindent 4 }}
+    {{- else }}
+    {{- tpl (.Files.Get "config/conductor/config.properties") . | nindent 4 }}
+    {{- end }}
+{{- end }}
