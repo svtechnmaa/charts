@@ -1,0 +1,38 @@
+{{- if .Values.postgresqlHa.enabled }}
+{{/*
+The vendored postgresql-ha chart ships no pv.yaml, so the parent supplies both the
+StorageClass and one pre-provisioned hostPath PV per replica. Names are prefixed with
+the dependency's fullnameOverride so they cannot collide with the PVs created by
+airflow-postgresql-ha (which uses data-<namespace>-postgresql-<index>).
+*/}}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.postgresqlHa.persistence.storageClass | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+{{- $namespace := .Release.Namespace }}
+{{- $prefix := (index .Values "postgresql-ha").fullnameOverride }}
+{{- $replicas := include "common.replicas" (dict "replicaCount" (index .Values "postgresql-ha").postgresql.replicaCount "global" .Values.global) }}
+{{- range $index := until (int $replicas) }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ printf "%s-data-%s-%d" $prefix $namespace $index }}
+  labels:
+    {{- include "common.labels.standard" $ | nindent 4 }}
+spec:
+  storageClassName: {{ $.Values.postgresqlHa.persistence.storageClass | quote }}
+  capacity:
+    storage: {{ $.Values.postgresqlHa.persistence.size | quote }}
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: {{ printf "%s/%s-data-%s-%d" $.Values.postgresqlHa.persistence.hostPath $prefix $namespace $index }}
+    type: DirectoryOrCreate
+{{- end }}
+{{- end }}

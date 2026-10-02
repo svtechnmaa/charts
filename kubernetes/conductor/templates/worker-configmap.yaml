@@ -1,0 +1,20 @@
+{{- if .Values.worker.enabled }}
+{{/*
+One ConfigMap per worker job (worker.jobEnv.<job>), loaded into the worker with envFrom by
+worker-deployment.yaml. A new job's settings are a values block only.
+*/}}
+{{- range $job, $vars := .Values.worker.jobEnv }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "%s-worker-env-%s" (include "common.names.fullname" $) $job }}
+  labels:
+    {{- include "common.labels.standard" $ | nindent 4 }}
+    app.kubernetes.io/component: conductor-worker
+data:
+  {{- range $key, $value := $vars }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+{{- end }}
+{{- end }}

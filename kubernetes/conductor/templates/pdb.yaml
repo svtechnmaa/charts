@@ -1,0 +1,31 @@
+{{- $replicas := int (include "common.replicas" (dict "replicaCount" .Values.replicaCount "global" .Values.global)) }}
+{{- if and .Values.podDisruptionBudget.create (gt $replicas 1) }}
+{{/*
+The guard on $replicas is deliberate: a PodDisruptionBudget over a single replica makes
+`kubectl drain` block forever, and common.replicas collapses replicaCount to 1 whenever
+global.ci is true. apiVersion comes from the helper this chart defines in _helpers.tpl
+(policy/v1 on kube >= 1.21); do not hardcode policy/v1beta1 like mariadb-galera does - that
+API was removed in Kubernetes 1.25.
+*/}}
+apiVersion: {{ include "common.capabilities.policy.apiVersion" . }}
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}
+{{- end }}

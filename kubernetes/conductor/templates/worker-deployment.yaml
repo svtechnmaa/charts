@@ -1,0 +1,112 @@
+{{- if .Values.worker.enabled }}
+{{/*
+The NMAA worker serves every converted job (discovery, rediscovery, delete, backup and the
+shared icinga2_reload task) from one process. It polls Conductor outbound and exposes no
+Service. Its image is the runtime only: the code is the automation repo, mounted read-only
+from the shared automation-repo volume. It writes icinga2 host/service configuration into the
+SHARED zones.d volume that icinga2 reads, commits backups into the shared gitlist volume, and
+reloads every icinga2 master over its REST API.
+
+Single writer by design: replicas>1 would have several pods generating config and
+committing to the same repo concurrently. Keep replicaCount at 1 unless per-run locking
+is added upstream.
+*/}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-worker" (include "common.names.fullname" .) }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: conductor-worker
+spec:
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.worker.replicaCount "global" .Values.global) }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: conductor-worker
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: conductor-worker
+      annotations:
+        checksum/job-env: {{ include (print $.Template.BasePath "/worker-configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/worker-secret.yaml") . | sha256sum }}
+    spec:
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      # Root by default - see worker.podSecurityContext in values.yaml.
+      securityContext:
+        {{- toYaml .Values.worker.podSecurityContext | nindent 8 }}
+      containers:
+        - name: worker
+          image: {{ include "conductor.worker.image" . }}
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
+            - name: CONDUCTOR_SERVER_URL
+              value: {{ include "conductor.apiUrl" . }}/api
+            - name: DISCOVERY_NMS_PATH
+              value: {{ .Values.worker.nmsPath | quote }}
+            - name: DISCOVERY_TEMP_DIR
+              value: {{ .Values.worker.tempDir | quote }}
+            - name: DISCOVERY_RUNNER_DIR
+              value: {{ .Values.worker.runnerDir | quote }}
+            # validate_icinga_config.sh container mode - no local icinga2 needed.
+            - name: ICINGA2_CONTAINER
+              value: "true"
+            - name: ICINGA2_API_HOST
+              value: {{ .Values.worker.icinga2.apiHost | quote }}
+            - name: ICINGA2_API_USER
+              value: {{ .Values.worker.icinga2.apiUser | quote }}
+            - name: ICINGA2_API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "conductor.worker.secretName" . }}
+                  key: ICINGA2_API_PASSWORD
+            - name: ICINGA2_RELOAD_URLS
+              value: {{ include "conductor.worker.reloadUrls" . | quote }}
+          # One ConfigMap per job - worker-configmap.yaml.
+          {{- if .Values.worker.jobEnv }}
+          envFrom:
+            {{- range $job, $_ := .Values.worker.jobEnv }}
+            - configMapRef:
+                name: {{ printf "%s-worker-env-%s" (include "common.names.fullname" $) $job }}
+            {{- end }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.worker.resources | nindent 12 }}
+          volumeMounts:
+            - name: worker-tmp
+              mountPath: {{ .Values.worker.tempDir }}
+            - name: worker-runner
+              mountPath: {{ .Values.worker.runnerDir }}
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has "conductor-worker" .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+              {{- if eq .path (include "conductor.worker.repoPath" $) }}
+              readOnly: true
+              {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+      volumes:
+        - name: worker-tmp
+          emptyDir: {}
+        - name: worker-runner
+          emptyDir: {}
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has "conductor-worker" .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+{{- end }}

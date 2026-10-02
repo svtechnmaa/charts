@@ -1,0 +1,359 @@
+# Default values for the conductor subchart.
+#
+# Conductor OSS 3.31.0 runs as ONE container with TWO listeners:
+#   :8080  Java server  - REST/gRPC API, health at /health, metrics at /actuator/prometheus
+#   :5000  nginx        - React UI at /, reverse-proxying /api, /actuator, /swagger-ui to :8080
+#
+# All Conductor state (execution store, task queues, search index, external payload
+# storage) lives in PostgreSQL. No Elasticsearch or Kafka is required; Redis is needed
+# only for the HA distributed workflow-execution lock (see lock.redisUrl below).
+
+global:
+  imageRegistry: ghcr.io
+  timezone: Asia/Ho_Chi_Minh
+  ci: false
+  sharedVolume:
+    enabled: false
+  sharedPersistenceVolume: []
+
+# Server replicas. Anything above 1 REQUIRES lock.enabled=true (see below) so that
+# two Deciders cannot evaluate the same workflow concurrently.
+replicaCount: 1
+
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/svtech_conductor
+  # Overridden in CI via --set conductor.image.tag=<tag> (image_chart_mapping.yml).
+  tag: "3.31.0"
+  pullPolicy: IfNotPresent
+
+initContainer:
+  # Blocks server startup until the Postgres write endpoint accepts TCP connections.
+  waitForPostgres:
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/busybox
+      # 1.33, not 1.33.0 - the mirror publishes the upstream two-component tag. Verified
+      # against the cluster: keycloak-0 runs ghcr.io/svtechnmaa/busybox:1.33, and
+      # :1.33.0 returns "not found" from ghcr.
+      tag: "1.33"
+      pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  # Set true together with a nodePort on each port entry when service.type=NodePort.
+  nodePortEnabled: false
+  ports:
+    - name: ui
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
+    - name: api
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+  annotations: {}
+  externalTrafficPolicy: Cluster
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []
+
+# ---------------------------------------------------------------------------
+# Datasource used by the Conductor server.
+# Defaults point at the bundled cluster below. To use an existing PostgreSQL,
+# set postgresqlHa.enabled=false and override host/port/database/username/password.
+# ---------------------------------------------------------------------------
+postgresql:
+  host: conductor-postgresql-pgpool
+  port: 5432
+  database: conductor
+  username: conductor
+  password: "juniper@123"
+  # HikariCP pool per server replica. Keep replicaCount * maxPoolSize below
+  # pgpool's connection ceiling.
+  maxPoolSize: 20
+
+# ---------------------------------------------------------------------------
+# Bundled PostgreSQL cluster (vendored postgresql-ha dependency).
+# ---------------------------------------------------------------------------
+postgresqlHa:
+  enabled: true
+  persistence:
+    # hostPath PVs are created by templates/postgresql-pv.yaml, one per
+    # postgresql-ha.postgresql.replicaCount, under <hostPath>/<pv-name>.
+    hostPath: /data
+    size: 8Gi
+    storageClass: conductor-postgresql
+
+# NOTE: every render of this chart prints
+#   coalesce.go:220: warning: cannot overwrite table with non table for
+#   postgresql-ha.service.ports (map[postgresql:5432])
+# It is expected and harmless. Cause: this chart's own top-level service.ports (above) is a
+# list, while this subchart's service.ports is a map, and Helm's coalesce reports the shape
+# clash while merging the parent's values into the subchart's namespace. The message always
+# quotes the subchart's DEFAULT map, whatever the effective value is.
+#
+# Overriding the bundled Postgres port from here DOES work: set
+# postgresql-ha.service.ports.postgresql (verified - 5433 renders a pgpool Service on 5433),
+# keeping the subchart's map shape. Only a list-shaped override at that path is discarded.
+# tests/render.sh asserts the pgpool Service's port, so a regression cannot pass silently.
+# Values for the vendored postgresql-ha dependency. Hyphenated key - templates read
+# it with (index .Values "postgresql-ha"). fullnameOverride keeps the service names
+# release-name independent, so postgresql.host above is always correct.
+postgresql-ha:
+  fullnameOverride: conductor-postgresql
+  postgresql:
+    # 3 for HA: repmgr needs an odd number to reach quorum when promoting a new primary, and 3
+    # is the vendored chart's own default. 1 means "no HA and no recovery" - see README.
+    replicaCount: 1
+    # Create together with replicaCount 3, and keep minAvailable at 2 so a drain can never take
+    # the quorum away.
+    pdb:
+      create: false
+      minAvailable: 2
+    username: conductor
+    password: "juniper@123"
+    database: conductor
+    repmgrUsername: repmgr
+    repmgrPassword: "juniper@123"
+    repmgrDatabase: repmgr
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/postgresql-repmgr
+      tag: 14.5.0-debian-11-r19
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
+      debug: false
+  pgpool:
+    # Set explicitly, like the postgresql passwords below it. If left unset the vendored chart
+    # GENERATES it at install time, and then every `helm upgrade` fails with "PASSWORDS ERROR:
+    # You must provide your current passwords when upgrading the release" - which would break
+    # `ansible-playbook k8s_nms.yml` on any existing deployment. Matches the stack's
+    # plaintext-password convention.
+    adminPassword: "juniper@123"
+    # Every Conductor JDBC connection is routed through the conductor-postgresql-pgpool Service,
+    # so one pgpool pod is a single point of failure in front of an otherwise-HA database. Use 2
+    # whenever postgresql.replicaCount is 3.
+    replicaCount: 1
+    pdb:
+      create: false
+      minAvailable: 1
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/pgpool
+      tag: 4.6.3-debian-12-r0
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
+      debug: false
+  persistence:
+    storageClass: conductor-postgresql
+    accessModes:
+      - ReadWriteOnce
+    size: 8Gi
+  volumePermissions:
+    enabled: true
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/os-shell
+      tag: "11"
+      pullPolicy: IfNotPresent
+      pullSecrets:
+        - ghcr-pull-secret
+
+# ---------------------------------------------------------------------------
+# Conductor server properties. Rendered into a Secret as config-nmaa.properties
+# and selected with the CONFIG_PROP env var.
+# ---------------------------------------------------------------------------
+conductorConfig:
+  # Threads the server dedicates to built-in system tasks (HTTP, JQ, SWITCH, ...).
+  systemTaskWorkerThreadCount: 20
+  # How long a workflow waits before re-evaluation when it hits a concurrency limit.
+  taskExecutionPostponeDuration: 60s
+  # NMAA workflow definitions do not carry ownerEmail.
+  ownerEmailMandatory: false
+  # Never load the upstream kitchen-sink demo workflow into a real deployment.
+  loadSample: false
+  metricsPrometheus: true
+  # Raw property lines appended verbatim, e.g. ["conductor.app.sweeperThreadCount=10"].
+  extraProperties: []
+
+# Distributed workflow-execution lock. MANDATORY when replicaCount > 1.
+# Points at the shared NMAA redis service by default.
+lock:
+  enabled: false
+  redisUrl: redis://redis:6379
+  lockTimeToTry: 500
+
+javaOpts: "-Xms1g -Xmx2g"
+
+# Startup includes Flyway schema migration, so allow generous time before the
+# liveness probe starts killing the pod.
+startupProbe:
+  httpGet:
+    path: /health
+    port: api
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+livenessProbe:
+  httpGet:
+    path: /health
+    port: api
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 5
+readinessProbe:
+  httpGet:
+    path: /health
+    port: api
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+resources: {}
+  # limits:
+  #   cpu: "2"
+  #   memory: 3Gi
+  # requests:
+  #   cpu: 500m
+  #   memory: 2Gi
+
+podSecurityContext: {}
+securityContext: {}
+
+podAnnotations: {}
+commonLabels: {}
+commonAnnotations: {}
+
+autoscaling:
+  enabled: false
+
+volumes: []
+volumeMounts: []
+
+nodeSelector: {}
+tolerations: []
+podAffinityPreset: ""
+podAntiAffinityPreset: soft
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+affinity: {}
+
+# PodDisruptionBudget for the conductor server. Only meaningful above one replica - a budget
+# over a single replica blocks every node drain forever - so templates/pdb.yaml ignores it at
+# one EFFECTIVE replica, which includes any render with global.ci=true (common.replicas forces
+# replicaCount to 1 there).
+podDisruptionBudget:
+  create: false
+  minAvailable: 1
+  maxUnavailable: ""
+
+timezone: Asia/Ho_Chi_Minh
+env: {}
+
+# ---------------------------------------------------------------------------
+# Post-install Job that registers the NMAA task and workflow definitions.
+#   image: worker.image (below) - the Python runtime only, no own image setting.
+#   code:  register.py under defsPath, from the automation-repo volume (shareFor
+#          conductor-register), mounted read-only - the same model as the worker.
+#
+# Off by default: the automation-repo volume holds conductor_workflows/ only once an
+# automation release carries it (feat/conductor-platform is unmerged; v1.5.2, the newest tag
+# on 2026-09-29, does not). Without register.py the hook fails, and a failed
+# post-install/post-upgrade hook fails the whole helm upgrade of the stack.
+# ---------------------------------------------------------------------------
+registerWorkflows:
+  enabled: false
+  # Folder inside the automation repo volume holding register.py + workflow_defs/.
+  defsPath: /opt/SVTECH-Junos-Automation/Python-Development/conductor_workflows
+  backoffLimit: 2
+
+# ---------------------------------------------------------------------------
+# NMAA worker: ONE process serving every converted job (device_discovery,
+# device_rediscovery, device_delete, device_backup, and the shared icinga2_reload task).
+# workers/run_workers.py loads every workers/*_workers.py it finds, so a new job needs no
+# new Deployment - only its jobEnv block below, if it has settings.
+#
+# The image is the runtime only (stacked_charts images/svtech_conductor_worker); the code is
+# SVTECH-Junos-Automation, mounted like rundeck mounts it. The image's CMD runs
+# /opt/SVTECH-Junos-Automation/Python-Development/conductor_workflows/workers/run_workers.py,
+# so the worker needs three shared volumes (global.sharedPersistenceVolume, shareFor
+# conductor-worker): the automation repo at /opt/SVTECH-Junos-Automation, mounted read-only
+# (the render refuses a worker without it - the pod could not start), the Icinga2 zones.d
+# one it writes host config into, and the gitlist one device_backup commits into.
+# ---------------------------------------------------------------------------
+worker:
+  enabled: false
+  replicaCount: 1
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/svtech_conductor_worker
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  nmsPath: /etc/icinga2/zones.d/all_config
+  tempDir: /tmp/conductor_workflows
+  # ansible-runner private data dir (DISCOVERY_RUNNER_DIR), one emptyDir like tempDir.
+  runnerDir: /tmp/conductor_workflows_runner
+  icinga2:
+    apiHost: icinga2
+    apiUser: icingaAdmin
+    # Stored in the Secret <fullname>-worker (key ICINGA2_API_PASSWORD), not in the
+    # Deployment spec.
+    apiPassword: icingaAdmin
+    # Name of a Secret created outside the chart, with key ICINGA2_API_PASSWORD. When set,
+    # the chart creates no Secret and apiPassword is ignored.
+    existingSecret: ""
+    # icinga2_reload posts to EVERY master by pod name - blind DNS over the headless
+    # Service also reaches non-master pods. The URLs are derived from the release this chart
+    # is installed with, which in the nmaa stack also installs icinga2:
+    #   https://<release>-icinga2-master-<i>.icinga2-headless.<namespace>.svc.cluster.local:5665
+    # Keep masterReplicaCount equal to icinga2.master.replicaCount (the installer passes
+    # the same inventory key to both).
+    masterReplicaCount: 1
+    # Replaces the derived list when non-empty, e.g. when icinga2 lives in another release.
+    reloadUrls: []
+  # Runs as root. The stack's shared volumes are hostPath PVs, where kubelet never applies
+  # fsGroup, and the zones.d and gitlist folders on them are root-owned, so the image's
+  # uid 10001 cannot write host config, backups or git commits there. This is what the
+  # conductor-poc worker has run with since 2026-09-22.
+  podSecurityContext:
+    runAsUser: 0
+    runAsGroup: 0
+  # One ConfigMap per job, <fullname>-worker-env-<job>, all loaded into the worker with
+  # envFrom. A new job with settings adds one block here and edits nothing else. A key may
+  # appear in only one job and must not be one the Deployment sets itself - the render
+  # refuses both, because envFrom resolves such clashes silently.
+  jobEnv:
+    # Settings every job uses.
+    shared:
+      # git refuses a repo owned by another uid ("dubious ownership", git >= 2.35.2)...
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: "*"
+      # ...and needs an identity when HOME has no .gitconfig (rc=128).
+      GIT_AUTHOR_NAME: nmaa-conductor
+      GIT_AUTHOR_EMAIL: nmaa-conductor@localhost
+      GIT_COMMITTER_NAME: nmaa-conductor
+      GIT_COMMITTER_EMAIL: nmaa-conductor@localhost
+    # device_backup.
+    backup:
+      # The gitlist backup repo, on the same shared volume Rundeck and gitlist mount.
+      BACKUP_PATH: /opt/gitlist/backup_config
+      # Caps ansible-playbook --forks for backup_collect. ansible.cfg's forks=50 would OOM
+      # the pod: each fork is a Python process importing netmiko/PyEZ, ~50-100 MB RSS.
+      BACKUP_FORKS: "20"
+  # Sized for BACKUP_FORKS 20 at up to ~100 MB each, plus discovery's SNMP scans.
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 4Gi

@@ -1,0 +1,86 @@
+{{- if .Values.registerWorkflows.enabled }}
+{{/*
+Registers the NMAA task + workflow definitions on the Conductor server after the
+server rolls out. Runs conductor_workflows/register.py from the shared automation-repo
+volume, so the definitions live in one place (SVTECH-Junos-Automation) rather than
+being duplicated into this chart.
+
+It runs on the worker's image (worker.image): that image is the Python runtime, and the
+code is the mounted repo - the same model as the worker, with one image and one tag.
+
+The Job is idempotent: register.py POSTs task defs and falls back to per-def PUT, and
+uses PUT for workflow defs (create-or-update).
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-register-workflows" (include "common.names.fullname" .) }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: conductor-register
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.registerWorkflows.backoffLimit }}
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: conductor-register
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      containers:
+        - name: register
+          image: {{ include "conductor.worker.image" . }}
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
+            - name: CONDUCTOR_SERVER_URL
+              value: {{ include "conductor.apiUrl" . }}/api
+          command:
+            - bash
+            - -c
+            - |
+              set -euo pipefail
+              DEFS="{{ .Values.registerWorkflows.defsPath }}"
+
+              echo "waiting for the conductor api at $CONDUCTOR_SERVER_URL"
+              for i in $(seq 1 60); do
+                if curl -sf "$CONDUCTOR_SERVER_URL/metadata/workflow" >/dev/null; then break; fi
+                echo "  attempt $i - not ready yet"; sleep 10
+              done
+              curl -sf "$CONDUCTOR_SERVER_URL/metadata/workflow" >/dev/null
+
+              cd "$DEFS"
+              python3 register.py
+              echo "registered workflow definitions:"
+              curl -sf "$CONDUCTOR_SERVER_URL/metadata/workflow" | head -c 2000; echo
+          volumeMounts:
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has "conductor-register" .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+              {{- if eq .path (include "conductor.worker.repoPath" $) }}
+              readOnly: true
+              {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+      volumes:
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has "conductor-register" .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+{{- end }}

@@ -1,0 +1,141 @@
+{{- include "conductor.validateValues" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }}
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.commonLabels "context" $) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ include "common.replicas" (dict "replicaCount" .Values.replicaCount "global" .Values.global) }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }}
+      annotations:
+        # Roll the pods whenever the properties file changes.
+        checksum/config: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- if .Values.podAnnotations }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      initContainers:
+        # Conductor exits if the datasource is unreachable at boot, and Flyway needs a
+        # live connection, so block until pgpool accepts TCP.
+        - name: wait-for-postgres
+          image: {{ include "conductor.waitForPostgres.image" . }}
+          imagePullPolicy: {{ .Values.initContainer.waitForPostgres.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z {{ include "conductor.postgresql.host" . }} {{ .Values.postgresql.port }}; do
+                echo "waiting for {{ include "conductor.postgresql.host" . }}:{{ .Values.postgresql.port }}"
+                sleep 5
+              done
+              echo "postgres is accepting connections"
+
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "conductor.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
+            # startup.sh turns this into -DCONDUCTOR_CONFIG_FILE=/app/config/<value>
+            - name: CONFIG_PROP
+              value: {{ include "conductor.configFileName" . }}
+            - name: JAVA_OPTS
+              value: {{ .Values.javaOpts | quote }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- if .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            # subPath keeps the image's own /app/config/*.properties files visible.
+            - name: config
+              mountPath: /app/config/{{ include "conductor.configFileName" . }}
+              subPath: {{ include "conductor.configFileName" . }}
+              readOnly: true
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ printf "%s-config" (include "common.names.fullname" .) }}
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- if .Values.volumes }}
+        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- end }}
