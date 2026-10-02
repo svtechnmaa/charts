@@ -227,7 +227,9 @@ netforgeAppEnv:
   CONDUCTOR_API_URL: http://netforge-be-conductor:8080/api
 
 netforgeAppSecretEnv:
-  # Generate SECRET_KEY: openssl rand -hex 32
+  # Optional. When empty, reuse the existing Kubernetes Secret's SECRET_KEY.
+  # If missing or empty, generate a cryptographically random 32-byte Base64 key.
+  # To provide your own key: openssl rand -hex 32
   SECRET_KEY: ""
   # Optional. When empty, netforge-be generates a Fernet key on first install
   # and reuses the key stored in its Kubernetes Secret on upgrades. To provide
