@@ -1,0 +1,138 @@
+{{- $workloadType := .Values.workloadType | default "Deployment" }}
+{{- $timezone := $.Values.timezone | default "Asia/Ho_Chi_Minh" }}
+{{- if and (hasKey .Values "global") (hasKey .Values.global "timezone") }}
+{{- $timezone = .Values.global.timezone }}
+{{- end }}
+apiVersion: apps/v1
+kind: {{ $workloadType }}
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if eq $workloadType "StatefulSet" }}
+  serviceName: {{ .Chart.Name }}-headless
+  {{- end }}
+  {{- if and (ne $workloadType "DaemonSet") (not .Values.autoscaling.enabled) }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
+  # Strategy and updateStrategy are mutually exclusive. If you set one, the other will be ignored.
+  # Refer to https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy for more information.
+  {{- if and (eq $workloadType "Deployment") .Values.strategy }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  {{- end }}
+  # Refer to https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies for more information.
+  {{- if and (or (eq $workloadType "StatefulSet") (eq $workloadType "DaemonSet")) .Values.updateStrategy }}
+  updateStrategy:
+    {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
+    spec:
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      {{- if .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
+      # Affinity and nodeSelector are mutually exclusive. If you set one, the other will be ignored.
+      {{- if ne $workloadType "DaemonSet" }}
+      {{- with .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          {{- if .Values.securityContext }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" | quote }}
+          args: ["-c", "/opt/esx/esx.yml"]
+          ports:
+            {{- range .Values.service.ports }}
+            - name: {{ .name }}
+              containerPort: {{ .targetPort }}
+              protocol: {{ .protocol | default "TCP" }}
+            {{- end }}
+          env:
+            - name: TZ
+              value: {{ default $timezone | quote }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          # Please refer to https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ for more information on probes.
+          {{ with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end -}}
+          {{ with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end -}}
+          {{ with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          # Resources required by the container. More information can be found here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global .Values.global.sharedPersistenceVolume .Values.global.sharedVolume }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+      volumes:
+      # shareVolume(volume): define in the global values
+        {{- if and .Values.global .Values.global.sharedPersistenceVolume .Values.global.sharedVolume }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+      # unshareVolume(volume): define in the chart's values.yaml
+        {{- if .Values.volumes }}
+        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- end }}
