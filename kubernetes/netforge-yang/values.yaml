@@ -188,7 +188,12 @@ netforgeYangEnv:
   YANG_UPLOAD_DIR: /yang-files/uploads
   NW_BACKEND_URL: http://netforge-be:8000
 
+# Reference keys from existing Secrets in the same namespace.
+netforgeYangSecretRefs:
+  NW_JWT_SECRET:
+    name: netforge-be-secret-env
+    key: SECRET_KEY
+
 netforgeYangSecretEnv:
-  NW_JWT_SECRET: your-secret-key-here
   YANG_ADMIN_USER: admin
   YANG_ADMIN_PASSWORD: admin
