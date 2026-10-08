@@ -33,7 +33,7 @@ initRepo:
 image:
   registry: ghcr.io
   repository: svtechnmaa/netforge-be
-  tag: v1.21.41
+  tag: v1.21.42
   pullPolicy: IfNotPresent
 
 # This is to override the chart name.
@@ -85,7 +85,7 @@ conductorWorker:
   image:
     registry: ghcr.io
     repository: svtechnmaa/netforge-conductor-worker
-    tag: v1.21.41
+    tag: v1.21.42
     pullPolicy: IfNotPresent
   resources: {}
 
