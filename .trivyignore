@@ -1,0 +1,20 @@
+# AVD-KSV-0119 (NET_RAW capability added)
+#
+# network-exporter (syepes/network_exporter) needs raw sockets to run its
+# ICMP/MTR probes. Its securityContext already drops ALL capabilities and
+# explicitly re-adds only NET_ADMIN and NET_RAW (see
+# kubernetes/network-exporter/values.yaml).
+#
+# Inline `# trivy:ignore:AVD-KSV-0119` comments and path-scoped
+# .trivyignore.yaml entries do not suppress this specific check when
+# scanning Helm-rendered manifests (trivy misattributes the finding's
+# location to an unrelated resource), so it is ignored globally here
+# instead. This also silences the same finding for netforge-be's
+# celery-worker and conductor-worker containers, which also add NET_RAW.
+#
+# Both ID forms are listed because the trivy version used by some
+# runners (e.g. trivy-runner) prints the short form "KSV-0119" in the
+# report while others print "AVD-KSV-0119" - the ignorefile matcher
+# requires an exact string match against whichever form is printed.
+AVD-KSV-0119
+KSV-0119
