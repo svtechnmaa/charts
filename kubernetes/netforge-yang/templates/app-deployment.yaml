@@ -75,6 +75,13 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- range $key, $ref := .Values.netforgeYangSecretRefs }}
+            - name: {{ $key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $ref.name | quote }}
+                  key: {{ $ref.key | quote }}
+            {{- end }}
           {{- if or .Values.netforgeYangEnv .Values.netforgeYangSecretEnv }}
           envFrom:
             {{- if .Values.netforgeYangEnv }}
