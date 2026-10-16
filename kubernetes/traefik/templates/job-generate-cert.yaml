@@ -38,7 +38,7 @@ spec:
                 echo "TLS Secret or certificate is missing; generating..."
               fi
 
-              openssl req -x509 -nodes -days {{ .Values.tls.durationDays }} -newkey rsa:2048 -keyout "$work_dir/tls.key" -out "$work_dir/tls.crt" -subj "/CN={{ .Values.tls.commonName }}"
+              openssl req -x509 -nodes -days {{ .Values.tls.durationDays }} -newkey rsa:2048 -keyout "$work_dir/tls.key" -out "$work_dir/tls.crt" -subj "/CN={{ .Values.tls.commonName }}" -addext "subjectAltName=IP:{{ .Values.global.frontendVIP }}"
               kubectl create secret tls "$secret_name" --namespace "$namespace" --cert="$work_dir/tls.crt" --key="$work_dir/tls.key" --dry-run=client -o yaml > "$work_dir/secret.yaml"
               kubectl apply --namespace "$namespace" -f "$work_dir/secret.yaml"
       restartPolicy: Never
