@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Values.tls.secretName | quote }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  secretName: {{ .Values.tls.secretName | quote }}
+  commonName: {{ .Values.tls.commonName | quote }}
+  subject:
+    organizations:
+      - traefik
+  dnsNames:
+    - {{ .Values.tls.commonName | quote }}
+  {{- if .Values.global.frontendVIP }}
+  ipAddresses:
+    - {{ .Values.global.frontendVIP | quote }}
+  {{- end }}
+  duration: {{ printf "%dh" (mul (int .Values.tls.durationDays) 24) | quote }}
+  renewBefore: {{ .Values.tls.renewBefore | quote }}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+  issuerRef:
+    name: {{ printf "%s-selfsigned" (include "common.names.fullname" .) | trunc 63 | trimSuffix "-" }}
+    kind: Issuer
+    group: cert-manager.io
