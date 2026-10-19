@@ -1,6 +1,8 @@
 # Default values
 # Global values. Define shared volumes and persistence volumes. For example:
 global:
+  # Optional IP SAN for the TLS certificate.
+  frontendVIP: ""
   sharedVolume:
     enabled: true
   sharedPersistenceVolume: []
@@ -19,14 +21,6 @@ global:
 
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
-
-init:
-  image:
-    registry: ghcr.io
-    repository: svtechnmaa/kubectl
-    tag: "1.0.1"
-    pullPolicy: IfNotPresent
-
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -180,6 +174,8 @@ timezone: Asia/Ho_Chi_Minh
 env: {}
 
 tls:
+  # Requires cert-manager and its CRDs to be installed in the cluster.
   durationDays: 365
+  renewBefore: 168h # Renew automatically 7 days before expiry.
   secretName: traefik-tls-secret
   commonName: "traefik"
