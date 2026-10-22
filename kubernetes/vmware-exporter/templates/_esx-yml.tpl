@@ -3,8 +3,8 @@
 {{- if .Values.config }}
 {{- range $name, $setting := .Values.config }}
 {{ $name }}:
-  vsphere_user: {{ $setting.vsphere_user }}
-  vsphere_password: {{ $setting.vsphere_password }}
+  vsphere_user: {{ $setting.vsphere_user | default "" | quote }}
+  vsphere_password: {{ $setting.vsphere_password | default "" | quote }}
   ignore_ssl: true
   specs_size: 5000
   fetch_custom_attributes: true

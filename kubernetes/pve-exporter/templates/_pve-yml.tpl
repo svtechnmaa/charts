@@ -3,8 +3,8 @@
 {{- if .Values.config }}
 {{- range $name, $setting := .Values.config }}
 {{ $name }}:
-  user: {{ $setting.user }}
-  password: {{ $setting.password | quote }}
+  user: {{ $setting.user | default "" | quote }}
+  password: {{ $setting.password | default "" | quote }}
   verify_ssl: {{ $setting.verify_ssl }}
 {{- end }}
 {{ end }}

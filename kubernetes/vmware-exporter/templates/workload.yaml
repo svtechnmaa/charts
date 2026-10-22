@@ -43,6 +43,12 @@ spec:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
+      {{- /*
+      Optional: the exporter reads its config only at startup, so without this a config
+      change via "helm upgrade" does not restart the pod. Uncomment to roll pods on change.
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+      */}}
     spec:
       imagePullSecrets:
       - name: ghcr-pull-secret

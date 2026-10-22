@@ -188,6 +188,18 @@ extraConfig:
     #   user: root
     #   password: password
     #   dbname: pnetlab_db
-  metrics: []
+  # Interval (seconds) of the built-in queries query1..query4.
+  queryInterval: 60
+  # Extra metrics, merged under "metrics:" (map keyed by metric name).
+  metrics: {}
+    # extra_metric:
+    #   type: gauge
+    #   description: Extra metric
+    #   labels: [lab_id]
+  # Extra queries, merged under "queries:" (map keyed by query name).
   queries: {}
-    # interval: 30
+    # extra_query:
+    #   interval: 30
+    #   databases: [192.168.1.1]
+    #   metrics: [extra_metric]
+    #   sql: SELECT ...

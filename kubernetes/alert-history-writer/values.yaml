@@ -382,12 +382,12 @@ redis:
   startupProbe: {}
   livenessProbe:
     exec:
-      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+      command: ["sh", "-c", "[ -n \"$REDISCLI_AUTH\" ] || unset REDISCLI_AUTH; redis-cli ping | grep -q PONG"]
     initialDelaySeconds: 15
     periodSeconds: 15
   readinessProbe:
     exec:
-      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+      command: ["sh", "-c", "[ -n \"$REDISCLI_AUTH\" ] || unset REDISCLI_AUTH; redis-cli ping | grep -q PONG"]
     periodSeconds: 5
 
   # Additional volumes on the redis pod. "data" comes from persistence below.
@@ -466,14 +466,14 @@ config:
   LOG_RETENTION: "14 days"
 
 # Credentials, rendered into the Secret alert-history-writer-secret.
-# Placeholder values only: override them, or set create: false and create the
-# Secret out of band (sealed-secrets / external-secrets) under the same name,
-# or point envFrom at your own Secret.
+# Empty by default: rendering fails until every key except REDIS_PASSWORD is set.
+# Alternatively set create: false and create the Secret out of band
+# (sealed-secrets / external-secrets) under the same name, or point envFrom at your own Secret.
 secret:
   create: true
   data:
-    ALERTMANAGER_API_KEYS: "replace-this-key"
-    MYSQL_USER: "alert_writer"
-    MYSQL_PASSWORD: "change-me"
-    # Also used as requirepass by the bundled Redis.
-    REDIS_PASSWORD: "change-me-redis"
+    ALERTMANAGER_API_KEYS: ""
+    MYSQL_USER: ""
+    MYSQL_PASSWORD: ""
+    # Optional. Also used as requirepass by the bundled Redis; empty = no password.
+    REDIS_PASSWORD: ""
