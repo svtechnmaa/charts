@@ -11,6 +11,9 @@ global:
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
 
+imagePullSecrets:
+  - name: ghcr-pull-secret
+
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   registry: ghcr.io
@@ -39,6 +42,7 @@ args: []
 
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
+  name: "" # Defaults to common.names.fullname; use redis to preserve the old name.
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
   
@@ -146,7 +150,16 @@ redisinsight:
   replicaCount: 1
   enabled: false
   port: 15540
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
   image:
     registry: ghcr.io
     repository: svtechnmaa/redisinsight
-    tag: latest
+    tag: "3.8.0"
+    pullPolicy: IfNotPresent

@@ -41,8 +41,10 @@ spec:
       tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
       {{- end }}
 
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-      - name: ghcr-pull-secret
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
 
@@ -91,7 +93,7 @@ spec:
             {{- end }}
             # unshareVolume(volumeMount): define in the chart's values.yaml
             {{- if .Values.volumeMounts }}
-            {{- tpl .Values.volumeMounts $ | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" .Values.volumeMounts "context" $) | nindent 12 }}
             {{- end }}
 
       volumes:
@@ -107,5 +109,5 @@ spec:
         {{- end }}
       # unshareVolume(volume): define in the chart's values.yaml
         {{- if .Values.volumes }}
-        {{- tpl .Values.volumes $ | nindent 8 }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.volumes "context" $) | nindent 8 }}
         {{- end }}

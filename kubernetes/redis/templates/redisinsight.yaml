@@ -36,16 +36,23 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- end }}
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: redisinsight
           image: {{ include "common.images.image" (dict "imageRoot" .Values.redisinsight.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.redisinsight.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.redisinsight.resources | nindent 12 }}
           ports:
             - containerPort: {{ .Values.redisinsight.port }}
           env:
             - name: RI_APP_PORT
               value: {{ .Values.redisinsight.port | quote }}
             - name: RI_REDIS_HOST
-              value: {{ .Chart.Name }}
+              value: {{ .Chart.Name | quote }}
             - name: RI_REDIS_PORT
               value: {{ $redisPort.port | quote }}
             - name: RI_REDIS_DB
@@ -66,7 +73,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  type: NodePort
+  type: {{ .Values.redisinsight.service.type | quote }}
   ports:
     - name: http
       port: {{ .Values.redisinsight.port }}
