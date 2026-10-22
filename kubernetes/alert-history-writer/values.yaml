@@ -16,6 +16,11 @@
 # To use an external Redis instead, set redis.enabled: false and config.REDIS_HOST.
 # Ingest and consumer pods block in an initContainer until the database is at
 # the Alembic head revision, so they never start against an unmigrated schema.
+#
+# Resource names follow common.names.fullname (= release name when it contains
+# "alert-history-writer"), so several releases can share a namespace. envFrom,
+# volumes, redis.env, redis.volumes and config values are rendered as templates
+# and reference those names through {{ include "common.names.fullname" . }}.
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -154,11 +159,12 @@ timezone: "Asia/Ho_Chi_Minh"
 env: {}
 
 # Loaded into every container of the chart: app settings (configmap.yaml) and credentials (secret.yaml).
+# Rendered as a template.
 envFrom: &envFrom
   - configMapRef:
-      name: alert-history-writer-config
+      name: '{{ include "common.names.fullname" . }}-config'
   - secretRef:
-      name: alert-history-writer-secret
+      name: '{{ include "common.names.fullname" . }}-secret'
 
 # Blocks until the database is at the Alembic head revision. Values are rendered as a template.
 waitForMigrations: &waitForMigrations
@@ -170,6 +176,7 @@ waitForMigrations: &waitForMigrations
       - -c
       - |
         head="$(alembic heads | awk '{print $1}')"
+        [ -n "$head" ] || { echo "cannot resolve alembic head revision"; exit 1; }
         until alembic current 2>/dev/null | grep -q "$head"; do
           echo "waiting for database to reach alembic revision $head"
           sleep 5
@@ -252,7 +259,10 @@ consumer:
 migrate:
   backoffLimit: 3
   activeDeadlineSeconds: 900
-  ttlSecondsAfterFinished: 86400
+  # Empty by default: the Job name carries a config hash, so Helm/ArgoCD prune the
+  # previous Job on the next change. A TTL makes ArgoCD see the Job as missing
+  # (OutOfSync) and, with self-heal, recreate it and rerun the migration.
+  ttlSecondsAfterFinished: ""
   initContainers: []
   command: ["alembic", "upgrade", "head"]
   args: []
@@ -327,7 +337,7 @@ redis:
   nodeSelector: {}
   tolerations: []
 
-  # redis.conf, rendered into the ConfigMap alert-history-writer-redis-config.
+  # redis.conf, rendered into the ConfigMap <fullname>-redis-config.
   # requirepass is appended at startup from the secret REDIS_PASSWORD, keep it out of here.
   config: |
     bind 0.0.0.0
@@ -360,13 +370,13 @@ redis:
     - name: REDIS_PASSWORD
       valueFrom:
         secretKeyRef:
-          name: alert-history-writer-secret
+          name: '{{ include "common.names.fullname" . }}-secret'
           key: REDIS_PASSWORD
     # Read by redis-cli in the probes.
     - name: REDISCLI_AUTH
       valueFrom:
         secretKeyRef:
-          name: alert-history-writer-secret
+          name: '{{ include "common.names.fullname" . }}-secret'
           key: REDIS_PASSWORD
 
   # Resources required by the container. More information can be found here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
@@ -394,7 +404,7 @@ redis:
   volumes:
     - name: config
       configMap:
-        name: alert-history-writer-redis-config
+        name: '{{ include "common.names.fullname" . }}-redis-config'
     - name: tmp
       emptyDir: {}
   # Additional volumeMounts on the redis container.
@@ -424,7 +434,7 @@ redis:
         targetPort: redis
         protocol: TCP
 
-# Non-secret app settings, rendered into the ConfigMap alert-history-writer-config.
+# Non-secret app settings, rendered into the ConfigMap <fullname>-config.
 # Keep every value quoted: Helm reads bare numbers as floats and would render
 # 1048576 as 1.048576e+06.
 config:
@@ -443,7 +453,7 @@ config:
   MIGRATION_DB_RETRY_MAX_SECONDS: "30"
   # Service of the bundled Redis (redis.enabled). For an external Redis use AOF and
   # maxmemory-policy noeviction there: the stream carries events not yet written to MariaDB.
-  REDIS_HOST: "alert-history-writer-redis"
+  REDIS_HOST: '{{ include "common.names.fullname" . }}-redis'
   REDIS_PORT: "6379"
   REDIS_STREAM_DB: "2"
   REDIS_STREAM_NAME: "alert_events_stream"
@@ -465,10 +475,10 @@ config:
   LOG_ROTATION: "10 MB"
   LOG_RETENTION: "14 days"
 
-# Credentials, rendered into the Secret alert-history-writer-secret.
+# Credentials, rendered into the Secret <fullname>-secret.
 # Empty by default: rendering fails until every key except REDIS_PASSWORD is set.
 # Alternatively set create: false and create the Secret out of band
-# (sealed-secrets / external-secrets) under the same name, or point envFrom at your own Secret.
+# (sealed-secrets / external-secrets) under that name, or point envFrom at your own Secret.
 secret:
   create: true
   data:

@@ -32,7 +32,7 @@ Tuning:
     BatchSize: 8
     MaxQueuedRequestsPerLane: 64           # process-wide
     # Consecutive Fast admissions favored over Slow once a slot frees AND
-    # both are already queued for it â�� distinct from (and on top of) the
+    # both are already queued for it - distinct from (and on top of) the
     # one TargetConcurrency slot always reserved for Fast above.
     FastBatchLimit: 4                      # process-wide
     MaxDepth: 4

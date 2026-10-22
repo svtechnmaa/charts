@@ -31,7 +31,7 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ $.Chart.Name }}-ingest
+                name: {{ include "common.names.fullname" $ }}-ingest
                 port:
                   number: {{ (first $.Values.service.ports).port }}
           {{- end }}

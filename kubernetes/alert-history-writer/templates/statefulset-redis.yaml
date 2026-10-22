@@ -16,7 +16,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
-  serviceName: {{ .Chart.Name }}-{{ $component }}
+  serviceName: {{ include "common.names.fullname" . }}-{{ $component }}
   replicas: {{ include "common.replicas" ( dict "replicaCount" $values.replicaCount "global" .Values.global ) }}
   selector:
     matchLabels:
@@ -91,7 +91,7 @@ spec:
             - name: TZ
               value: {{ default $timezone | quote }}
             {{- with $values.env }}
-            {{- toYaml . | nindent 12 }}
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
             {{- end }}
           # Please refer to https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ for more information on probes.
           {{- with $values.startupProbe }}
@@ -136,7 +136,7 @@ spec:
         {{- end }}
       # unshareVolume(volume): define in the chart's values.yaml
         {{- if $values.volumes }}
-        {{- toYaml $values.volumes | nindent 8 }}
+        {{- include "common.tplvalues.render" (dict "value" $values.volumes "context" $) | nindent 8 }}
         {{- end }}
         {{- if not $values.persistence.enabled }}
         - name: data
