@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}-django-static
+  name: {{ include "speedtest.resourceName" (dict "suffix" "django-static" "context" .) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -52,9 +52,9 @@ spec:
       volumes:
         - name: static-volume
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.static.claimName }}
+            claimName: {{ include "speedtest.pvcName" (dict "group" "static" "context" .) }}
         - name: media-volume
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.media.claimName }}
+            claimName: {{ include "speedtest.pvcName" (dict "group" "media" "context" .) }}
       imagePullSecrets:
         - name: ghcr-pull-secret

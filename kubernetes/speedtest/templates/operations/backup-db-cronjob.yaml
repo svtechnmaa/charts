@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: backup-db-cronjob
+  name: {{ include "speedtest.resourceName" (dict "suffix" "backup-db-cronjob" "context" .) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -13,6 +13,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
+  concurrencyPolicy: Forbid
   schedule: "0 2 * * *"  # Every day at 2:00 AM
   jobTemplate:
     metadata:
@@ -57,7 +58,7 @@ spec:
           volumes:
             - name: backup-volume
               persistentVolumeClaim:
-                claimName: {{ .Values.pvc.backupDb.claimName }}
+                claimName: {{ include "speedtest.pvcName" (dict "group" "backupDb" "context" .) }}
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}

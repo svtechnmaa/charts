@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: purge-retention-cronjob
+  name: {{ include "speedtest.resourceName" (dict "suffix" "purge-retention-cronjob" "context" .) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -61,7 +61,7 @@ spec:
           volumes:
             - name: media-volume
               persistentVolumeClaim:
-                claimName: {{ .Values.pvc.media.claimName }}
+                claimName: {{ include "speedtest.pvcName" (dict "group" "media" "context" .) }}
           {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
             {{- toYaml . | nindent 12 }}

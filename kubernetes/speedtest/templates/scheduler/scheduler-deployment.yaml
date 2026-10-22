@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}-scheduler
+  name: {{ include "speedtest.resourceName" (dict "suffix" "scheduler" "context" .) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -54,7 +54,7 @@ spec:
       volumes:
         - name: logs-volume
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.mqttLogs.claimName }}
+            claimName: {{ include "speedtest.pvcName" (dict "group" "mqttLogs" "context" .) }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

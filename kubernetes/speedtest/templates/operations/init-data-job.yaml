@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: init-data-job
+  name: {{ include "speedtest.resourceName" (dict "suffix" (printf "init-data-r%d" .Release.Revision) "context" .) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -32,6 +32,7 @@ spec:
     spec:
       restartPolicy: Never
       initContainers:
+        {{- include "speedtest.migrationWait" . | nindent 8 }}
         - name: wait-for-mariadb
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image.initWaitDb "global" .Values.global) }}
           imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
@@ -63,6 +64,8 @@ spec:
             - name: ENABLE_HTTPS
               value: {{ .Values.global.enableHttps | quote }}
             {{- include "speedtest.databaseEnv" . | nindent 12 }}
+      volumes:
+        {{- include "speedtest.migrationVolume" . | nindent 8 }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

@@ -2,12 +2,12 @@
 global:
   imageRegistry: ""
   backendVip: "" # <= Auto-assign with metalLB (Always set to empty string)
-  frontendVip: "10.98.98.110" # <= Auto-assign with metalLB or set your own IP
+  frontendVip: "" # <= Auto-assign with metalLB or set your own IP
   enableHttps: false # <= Set to true if you want to enable HTTPS
   grafana-embed:
     subPath: "/speedtest/grafana"
   speedtest:
-    runInitDataJob: false # <= Set to true if you want to run the init data job
+    runInitDataJob: true # <= Set to true if you want to run the init data job
 ######################################################
 timezone: Asia/Ho_Chi_Minh
 nameOverride: ""
@@ -66,45 +66,44 @@ image:
 #####################################################
 pvc:
   static:
-    claimName: static-pvc
+    claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 50Mi
   media:
-    claimName: media-pvc
+    claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 300Mi
-  frontendDist:
-    claimName: frontend-dist-pvc
-    storageClass: seaweedfs-storage
-    size: 50Mi
   backupDb:
-    claimName: backup-db-pvc
+    claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 2Gi
   mqttLogs:
-    claimName: mqtt-logs-pvc
+    claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 1Gi
 ####################################################
-auth:
-  # Existing Secret can be a name or an object with name and keyMapping.
-  # It must contain all DB, MQTT, and Django bootstrap credential keys.
-  existingSecret: null
-####################################################
+# Each credential accepts a Secret name or {name, keyMapping}.
+# Missing mapping entries fall back to existingSecretPasswordKey.
 # Change this if you use a different service/IP
 db:
+  auth:
+    username: "speedtest"
+    password: "" # External DB: provide its password or an existing Secret.
+    existingSecret: ""
+    existingSecretPasswordKey: DB_PASSWORD
   name: "speedtest"
-  user: ""
-  password: ""
   host: "mariadb" # <= Change this to your MariaDB service name
   port: "3306"
 ####################################################
 # Change this if you use a different service/IP
 mqtt:
+  auth:
+    username: "admin"
+    password: "" # External broker: prefer the Secret owned by EMQX or the stack.
+    existingSecret: ""
+    existingSecretPasswordKey: MQTT_BROKER_PASSWORD
   brokerHost: "emqx-listeners" # <= Change this to your MQTT broker service name or IP
   brokerPort: "8083"
-  username: "admin"
-  password: "" # <= Change this to your MQTT broker password. This can be a random string
   maxConcurrency: 10
   brokerPath: "/speedtest/ws-ep" # Must match brokerWs path of emqx
 vite:
@@ -115,10 +114,13 @@ vite:
   defaultLang: "en"
 #####################################################
 django:
+  auth:
+    username: ""
+    password: "" # Empty will generates a stable password.
+    existingSecret: ""
+    existingSecretPasswordKey: DJANGO_SUPERUSER_PASSWORD
   dbEngine: "mariadb"
-  superUserUsername: ""
   superUserEmail: ""
-  superUserPassword: ""
   allowedHosts: "*"
   staticRoot: "/app/static/"
   mediaRoot: "/app/media/"
@@ -157,3 +159,9 @@ paths: # This can be used to change the paths of the admin and user portals, can
   backendApi: "/speedtest/api/"
   backendGraphQl: "/speedtest/graphql/"
   speedtestServer: "/speedtest/server/default"
+
+# Normal, single-Pod Job. Workloads wait for this release's completion marker.
+migration:
+  waitTimeoutSeconds: 1800
+  activeDeadlineSeconds: 1800
+  backoffLimit: 1

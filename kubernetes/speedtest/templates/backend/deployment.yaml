@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}-django
+  name: {{ include "speedtest.resourceName" (dict "suffix" "django" "context" .) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -49,48 +49,7 @@ spec:
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             {{- include "speedtest.databaseEnv" . | nindent 12 }}
 
-        - name: migrate
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
-          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
-          command: ["/bin/sh", "-c", "./backup-and-migrate.sh"]
-          volumeMounts:
-            - name: backup-volume
-              mountPath: "/app/backup-db"
-          env:
-            - name: TZ
-              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-            - name: DB_ENGINE
-              value: {{ .Values.django.dbEngine | quote }}
-            - name: TENANT_DB_NAMES
-              value: {{ .Values.django.tenantDbNames | quote }}
-            - name: REDIS_HOST
-              value: {{ .Values.redis.host | quote }}
-            - name: REDIS_PORT
-              value: {{ .Values.redis.port | quote }}
-            - name: REDIS_DB
-              value: "0"
-            {{- include "speedtest.databaseEnv" . | nindent 12 }}
-        - name: collectstatic
-          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
-          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
-          command: ["python", "manage.py", "collectstatic", "--noinput"]
-          volumeMounts:
-            - name: static-volume
-              mountPath: {{ .Values.django.staticRoot | quote }}
-          env:
-            - name: TZ
-              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
-            - name: STATIC_ROOT
-              value: {{ .Values.django.staticRoot | quote }}
-            - name: TENANT_DB_NAMES
-              value: {{ .Values.django.tenantDbNames | quote }}
-            - name: REDIS_HOST
-              value: {{ .Values.redis.host | quote }}
-            - name: REDIS_PORT
-              value: {{ .Values.redis.port | quote }}
-            - name: REDIS_DB
-              value: "0"
-            {{- include "speedtest.databaseEnv" . | nindent 12 }}
+        {{- include "speedtest.migrationWait" (merge (dict "migrationVolumeName" "static-volume") .) | nindent 8 }}
       containers:
         - name: django
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
@@ -165,16 +124,13 @@ spec:
       volumes:
         - name: static-volume
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.static.claimName }}
+            claimName: {{ include "speedtest.pvcName" (dict "group" "static" "context" .) }}
         - name: media-volume
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.media.claimName }}
-        - name: backup-volume
-          persistentVolumeClaim:
-            claimName: {{ .Values.pvc.backupDb.claimName }}
+            claimName: {{ include "speedtest.pvcName" (dict "group" "media" "context" .) }}
         - name: logs-volume
           persistentVolumeClaim:
-            claimName: {{ .Values.pvc.mqttLogs.claimName }}
+            claimName: {{ include "speedtest.pvcName" (dict "group" "mqttLogs" "context" .) }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "common.names.fullname" . }}-frontend
+  name: {{ include "speedtest.resourceName" (dict "suffix" "frontend" "context" .) }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -40,7 +40,7 @@ spec:
           imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
           command: ["/bin/sh", "-c"]
           args:
-            - npm run build && cp -r dist/* /app-dist/ && find /app-dist/ -type f -mtime +7 -delete
+            - npm run build && cp -r dist/. /app-dist/
           workingDir: /app
           env:
             - name: TZ
@@ -76,8 +76,7 @@ spec:
               value: {{ .Values.paths.userPortal | quote }}
       volumes:
         - name: app-dist-volume
-          persistentVolumeClaim:
-            claimName: {{ .Values.pvc.frontendDist.claimName }}
+          emptyDir: {}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}

@@ -39,7 +39,7 @@ templates/
 | Backup job | Creates MariaDB backups and removes backups older than the configured retention period. |
 | Retention job | Removes expired tenant results, SLA history, snapshots, and related media. |
 | Ingress | Routes frontend, GraphQL/API/admin, static/media, and LibreSpeed paths. |
-| Storage claims | Provide shared storage for static files, media, frontend artifacts, operational logs, and database backups. |
+| Storage claims | Provide shared storage for static files, media, operational logs, and database backups; frontend builds use per-Pod temporary storage. |
 
 Remote `speedtest-agent` instances run at monitored sites and are intentionally outside this central chart.
 
@@ -167,7 +167,7 @@ flowchart LR
 - `replicaCounts`: replica settings for application workloads.
 - `image`: image registry, repository, and tag for each application component.
 - `pvc`: claim name, StorageClass, and capacity for application file storage.
-- `auth`: optional existing Secret shared by database, MQTT, and Django bootstrap authentication.
+- `db`, `mqtt`, `django`: independent password/Secret references for each credential.
 - `db`: external MariaDB connection and managed-Secret source values.
 - `redis`: external Redis connection used for runtime state, caching, channels, and RQ.
 - `mqtt`: external EMQX connection, Commander limits, and managed-Secret source values.
@@ -177,52 +177,55 @@ flowchart LR
 
 ## Credential Secrets
 
-Database, MQTT, and Django bootstrap credentials are stored in one shared Secret:
+Each credential has independent `password`, `existingSecret`, and
+`existingSecretPasswordKey` values. A Pod can read multiple Secrets; credentials
+are never copied from a producer Secret into an application Secret.
 
-1. Leave `auth.existingSecret` empty. The chart creates `<fullname>-auth` from the `db`, `mqtt`, and `django` credential values.
-2. Set `auth.existingSecret`. The chart references that Secret and does not create a replacement.
+- `django`: self-owned bootstrap password. An empty
+  password generates 32 random characters using `common.secrets.passwords.manage`.
+  The managed Secret renders even when init-data is disabled, so disabling the
+  Job on upgrade preserves the password for later retrieval. An external
+  `django.auth.existingSecret` still suppresses local Secret creation.
+- `db` and `mqtt`: external service credentials. Supply `existingSecret`, or an
+  explicit password matching the account already provisioned at the service. Empty
+  password + empty existingSecret fails rendering; Speedtest cannot provision an
+  external MariaDB or MQTT account by inventing its own password.
+- `existingSecret` takes precedence over password and suppresses creation of that
+  group's Secret. All workloads use `secretKeyRef` for passwords. Host, port,
+  database name, username, and bootstrap email remain ordinary values.
 
-For the default release, the managed Secret is named `speedtest-auth`. It contains:
-
-```text
-DB_NAME
-DB_USER
-DB_PASSWORD
-DB_HOST
-DB_PORT
-MQTT_BROKER_USERNAME
-MQTT_BROKER_PASSWORD
-DJANGO_SUPERUSER_USERNAME
-DJANGO_SUPERUSER_EMAIL
-DJANGO_SUPERUSER_PASSWORD
-```
-
-Use a Secret with the default key names by setting its name directly:
+Example: Django owns its superuser password, while MariaDB and EMQX own theirs:
 
 ```yaml
-auth:
-  existingSecret: company-speedtest-auth
+global:
+  speedtest:
+    runInitDataJob: true
+django:
+  auth:
+    username: admin
+    password: ""  # Generated once; no shared producer.
+  superUserEmail: admin@example.com
+db:
+  auth:
+    username: speedtest
+    existingSecret: mariadb-app-auth
+    existingSecretPasswordKey: mariadb-password
+mqtt:
+  auth:
+    username: admin
+    existingSecret: emqx-mqtt
+    existingSecretPasswordKey: MQTT_BROKER_PASSWORD
 ```
 
-When an existing Secret uses different keys please use with `name` and `keyMapping` format :
+For a release named `emqx`, the EMQX chart's default managed MQTT Secret is
+`emqx-mqtt`. Install both charts in the same namespace. For another release name
+or fullname override, use the actual name rendered by that chart. Install EMQX
+first, then Speedtest. Both sides must also use the same MQTT username.
 
-```yaml
-auth:
-  existingSecret:
-    name: company-speedtest-auth
-    keyMapping:
-      DB_NAME: database-name
-      DB_USER: database-user
-      DB_PASSWORD: database-password
-      DB_HOST: database-host
-      DB_PORT: database-port
-      MQTT_BROKER_USERNAME: mqtt-user
-      MQTT_BROKER_PASSWORD: mqtt-password
-      DJANGO_SUPERUSER_USERNAME: admin-user
-      DJANGO_SUPERUSER_EMAIL: admin-email
-      DJANGO_SUPERUSER_PASSWORD: admin-password
-```
-
+For externally managed credentials, create one Secret separately, then point `speedtest.mqtt.auth.existingSecret` and
+`emqx.mqtt.auth.existingSecret` at it with the same password key. Only the owner creates
+that value. Changing a Secret alone does not change an existing database/MQTT user;
+rotate the service account and restart consumers together.
 
 ## Application Paths
 
@@ -242,7 +245,8 @@ auth:
 Review `values.yaml`, then install or upgrade the release:
 
 ```sh
-helm upgrade --install speedtest . --namespace speedtest --create-namespace
+helm upgrade --install speedtest . --namespace speedtest --create-namespace \
+  --timeout 35m --wait
 ```
 
 Validate the release:
@@ -261,3 +265,39 @@ helm uninstall speedtest --namespace speedtest
 ```
 
 PVC retention depends on the StorageClass reclaim policy. Verify backups before manually deleting claims.
+
+## Password and application setup checklist
+
+When installing this chart alone:
+
+1. Set `db.host`, `db.port`, `db.name`, and `db.auth.username` to the existing
+   MariaDB endpoint/schema/account. Set `db.auth.existingSecret` to the actual
+   Secret name; the current default `avc` is only a placeholder.
+2. Set `mqtt.brokerHost`, `mqtt.brokerPort`, `mqtt.brokerPath`, and
+   `mqtt.auth.username`. Replace the Secret name with the
+   EMQX producer Secret. These are server-side connection settings.
+3. Set `django.auth.username` and `django.superUserEmail`. Enable
+   `global.speedtest.runInitDataJob` for initial application provisioning.
+4. Set `django.allowedHosts`, `django.csrfTrustedOrigins`, tenant settings,
+   storage classes under `pvc`, and browser MQTT settings under `vite` for your
+   environment. Browser host/protocol/port must be reachable from the browser.
+
+For an explicit password instead of an existing Secret, clear the reference:
+
+```yaml
+db:
+  auth:
+    username: speedtest
+    password: "REPLACE_WITH_CURRENT_DB_PASSWORD"
+    existingSecret: ""
+mqtt:
+  auth:
+    username: admin
+    password: "REPLACE_WITH_CURRENT_MQTT_PASSWORD"
+    existingSecret: ""
+django:
+  auth:
+    username: admin
+    password: "" # Auto-generate; or provide the initial admin password.
+    existingSecret: ""
+```
