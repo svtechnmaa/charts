@@ -1,0 +1,125 @@
+{{- $component := "migrate" }}
+{{- $values := .Values.migrate }}
+{{- $timezone := include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global ) }}
+{{- /* Job pod templates are immutable: the name carries a hash of everything the migration pod reads,
+so each change runs its own migration Job instead of failing to patch the old one. */}}
+{{- $hash := toJson (list .Values.image $values .Values.env .Values.envFrom .Values.volumes .Values.volumeMounts .Values.podSecurityContext .Values.securityContext .Values.serviceAccount .Values.affinity .Values.nodeAffinityPreset .Values.tolerations .Values.nodeSelector $timezone) | print (include (print $.Template.BasePath "/configmap.yaml") .) (include (print $.Template.BasePath "/secret.yaml") .) | sha256sum | trunc 8 }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "common.names.fullname" . | trunc 46 | trimSuffix "-" }}-{{ $component }}-{{ $hash }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+spec:
+  backoffLimit: {{ $values.backoffLimit }}
+  activeDeadlineSeconds: {{ $values.activeDeadlineSeconds }}
+  {{- with $values.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: {{ $component }}
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (include "common.names.fullname" .) }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
+      {{- with $values.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ . }}
+      {{- end }}
+      {{- if .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- end }}
+      # Affinity and nodeSelector are mutually exclusive. If you set one, the other will be ignored.
+      {{- with .Values.affinity }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
+        podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 10 }}
+        nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 10 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $values.initContainers }}
+      initContainers:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $component }}
+          {{- if .Values.securityContext }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- end }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" | quote }}
+          {{- with $values.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $values.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: TZ
+              value: {{ default $timezone | quote }}
+            {{- range $key, $value := (merge (dict) ($values.env | default dict) .Values.env) }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          # Resources required by the container. More information can be found here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          resources:
+            {{- toYaml $values.resources | nindent 12 }}
+          volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global .Values.global.sharedPersistenceVolume .Values.global.sharedVolume }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+      volumes:
+      # shareVolume(volume): define in the global values
+        {{- if and .Values.global .Values.global.sharedPersistenceVolume .Values.global.sharedVolume }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+      # unshareVolume(volume): define in the chart's values.yaml
+        {{- if .Values.volumes }}
+        {{- toYaml .Values.volumes | nindent 8 }}
+        {{- end }}
