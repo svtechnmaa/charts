@@ -26,7 +26,7 @@ maxscaleConfig:
     - db03://10.98.3.13:3306
   auth:
     username: maxscale_monitor
-    password: "" # Empty: generate and preserve a 32-character password.
+    password: "maxscale@123" # Empty: generate and preserve a 32-character password.
     existingSecret: ""
     existingSecretPasswordKey: MONITOR_PASSWORD
   
