@@ -1,4 +1,4 @@
-apiVersion: apps.emqx.io/v2beta1
+apiVersion: apps.emqx.io/v2
 kind: EMQX
 metadata:
   name: {{ include "common.names.fullname" . }}
@@ -24,6 +24,16 @@ spec:
   {{- end }}
   clusterDomain: {{ .Values.clusterDomain | quote }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  {{- range .Values.bootstrapAPIKeys }}
+  {{- if or .key .secret }}
+  {{- fail "bootstrapAPIKeys must use secretRef.key and secretRef.secret, not plaintext key/secret" }}
+  {{- end }}
+  {{- $ref := required "bootstrapAPIKeys[].secretRef is required" .secretRef }}
+  {{- $_ := required "bootstrapAPIKeys[].secretRef.key.secretName is required" (dig "key" "secretName" "" $ref) }}
+  {{- $_ := required "bootstrapAPIKeys[].secretRef.key.secretKey is required" (dig "key" "secretKey" "" $ref) }}
+  {{- $_ := required "bootstrapAPIKeys[].secretRef.secret.secretName is required" (dig "secret" "secretName" "" $ref) }}
+  {{- $_ := required "bootstrapAPIKeys[].secretRef.secret.secretKey is required" (dig "secret" "secretKey" "" $ref) }}
+  {{- end }}
   {{- if .Values.bootstrapAPIKeys }}
   bootstrapAPIKeys:
     {{- include "common.tplvalues.render" (dict "value" .Values.bootstrapAPIKeys "context" $) | nindent 4 }}
@@ -40,6 +50,27 @@ spec:
       listeners.wss.default {
         websocket.mqtt_path = {{ .Values.global.emqx.mqtt.secureWebsocket.mqttPath | quote }}
       }
+      {{- end }}
+      {{- if or .Values.mqtt.enabled .Values.mqtt.additionalAuthentication }}
+      authentication = [
+      {{- $separator := false }}
+      {{- if .Values.mqtt.enabled }}
+      {
+        mechanism = password_based
+        backend = built_in_database
+        user_id_type = username
+        password_hash_algorithm { name = sha256, salt_position = suffix }
+        bootstrap_file = "/opt/emqx/mqtt-bootstrap/users.json"
+        bootstrap_type = plain
+      }
+      {{- $separator = true }}
+      {{- end }}
+      {{- range .Values.mqtt.additionalAuthentication }}
+      {{- if $separator }},{{ end }}
+      {{ tpl (toJson .) $ }}
+      {{- $separator = true }}
+      {{- end }}
+      ]
       {{- end }}
   {{- if .Values.updateStrategy }}
   updateStrategy:
@@ -78,13 +109,16 @@ spec:
       containerSecurityContext:
         {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.containerSecurityContext "context" $) | nindent 8 }}
       {{- end }}
-      {{- if .Values.coreTemplate.extraVolumes }}
-      extraVolumes:
-        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.extraVolumes "context" $) | nindent 8 }}
+      {{- $bootstrap := dict }}
+      {{- if .Values.mqtt.enabled }}
+      {{- $bootstrap = include "emqx.mqttBootstrapSpec" . | fromYaml }}
       {{- end }}
-      {{- if .Values.coreTemplate.extraVolumeMounts }}
-      extraVolumeMounts:
-        {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.extraVolumeMounts "context" $) | nindent 8 }}
+      {{- range $key := list "extraVolumes" "extraVolumeMounts" "initContainers" }}
+      {{- $items := concat (default list (index $bootstrap $key)) (default list (index $.Values.coreTemplate $key)) }}
+      {{- if $items }}
+      {{ $key }}:
+        {{- include "common.tplvalues.render" (dict "value" $items "context" $) | nindent 8 }}
+      {{- end }}
       {{- end }}
       {{- if .Values.coreTemplate.persistence.enabled }}
       volumeClaimTemplates:
@@ -97,7 +131,7 @@ spec:
       {{- end }}
   {{- if .Values.replicantTemplate }}
   replicantTemplate:
-    {{- include "common.tplvalues.render" (dict "value" .Values.replicantTemplate "context" $) | nindent 4 }}
+    {{- include "emqx.replicantTemplate" . | nindent 4 }}
   {{- end }}
   {{- if .Values.dashboardServiceTemplate }}
   dashboardServiceTemplate:
