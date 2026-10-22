@@ -27,15 +27,8 @@ spec:
               value: {{ include "generate_external_mariadb_string" (dict "server" .Values.maxscaleConfig.server) }}
             {{- end }}
             - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: wait-for-mariadb-secret
-                  key: mysql_user
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: wait-for-mariadb-secret
-                  key: mysql_password
+              value: {{ tpl .Values.maxscaleConfig.auth.username . | required "maxscaleConfig.auth.username is required" | quote }}
+            {{- include "maxscale.passwordEnv" (dict "env" "MYSQL_PASSWORD" "context" .) | nindent 12 }}
           command:
             - /bin/bash
             - -c
@@ -48,8 +41,6 @@ spec:
 
               # Continue looping until successfully logged in to all servers
               while [ "$LOGGED_IN" == false ]; do
-                  echo $MYSQL_USER
-                  echo $MYSQL_PASSWORD
                   # Loop through each MySQL server
                   for SERVER in "${SERVERS[@]}"; do
                       # Extract server details
@@ -88,9 +79,8 @@ spec:
               value: {{ include "generate_external_mariadb_string" (dict "server" .Values.maxscaleConfig.server) }}
             {{- end }}
             - name: MONITOR_USER
-              value: {{ .Values.maxscaleConfig.monitor_user }}
-            - name: MONITOR_PASSWORD
-              value: {{ .Values.maxscaleConfig.monitor_user_password }}
+              value: {{ tpl .Values.maxscaleConfig.auth.username . | required "maxscaleConfig.auth.username is required" | quote }}
+            {{- include "maxscale.passwordEnv" (dict "env" "MONITOR_PASSWORD" "context" .) | nindent 12 }}
             {{- include "maxscale.assertUniqueRouters" . }}
             - name: MAXSCALE_ROUTERS
               value: "{{- range $i, $r := .Values.routers }}{{- if $i }},{{ end }}{{ $r.id }}{{- end }}"

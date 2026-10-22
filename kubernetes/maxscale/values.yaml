@@ -24,9 +24,12 @@ maxscaleConfig:
     - db01://10.98.3.11:3306
     - db02://10.98.3.12:3306
     - db03://10.98.3.13:3306
-  monitor_user: maxscale_monitor
-  monitor_user_password: maxscale@123
-
+  auth:
+    username: maxscale_monitor
+    password: "" # Empty: generate and preserve a 32-character password.
+    existingSecret: ""
+    existingSecretPasswordKey: MONITOR_PASSWORD
+  
 # List of MaxScale router services to expose. Each entry becomes a router
 # inside the container (env MXS_<id>_TYPE / _PORT / _ROUTER_OPTIONS) and a
 # port on the mariadb Service. Default = single readwritesplit on 4006,
