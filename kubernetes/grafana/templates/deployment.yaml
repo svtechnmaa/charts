@@ -56,8 +56,8 @@ spec:
             - /bin/sh
             - -c
             - |
-              {{- if .Values.grafanaConfig.mysqlHost }}
-              until nc -zvw5 {{ .Values.grafanaConfig.mysqlHost }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+              {{- if .Values.grafanaConfig.database.mysqlHost }}
+              until nc -zvw5 {{ .Values.grafanaConfig.database.mysqlHost }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
               {{- else }}
               until nc -zvw5 mariadb 3306; do echo "Waiting for MariaDB..."; sleep 2; done
               {{- end }}
@@ -76,23 +76,23 @@ spec:
             - name: GF_DATABASE_TYPE
               value: mysql
             - name: GF_DATABASE_HOST
-              value: {{ .Values.grafanaConfig.mysqlHost | quote }}
+              value: {{ .Values.grafanaConfig.database.mysqlHost | quote }}
             - name: GF_DATABASE_PORT
-              value: {{ .Values.grafanaConfig.mysqlPort | quote }}
+              value: {{ .Values.grafanaConfig.database.mysqlPort | quote }}
             - name: GF_DATABASE_NAME
             {{- if index (index .Values.global "mariadb-galera") "enabled" }}
-              value: {{ .Values.grafanaConfig.mysqlDB | quote }}
+              value: {{ tpl .Values.grafanaConfig.database.mysqlDB . | required "grafanaConfig.database.mysqlDB is required" | quote }}
             {{- else }}
-              value: "{{ .Release.Namespace }}_{{ .Values.grafanaConfig.mysqlDB }}"
+              value: {{ printf "%s_%s" .Release.Namespace (tpl .Values.grafanaConfig.database.mysqlDB . | required "grafanaConfig.database.mysqlDB is required") | quote }}
             {{- end }}
             - name: GF_DATABASE_USER
-              value: {{ .Values.grafanaConfig.mysqlUser | quote }}
+              value: {{ tpl .Values.grafanaConfig.database.auth.username . | required "grafanaConfig.database.auth.username is required" | quote }}
             - name: GF_DATABASE_PASSWORD
-              value: {{ .Values.grafanaConfig.mysqlPassword | quote }}
-            - name: GF_SECURITY_ADMIN_USER
-              value: {{ include "admin.user" . }}
-            - name: GF_SECURITY_ADMIN_PASSWORD
-              value: {{ include "admin.password" . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.databaseSecretName" . | quote }}
+                  key: {{ include "grafana.databaseSecretKey" . | quote }}
+            {{- include "grafana.adminEnv" . | nindent 12 }}
             - name: GF_SECURITY_ANGULAR_SUPPORT_ENABLED
               value: "true"
             - name: GF_SECURITY_ALLOW_EMBEDDING

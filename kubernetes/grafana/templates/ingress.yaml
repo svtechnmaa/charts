@@ -11,7 +11,7 @@ spec:
   rules:
   - http:
       paths:
-      - path: {{ .Values.grafanaConfig.subPath }}
+      - path: {{ .Values.grafanaConfig.subPath | default "/" | quote }}
         pathType: Prefix
         backend:
           service:

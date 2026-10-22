@@ -25,12 +25,11 @@ contexts:
     watched_folders_override: {{ .Values.gdgConfig.mainContext.watchedFoldersOverride | toYaml | nindent 6 }}
     organization_name: {{ .Values.gdgConfig.mainContext.organizationName | quote }}
     output_path: {{ .Values.gdgConfig.mainContext.outputPath | quote }}
-    {{- $username := default .Values.global.adminUser .Values.gdgConfig.mainContext.credentials.username | quote }}
-    {{- $password := default .Values.global.adminPassword .Values.gdgConfig.mainContext.credentials.password | quote }}
-    password: {{ include "admin.password" . }}
+    # Password is supplied by the init Job's GDG_CONTEXTS__MAIN__PASSWORD env.
+    password: ""
     storage: ""
     url: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
-    user_name: {{ include "admin.user" . }}
+    user_name: {{ include "grafana.adminUser" . | quote }}
     user: null
 global:
   debug: {{ .Values.gdgConfig.global.debug }}

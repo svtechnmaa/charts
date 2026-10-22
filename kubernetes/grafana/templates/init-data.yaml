@@ -63,7 +63,7 @@ spec:
                       return 0;
                   fi
                   echo "Waiting grafana Up..."
-                  grafana_stats=`curl -X GET --silent --show-error -u ${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD} http://$GRAFANA_HOST:3000/api/admin/stats`
+                  grafana_stats=`curl -X GET --silent --show-error -u "${GF_SECURITY_ADMIN_USER}:${GF_SECURITY_ADMIN_PASSWORD}" http://$GRAFANA_HOST:3000/api/admin/stats`
                   if [ $? == 0 ]; then
                       result="up"
                       echo "Grafana is Up"
@@ -99,10 +99,14 @@ spec:
               for file in `grep -lr /opt/grafana-entities/org_main-org/* -e "\"refresh\": 1"`;do sed -i 's/"refresh": 1,/"refresh": 2,/g' $file ;done
               import_grafana_entities
         env:
-          - name: GF_SECURITY_ADMIN_USER
-            value: {{ include "admin.user" . }}
-          - name: GF_SECURITY_ADMIN_PASSWORD
-            value: {{ include "admin.password" . }}
+          {{- include "grafana.adminEnv" . | nindent 10 }}
+          - name: GDG_CONTEXTS__MAIN__PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "grafana.adminSecretName" . | quote }}
+                key: {{ include "grafana.adminSecretKey" . | quote }}
+          - name: GDG_CONTEXTS__MAIN__USER_NAME
+            value: {{ include "grafana.adminUser" . | quote }}
 
         volumeMounts:
           {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
