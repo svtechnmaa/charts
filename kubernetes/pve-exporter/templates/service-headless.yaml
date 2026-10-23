@@ -1,0 +1,20 @@
+{{- if eq (.Values.workloadType | default "Deployment") "StatefulSet" }}
+# Governing Service required by StatefulSet.spec.serviceName.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "common.names.fullname" . }}-headless
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+  ports:
+    {{- range .Values.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+    {{- end }}
+{{- end }}
