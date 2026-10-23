@@ -4,21 +4,15 @@ global:
   sharedVolume:
     enabled: false
   sharedPersistenceVolume: []
-#     # snmp-manager volume
-#     - volumeName: snmp-manager-volume
-#       pvcName: snmp-manager-pvc
-#       storageSize: 10Mi
-#       path: /etc/snmptt/
-#       accessModes: ReadWriteOnce #ReadWriteMany
-#       shareFor:
-#         - snmp-manager
-#       storageClass: snmp-manager-hostpath
 
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
 replicaCount: 1
+
+imagePullSecrets:
+  - name: ghcr-pull-secret
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
@@ -32,8 +26,6 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
-
-
 podSecurityContext: {}
   # fsGroup: 2000
 
@@ -45,8 +37,12 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
+# This is to additional arguments to the container. More information can be found here: https://redis.io/docs/manual/config/
+args: []
+
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
+  name: "" # Defaults to common.names.fullname; use redis to preserve the old name.
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   type: ClusterIP
   
@@ -115,11 +111,20 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 
+sharedPersistenceVolume:
+  enabled: false
+  # volumeName: redis-data
+  # pvcName: redis-data-pvc
+  # storageSize: 1Gi
+  # accessModes: ReadWriteMany
+  # storageClass: seaweedfs-storage
+  # path: /data
+
 # Additional volumes on the output Deployment definition.
 volumes: []
+
 # Additional volumeMounts on the output Deployment definition.
 volumeMounts: []
-
 
 nodeSelector: {}
 
@@ -140,3 +145,21 @@ affinity:
 
 timezone: Asia/Ho_Chi_Minh
 env: {}
+
+redisinsight:
+  replicaCount: 1
+  enabled: false
+  port: 15540
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/redisinsight
+    tag: "3.8.0"
+    pullPolicy: IfNotPresent

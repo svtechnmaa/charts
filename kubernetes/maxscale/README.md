@@ -30,8 +30,8 @@ Service exposing one port per configured router.
 | `init.image.*` | object | `svtechnmaa/mysql:8.2.0` | Image used by the `wait-for-mariadb` init container. |
 | `service.externalIPs` | list | `[]` | Reserved for future use (see `global.externalIP` for the currently-wired external IP). |
 | `maxscaleConfig.server` | list | 3 internal `dbNN://host:port` entries | Backend server list, **used only** when `global.mariadb-galera.enabled` is `false` (external database mode). Ignored when the bundled `mariadb-galera` subchart is enabled. |
-| `maxscaleConfig.monitor_user` | string | `maxscale_monitor` | DB user MaxScale uses to monitor backend health. |
-| `maxscaleConfig.monitor_user_password` | string | `maxscale@123` | Password for `monitor_user`. Override in production. |
+| `maxscaleConfig.auth.username` | string | `maxscale_monitor` | DB user MaxScale uses to monitor backend health. |
+| `maxscaleConfig.auth.password` | string | `""` | Empty generates a password; set the current DB account password or use an external Secret. |
 | `routers` | list | one `rwsplit` entry (see below) | List of MaxScale router services to expose. Each entry becomes a router inside the container and a port on the `mariadb` Service. |
 | `routers[*].id` | string | — | Router identifier. Becomes the `MXS_<id>_*` env var prefix and the Service port name. |
 | `routers[*].type` | string | — | MaxScale router type: `readwritesplit`, `readconnroute`, or `schemarouter`. |
@@ -130,3 +130,40 @@ See the image README's
 [How auto-monitoring works](https://github.com/svtechnmaa/stacked_charts/blob/master/images/svtech_maxscale/README.md#how-auto-monitoring-works)
 section for the full topology-detection and guard-rail details.
 
+
+
+## Monitor credentials
+
+```yaml
+maxscaleConfig:
+  auth:
+    username: maxscale_monitor
+    password: ""  # Empty: generate 32 characters; non-empty: use this value.
+    existingSecret: ""
+    existingSecretPasswordKey: MONITOR_PASSWORD
+```
+
+## Choose a password source
+
+| Scenario | Configuration |
+| --- | --- |
+| Existing MariaDB monitor account | Set `auth.password` to its current password and `auth.existingSecret: ""`. |
+| Existing Kubernetes Secret | Set `auth.existingSecret` and `auth.existingSecretPasswordKey`; keep the matching `auth.username`. |
+| Generate a new password | Leave password and Secret reference empty; provision the MariaDB account with the generated password separately. |
+
+
+For example, a standalone chart consuming an existing monitor Secret:
+
+```yaml
+maxscaleConfig:
+  auth:
+    username: maxscale_monitor
+    existingSecret: database-auth
+    existingSecretPasswordKey: maxscale-password
+```
+
+Create this Secret in the release namespace. Configure `maxscaleConfig.server`
+for external MariaDB backends using the router examples above. Auto-generation
+only creates a Kubernetes credential; it cannot log in to an already provisioned
+DB with a different password. Upgrades reuse a stored managed password rather
+than rotate it when `auth.password` changes.

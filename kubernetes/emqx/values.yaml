@@ -1,0 +1,81 @@
+global:
+  imageRegistry: ""
+  enableHttps: false
+  emqx:
+    mqtt:
+      websocket:
+        mqttPath: /speedtest/ws-ep
+      secureWebsocket:
+        mqttPath: /speedtest/wss-ep
+
+enabled: true
+
+nameOverride: ""
+fullnameOverride: ""
+commonLabels: {}
+commonAnnotations: {}
+
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/emqx
+  tag: 6
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: ghcr-pull-secret
+
+serviceAccountName: ""
+clusterDomain: cluster.local
+revisionHistoryLimit: 3
+
+config:
+  mode: Merge
+  data: ""
+
+coreTemplate:
+  replicaCount: 1
+  minAvailable: ""
+  maxUnavailable: ""
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  resources: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
+  initContainers: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+
+replicantTemplate: {}
+dashboardServiceTemplate: {}
+listenersServiceTemplate: {}
+# API credentials are separate from MQTT client credentials. Only secretRef is accepted.
+# - secretRef:
+#     key: {secretName: emqx-api-auth, secretKey: api-key}
+#     secret: {secretName: emqx-api-auth, secretKey: api-secret}
+bootstrapAPIKeys: []
+updateStrategy: {}
+extraSpec: {}
+
+# EMQX owns/provisions this MQTT user. Consumers reference the same Secret/key.
+# Disable when authentication is managed entirely by config.data or externally.
+mqtt:
+  auth:
+    username: admin
+    password: "" # Generated once if existingSecret is empty.
+    existingSecret: ""
+    existingSecretPasswordKey: MQTT_BROKER_PASSWORD
+  enabled: true
+  # Appended after built-in authentication, e.g. an HTTP backend for application users.
+  additionalAuthentication: []
+  bootstrapImage:
+    registry: ghcr.io
+    repository: svtechnmaa/busybox
+    tag: "1.33"
+    pullPolicy: IfNotPresent

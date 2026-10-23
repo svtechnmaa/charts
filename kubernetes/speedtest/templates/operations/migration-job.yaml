@@ -1,0 +1,94 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "speedtest.resourceName" (dict "suffix" (printf "migration-r%d" .Release.Revision) "context" .) }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migration.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-mariadb
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image.initWaitDb "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until nc -zvw5 "${DB_HOST}" "${DB_PORT}"; do echo "Waiting for MariaDB..."; sleep 2; done
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+            {{- include "speedtest.databaseEnv" . | nindent 12 }}
+
+        - name: migrate
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command: ["/bin/sh", "-c", "./backup-and-migrate.sh"]
+          volumeMounts:
+            - name: backup-volume
+              mountPath: "/app/backup-db"
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+            - name: DB_ENGINE
+              value: {{ .Values.django.dbEngine | quote }}
+            - name: TENANT_DB_NAMES
+              value: {{ .Values.django.tenantDbNames | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+            {{- include "speedtest.databaseEnv" . | nindent 12 }}
+      containers:
+        - name: collectstatic
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              python manage.py collectstatic --noinput
+              mkdir -p {{ dir (include "speedtest.migrationMarker" .) | quote }}
+              touch {{ include "speedtest.migrationMarker" . | quote }}
+          volumeMounts:
+            - name: static-volume
+              mountPath: {{ .Values.django.staticRoot | quote }}
+            - name: static-volume
+              mountPath: /migration-state
+          env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+            - name: STATIC_ROOT
+              value: {{ .Values.django.staticRoot | quote }}
+            - name: TENANT_DB_NAMES
+              value: {{ .Values.django.tenantDbNames | quote }}
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_DB
+              value: "0"
+      volumes:
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: {{ include "speedtest.pvcName" (dict "group" "backupDb" "context" .) }}
+        - name: static-volume
+          persistentVolumeClaim:
+            claimName: {{ include "speedtest.pvcName" (dict "group" "static" "context" .) }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
