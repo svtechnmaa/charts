@@ -21,11 +21,11 @@ init:
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  registry: docker.io
-  repository: prompve/prometheus-pve-exporter
+  registry: ghcr.io
+  repository: svtechnmaa/prometheus-pve-exporter
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # Required: image tag (no appVersion fallback).
   tag: "3.5.0"
   pullSecret: "" # This is the name of the secret to use for pulling the image, if required.
 
@@ -42,7 +42,8 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: false
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  # Exporters do not call the Kubernetes API, so do not mount the token.
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -52,6 +53,7 @@ serviceAccount:
 podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1000
+  fsGroup: 1000 # lets the non-root user read the config Secret mounted with defaultMode 0440
   seccompProfile:
     type: RuntimeDefault
 
@@ -151,6 +153,7 @@ volumes:
   - name: exporter-config-volume
     secret:
       secretName: pve-exporter-config
+      defaultMode: 0440 # config holds credentials; readable by owner/fsGroup only
       items:
         - key: pve.yml
           path: pve.yml
@@ -173,6 +176,9 @@ nodeAffinityPreset:
 timezone: "Asia/Ho_Chi_Minh"
 
 env:
+  # WARNING: values under "env" are stored in cleartext in the workload spec. Do not put
+  # passwords or tokens here; use "config" (stored in a Secret) or extraEnvVars/envFrom
+  # with a secretKeyRef instead.
   # # define how to authenticate against pve instances: password or token
   # ## password: use PVE_USER and PVE_PASSWORD
   # PVE_USER: "user"
@@ -183,7 +189,24 @@ env:
   # # Optional: set to false to skip SSL/TLS verification
   # PVE_VERIFY_SSL: "false"
 
+# Extra environment variables (rendered as a template). Preferred way to pass PVE credentials via env:
+# extraEnvVars:
+#   - name: PVE_PASSWORD
+#     valueFrom:
+#       secretKeyRef:
+#         name: my-pve-credentials
+#         key: password
+#   - name: PVE_TOKEN_VALUE
+#     valueFrom:
+#       secretKeyRef:
+#         name: my-pve-credentials
+#         key: token
+extraEnvVars: []
+# Load env vars from existing Secrets/ConfigMaps, e.g. [{secretRef: {name: my-secret}}]
+envFrom: []
+
 # Config for exporter.
+# Helm merges maps: the chart's default section stays unless you set config.default: null
 config:
   default:
     user: ""

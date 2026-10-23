@@ -6,6 +6,9 @@ metadata:
     {{- include "common.labels.standard" . | nindent 4 }}
 data:
 {{- range $name, $block := .Values.config }}
+{{- /* A null section (e.g. --set config.default=null) is skipped. */}}
+{{- if not (kindIs "invalid" $block) }}
   {{ $name }}.yml: |
 {{ include "redfish-exporter.config.yml" $block | b64enc | indent 4 }}
+{{- end }}
 {{- end }}

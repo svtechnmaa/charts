@@ -21,11 +21,11 @@ init:
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  registry: "docker.io"
-  repository: pryorda/vmware_exporter
+  registry: ghcr.io
+  repository: svtechnmaa/vmware_exporter
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # Required: image tag (no appVersion fallback).
   tag: "v0.18.4"
   pullSecret: "" # This is the name of the secret to use for pulling the image, if required.
 
@@ -42,7 +42,8 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: false
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  # Exporters do not call the Kubernetes API, so do not mount the token.
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -174,22 +175,36 @@ timezone: "Asia/Ho_Chi_Minh"
 
 env: {}
 
+# Extra environment variables (rendered as a template). Use this, not "env", for secrets:
+# extraEnvVars:
+#   - name: MY_PASSWORD
+#     valueFrom:
+#       secretKeyRef:
+#         name: my-credentials
+#         key: password
+extraEnvVars: []
+# Load env vars from existing Secrets/ConfigMaps, e.g. [{secretRef: {name: my-secret}}]
+envFrom: []
 
-# Config for exporter.
+
+# Config for exporter. Each key is a section of esx.yml; every vmware_exporter key
+# (vsphere_host, vsphere_user, vsphere_password, ignore_ssl, specs_size, fetch_*, collect_only)
+# can be set per section. ignore_ssl defaults to true (self-signed vCenters).
+# Helm merges maps: the chart's default section stays unless you set config.default: null
 config:
   default:
     # vsphere_host: "vcenter" # use list target in job config to scrape multiple vcenter
-    vsphere_user: "user"
-    vsphere_password: "password"
+    vsphere_user: ""
+    vsphere_password: ""
   # esx1:
   #   vsphere_host: "vcenter"
-  #   vsphere_user: "user"
-  #   vsphere_password: "password"
+  #   vsphere_user: ""
+  #   vsphere_password: ""
 extraConfig:
   # esx1:
   #   vsphere_host: "vcenter"
-  #   vsphere_user: "user"
-  #   vsphere_password: "password"
+  #   vsphere_user: ""
+  #   vsphere_password: ""
   #   ignore_ssl: True
   #   specs_size: 5000
   #   fetch_custom_attributes: True
@@ -203,8 +218,8 @@ extraConfig:
   #       snapshots: True
   # esx2:
   #   vsphere_host: "vcenter"
-  #   vsphere_user: "user"
-  #   vsphere_password: "password"
+  #   vsphere_user: ""
+  #   vsphere_password: ""
   #   ignore_ssl: True
   #   specs_size: 5000
   #   fetch_custom_attributes: True

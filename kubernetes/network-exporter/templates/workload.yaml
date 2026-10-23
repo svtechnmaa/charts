@@ -18,7 +18,7 @@ metadata:
   {{- end }}
 spec:
   {{- if eq $workloadType "StatefulSet" }}
-  serviceName: {{ .Chart.Name }}-headless
+  serviceName: {{ include "common.names.fullname" . }}-headless
   {{- end }}
   {{- if and (ne $workloadType "DaemonSet") (not .Values.autoscaling.enabled) }}
   replicas: {{ .Values.replicaCount }}
@@ -43,13 +43,15 @@ spec:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
-      {{- /*
-      Optional: the exporter reads its config only at startup, so without this a config
-      change via "helm upgrade" does not restart the pod. Uncomment to roll pods on change.
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-      */}}
     spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ .Values.serviceAccount.name | default (include "common.names.fullname" .) }}
+      {{- else if .Values.serviceAccount.name }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
       imagePullSecrets:
       - name: ghcr-pull-secret
       {{- if .Values.podSecurityContext }}
@@ -59,7 +61,7 @@ spec:
       # Affinity and nodeSelector are mutually exclusive. If you set one, the other will be ignored.
       {{- if ne $workloadType "DaemonSet" }}
       {{- with .Values.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- else }}
       affinity:
         podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 10 }}
@@ -96,6 +98,13 @@ spec:
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- with .Values.extraEnvVars }}
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+            {{- end }}
+          {{- with .Values.envFrom }}
+          envFrom:
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+          {{- end }}
           # Please refer to https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ for more information on probes.
           {{ with .Values.livenessProbe }}
           livenessProbe:

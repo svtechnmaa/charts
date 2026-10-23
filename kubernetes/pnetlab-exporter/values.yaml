@@ -21,11 +21,11 @@ init:
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  registry: docker.io
-  repository: adonato/query-exporter
+  registry: ghcr.io
+  repository: svtechnmaa/query-exporter
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
+  # Required: image tag (no appVersion fallback).
   tag: "3.2.0"
   pullSecret: "" # This is the name of the secret to use for pulling the image, if required.
 
@@ -41,7 +41,8 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: false
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  # Exporters do not call the Kubernetes API, so do not mount the token.
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -174,15 +175,29 @@ timezone: "Asia/Ho_Chi_Minh"
 
 env: {}
 
+# Extra environment variables (rendered as a template). Use this, not "env", for secrets:
+# extraEnvVars:
+#   - name: MY_PASSWORD
+#     valueFrom:
+#       secretKeyRef:
+#         name: my-credentials
+#         key: password
+extraEnvVars: []
+# Load env vars from existing Secrets/ConfigMaps, e.g. [{secretRef: {name: my-secret}}]
+envFrom: []
+
 
 # Config for query-exporter.
 extraConfig:
+  # Each database is keyed by "name" if set, else "<host>-<dbname>" (keys must be unique).
+  # The optional "name" field lets two entries share a host and dbname.
   databases: []
     # - host: 192.168.1.1
     #   port: 3306
     #   user: root
     #   password: password
     #   dbname: pnetlab_db
+    #   name: pnet1 # optional, defaults to 192.168.1.1-pnetlab_db
     # - host: 192.168.1.2
     #   port: 3306
     #   user: root
@@ -200,6 +215,6 @@ extraConfig:
   queries: {}
     # extra_query:
     #   interval: 30
-    #   databases: [192.168.1.1]
+    #   databases: ["192.168.1.1-pnetlab_db"]  # database keys: name, or <host>-<dbname>
     #   metrics: [extra_metric]
     #   sql: SELECT ...

@@ -1,7 +1,20 @@
-{{- define "joinList" }}
+{{- /* Key of one database entry: explicit "name", else <host>-<dbname>. Used both as the
+databases map key and in each query's "databases" list so the two always match. */}}
+{{- define "pnetlab-exporter.dbKey" -}}
+{{- .name | default (printf "%s-%s" .host (.dbname | default "pnetlab_db")) -}}
+{{- end }}
+
+{{- /* Comma-separated, quoted keys of all entries; fails on duplicate keys. */}}
+{{- define "pnetlab-exporter.joinList" }}
   {{- $list := list }}
+  {{- $seen := dict }}
   {{- range .arr }}
-    {{- $list = append $list .host }}
+    {{- $key := include "pnetlab-exporter.dbKey" . }}
+    {{- if hasKey $seen $key }}
+      {{- fail (printf "extraConfig.databases: duplicate database key %q; set a unique 'name' on one of the entries" $key) }}
+    {{- end }}
+    {{- $_ := set $seen $key true }}
+    {{- $list = append $list ($key | quote) }}
   {{- end }}
   {{- join "," $list }}
 {{- end }}
@@ -11,7 +24,7 @@
 databases:
 {{- if .Values.extraConfig.databases }}
 {{- range .Values.extraConfig.databases }}
-  {{ .host }}:
+  {{ include "pnetlab-exporter.dbKey" . | quote }}:
     dsn:
       dialect: mysql
       user: {{ .user | default "" | quote }}
@@ -67,31 +80,29 @@ metrics:
   {{- toYaml . | nindent 2 }}
   {{- end }}
 
-{{- /* "queries.interval" is kept as a fallback for older values files. */}}
-{{- $queries := .Values.extraConfig.queries | default dict }}
-{{- $interval := .Values.extraConfig.queryInterval | default $queries.interval | default 60 }}
+{{- $interval := .Values.extraConfig.queryInterval | default 60 }}
 queries:
   query1:
     interval: {{ $interval }}
-    databases: [{{ default "default" (include "joinList" (dict "arr" .Values.extraConfig.databases)) }}]
+    databases: [{{ default "default" (include "pnetlab-exporter.joinList" (dict "arr" .Values.extraConfig.databases)) }}]
     metrics: [node_running]
     sql: SELECT a.node_session_running as node_running  , b.lab_session_path as lab_path, a.node_session_port as node_port, a.node_session_lab as lab_id, a.node_session_nid as node_id from node_sessions as a inner join lab_sessions as b on a.node_session_lab = b.lab_session_id
   query2:
     interval: {{ $interval }}
-    databases: [{{ default "default" (include "joinList" (dict "arr" .Values.extraConfig.databases)) }}]
+    databases: [{{ default "default" (include "pnetlab-exporter.joinList" (dict "arr" .Values.extraConfig.databases)) }}]
     metrics: [node_cpu]
     sql: SELECT a.node_session_cpu as node_cpu , b.lab_session_path as lab_path, a.node_session_port as node_port, a.node_session_lab as lab_id, a.node_session_nid as node_id from node_sessions as a inner join lab_sessions as b on a.node_session_lab = b.lab_session_id
   query3:
     interval: {{ $interval }}
-    databases: [{{ default "default" (include "joinList" (dict "arr" .Values.extraConfig.databases)) }}]
+    databases: [{{ default "default" (include "pnetlab-exporter.joinList" (dict "arr" .Values.extraConfig.databases)) }}]
     metrics: [node_memory]
     sql: SELECT a.node_session_ram as node_memory , b.lab_session_path as lab_path, a.node_session_port as node_port, a.node_session_lab as lab_id, a.node_session_nid as node_id from node_sessions as a inner join lab_sessions as b on a.node_session_lab = b.lab_session_id
   query4:
     interval: {{ $interval }}
-    databases: [{{ default "default" (include "joinList" (dict "arr" .Values.extraConfig.databases)) }}]
+    databases: [{{ default "default" (include "pnetlab-exporter.joinList" (dict "arr" .Values.extraConfig.databases)) }}]
     metrics: [node_used_space]
     sql: SELECT a.node_session_hdd as node_used_space , b.lab_session_path as lab_path, a.node_session_port as node_port, a.node_session_lab as lab_id, a.node_session_nid as node_id from node_sessions as a inner join lab_sessions as b on a.node_session_lab = b.lab_session_id
-  {{- with (omit $queries "interval") }}
+  {{- with .Values.extraConfig.queries }}
   {{- toYaml . | nindent 2 }}
   {{- end }}
 {{- end }}

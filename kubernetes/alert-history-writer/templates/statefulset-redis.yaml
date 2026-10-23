@@ -33,15 +33,13 @@ spec:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ $component }}
       annotations:
-        # Restart the pod when redis.conf or the password changes
+        # Restart the pod when redis.conf or the Redis password changes (not on other secret keys)
         checksum/config: {{ include (print $.Template.BasePath "/configmap-redis.yaml") . | sha256sum }}
-        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/redis-password: {{ .Values.secret.data.REDIS_PASSWORD | default "" | toString | sha256sum }}
     spec:
       imagePullSecrets:
       - name: ghcr-pull-secret
-      {{- if .Values.serviceAccount.create }}
-      serviceAccountName: {{ .Values.serviceAccount.name | default (include "common.names.fullname" .) }}
-      {{- end }}
+      serviceAccountName: {{ include "alert-history-writer.serviceAccountName" . }}
       automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
       {{- with $values.terminationGracePeriodSeconds }}
       terminationGracePeriodSeconds: {{ . }}

@@ -1,7 +1,8 @@
 {{- define "redfish-exporter.config.yml" -}}
+{{- $auth := .auth | default dict }}
 Auth:
-  Username: {{ .auth.username | default "" | quote }}
-  Password: {{ .auth.password | default "" | quote }}
+  Username: {{ $auth.username | default "" | quote }}
+  Password: {{ $auth.password | default "" | quote }}
 Tuning:
   MaxParallelTargets: 50
   TargetConcurrency: 8             # process-wide

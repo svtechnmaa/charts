@@ -14,8 +14,9 @@
 #   consumer    Deployment  Redis stream -> MariaDB (MODE=consumer)
 #   maintenance CronJob     daily partition create/drop
 # To use an external Redis instead, set redis.enabled: false and config.REDIS_HOST.
-# Ingest and consumer pods block in an initContainer until the database is at
-# the Alembic head revision, so they never start against an unmigrated schema.
+# Consumer pods block in an initContainer until the database is at the Alembic
+# head revision, so they never start against an unmigrated schema. Ingest only
+# writes to Redis and does not wait.
 #
 # Resource names follow common.names.fullname (= release name when it contains
 # "alert-history-writer"), so several releases can share a namespace. envFrom,
@@ -24,14 +25,15 @@
 
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
-  registry: docker.io
-  repository: vyvuvivo/alert-history-writer
-  tag: "v0.0.3" # Overrides the image tag whose default is the chart appVersion.
+  registry: ghcr.io
+  repository: svtechnmaa/alert-history-writer
+  tag: "v0.0.3" # Required: image tag (no appVersion fallback)
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
 
 # This is to override the chart name.
 nameOverride: ""
+# Must be <= 40 characters: the CronJob <fullname>-maintenance is limited to 52.
 fullnameOverride: ""
 
 # Labels and annotations
@@ -47,7 +49,8 @@ serviceAccount:
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
+  # If not set and create is true, a name is generated using the fullname template;
+  # if not set and create is false, the namespace's "default" ServiceAccount is used.
   name: ""
 
 # Applied to every pod of the chart.
@@ -135,8 +138,8 @@ volumes:
     emptyDir: {}
   - name: tmp
     emptyDir: {}
-# Additional volumeMounts on every container of the chart (initContainers included through the anchor).
-volumeMounts: &volumeMounts
+# Additional volumeMounts on every container of the chart (wait-for-migrations included).
+volumeMounts:
   - name: logs
     mountPath: /var/log/alert_history_writer   # directory of config.LOG_FILE
   - name: tmp
@@ -148,6 +151,10 @@ tolerations: []
 
 affinity: {}
 
+# Presets apply to every workload of the chart and are scoped by component, so
+# "hard" spreads replicas of one component without repelling the others.
+podAffinityPreset: ""
+podAntiAffinityPreset: ""
 nodeAffinityPreset:
   type: ""
   key: ""
@@ -160,40 +167,26 @@ env: {}
 
 # Loaded into every container of the chart: app settings (configmap.yaml) and credentials (secret.yaml).
 # Rendered as a template.
-envFrom: &envFrom
+envFrom:
   - configMapRef:
       name: '{{ include "common.names.fullname" . }}-config'
   - secretRef:
       name: '{{ include "common.names.fullname" . }}-secret'
 
-# Blocks until the database is at the Alembic head revision. Values are rendered as a template.
-waitForMigrations: &waitForMigrations
-  - name: wait-for-migrations
-    image: '{{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}'
-    imagePullPolicy: IfNotPresent
-    command:
-      - sh
-      - -c
-      - |
-        head="$(alembic heads | awk '{print $1}')"
-        [ -n "$head" ] || { echo "cannot resolve alembic head revision"; exit 1; }
-        until alembic current 2>/dev/null | grep -q "$head"; do
-          echo "waiting for database to reach alembic revision $head"
-          sleep 5
-        done
-    envFrom: *envFrom
-    securityContext:
-      readOnlyRootFilesystem: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop: ["ALL"]
-    resources:
-      requests:
-        cpu: 10m
-        memory: 64Mi
-      limits:
-        memory: 256Mi
-    volumeMounts: *volumeMounts
+# Init container of the consumer: blocks until the database is at the Alembic head
+# revision (see templates/_helpers.tpl). It reuses image, envFrom, volumeMounts and
+# securityContext from the top-level values.
+waitForMigrations:
+  enabled: true
+  # Fails the init container (Init:CrashLoopBackOff) instead of hanging forever.
+  # Matches migrate.activeDeadlineSeconds.
+  timeoutSeconds: 900
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
 
 # Alertmanager webhook -> Redis stream
 ingest:
@@ -206,7 +199,11 @@ ingest:
       maxSurge: 1
       maxUnavailable: 0
   terminationGracePeriodSeconds: 30
-  initContainers: *waitForMigrations
+  initContainers: []
+  # Extra pod disruption budget: ingest is the Alertmanager webhook entrypoint.
+  pdb:
+    enabled: true
+    minAvailable: 1
   command: ["python", "-m", "app.run"]
   args: []
   env:
@@ -238,7 +235,8 @@ consumer:
   replicaCount: 2
   strategy: {}
   terminationGracePeriodSeconds: 60
-  initContainers: *waitForMigrations
+  # Extra init containers; wait-for-migrations is added by the template (waitForMigrations).
+  initContainers: []
   command: ["python", "-m", "app.run"]
   args: []
   env:
@@ -274,8 +272,8 @@ migrate:
     limits:
       memory: 256Mi
 
-# Daily partition create/drop. Runs in `timezone`, which must equal config.TIMEZONE
-# so the start time and the partition boundaries agree.
+# Daily partition create/drop. Runs in `timezone` (or global.timezone); config.TIMEZONE
+# is derived from the same value so the start time and the partition boundaries agree.
 maintenance:
   enabled: true
   schedule: "0 3 * * *"
@@ -302,8 +300,8 @@ maintenance:
 redis:
   enabled: true
   image:
-    registry: ghcr.io/svtechnmaa
-    repository: redis
+    registry: ghcr.io
+    repository: svtechnmaa/redis
     tag: "7.2.3"
     pullPolicy: IfNotPresent
   # Single node: the app has no Sentinel support, so there is nothing to fail over to.
@@ -356,10 +354,21 @@ redis:
     - sh
     - -c
     - |
-      cp /etc/redis/redis.conf /tmp/redis.conf
-      if [ -n "$REDIS_PASSWORD" ]; then
-        printf 'requirepass "%s"\n' "$REDIS_PASSWORD" >> /tmp/redis.conf
+      # Covers secret.create=false with a Secret that lacks the key.
+      if [ -z "$REDIS_PASSWORD" ]; then
+        echo 'REDIS_PASSWORD is required' >&2
+        exit 1
       fi
+      # A newline would end the requirepass directive and inject further config lines.
+      nl='
+      '
+      case "$REDIS_PASSWORD" in
+        *"$nl"*|*"$(printf '\r')"*) echo 'REDIS_PASSWORD must not contain newlines' >&2; exit 1;;
+      esac
+      # redis.conf quoted strings: escape backslash and double quote.
+      esc=$(printf '%s' "$REDIS_PASSWORD" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+      cp /etc/redis/redis.conf /tmp/redis.conf
+      printf 'requirepass "%s"\n' "$esc" >> /tmp/redis.conf
       exec redis-server /tmp/redis.conf
   args: []
   ports:
@@ -389,16 +398,24 @@ redis:
       memory: 1536Mi
 
   # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-  startupProbe: {}
+  # startupProbe holds liveness off while a large AOF loads (10 minute budget).
+  startupProbe:
+    exec:
+      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 60
   livenessProbe:
     exec:
-      command: ["sh", "-c", "[ -n \"$REDISCLI_AUTH\" ] || unset REDISCLI_AUTH; redis-cli ping | grep -q PONG"]
-    initialDelaySeconds: 15
+      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
     periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
   readinessProbe:
     exec:
-      command: ["sh", "-c", "[ -n \"$REDISCLI_AUTH\" ] || unset REDISCLI_AUTH; redis-cli ping | grep -q PONG"]
+      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
     periodSeconds: 5
+    timeoutSeconds: 3
 
   # Additional volumes on the redis pod. "data" comes from persistence below.
   volumes:
@@ -470,13 +487,15 @@ config:
   LAG_WARNING: "5000"
   LAG_CRITICAL: "50000"
   ALERT_RETENTION_DAYS: "365"
-  TIMEZONE: "Asia/Ho_Chi_Minh"        # must match timezone (CronJob timeZone)
+  # Derived from timezone/global.timezone, do not hard-code.
+  TIMEZONE: '{{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}'
   LOG_FILE: "/var/log/alert_history_writer/alert_history_writer.log"
   LOG_ROTATION: "10 MB"
   LOG_RETENTION: "14 days"
 
 # Credentials, rendered into the Secret <fullname>-secret.
-# Empty by default: rendering fails until every key except REDIS_PASSWORD is set.
+# Empty by default: rendering fails until ALERTMANAGER_API_KEYS, MYSQL_USER and MYSQL_PASSWORD
+# (plus REDIS_PASSWORD when redis.enabled) are set.
 # Alternatively set create: false and create the Secret out of band
 # (sealed-secrets / external-secrets) under that name, or point envFrom at your own Secret.
 secret:
@@ -485,5 +504,6 @@ secret:
     ALERTMANAGER_API_KEYS: ""
     MYSQL_USER: ""
     MYSQL_PASSWORD: ""
-    # Optional. Also used as requirepass by the bundled Redis; empty = no password.
+    # Required when redis.enabled (used as requirepass by the bundled Redis).
+    # May stay empty with redis.enabled=false and an external Redis.
     REDIS_PASSWORD: ""

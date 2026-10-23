@@ -17,8 +17,9 @@ metadata:
   {{- end }}
 spec:
   schedule: {{ $values.schedule | quote }}
-  # Same value as config.TIMEZONE: this decides when the Job starts,
-  # TIMEZONE decides the local-date partition boundaries.
+  # Derived from the same timezone/global.timezone as config.TIMEZONE: this decides
+  # when the Job starts, TIMEZONE decides the local-date partition boundaries.
+  # timeZone needs Kubernetes >= 1.27 (see kubeVersion in Chart.yaml).
   timeZone: {{ $timezone | quote }}
   concurrencyPolicy: {{ $values.concurrencyPolicy }}
   startingDeadlineSeconds: {{ $values.startingDeadlineSeconds }}
@@ -37,9 +38,7 @@ spec:
           restartPolicy: Never
           imagePullSecrets:
           - name: ghcr-pull-secret
-          {{- if .Values.serviceAccount.create }}
-          serviceAccountName: {{ .Values.serviceAccount.name | default (include "common.names.fullname" .) }}
-          {{- end }}
+          serviceAccountName: {{ include "alert-history-writer.serviceAccountName" . }}
           automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
           {{- with $values.terminationGracePeriodSeconds }}
           terminationGracePeriodSeconds: {{ . }}
@@ -53,8 +52,8 @@ spec:
           affinity: {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
           {{- else }}
           affinity:
-            podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "context" $) | nindent 14 }}
-            podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "context" $) | nindent 14 }}
+            podAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAffinityPreset "component" $component "context" $) | nindent 14 }}
+            podAntiAffinity: {{- include "common.affinities.pods" (dict "type" .Values.podAntiAffinityPreset "component" $component "context" $) | nindent 14 }}
             nodeAffinity: {{- include "common.affinities.nodes" (dict "type" .Values.nodeAffinityPreset.type "key" .Values.nodeAffinityPreset.key "values" .Values.nodeAffinityPreset.values) | nindent 14 }}
           {{- end }}
           {{- with .Values.tolerations }}

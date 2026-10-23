@@ -1,3 +1,4 @@
+{{- include "alert-history-writer.validateName" . }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -23,7 +23,7 @@ init:
 image:
   registry: ghcr.io
   repository: svtechnmaa/redfish-exporter
-  tag: "2.3.0" # Overrides the image tag whose default is the chart appVersion.
+  tag: "2.3.0" # Required: image tag (no appVersion fallback).
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   pullSecret: "ghcr-pull-secret" # This is the name of the secret to use for pulling the image, if required.
@@ -41,7 +41,8 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: false
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  # Exporters do not call the Kubernetes API, so do not mount the token.
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -170,9 +171,21 @@ timezone: "Asia/Ho_Chi_Minh"
 
 env: {}
 
+# Extra environment variables (rendered as a template). Use this, not "env", for secrets:
+# extraEnvVars:
+#   - name: MY_PASSWORD
+#     valueFrom:
+#       secretKeyRef:
+#         name: my-credentials
+#         key: password
+extraEnvVars: []
+# Load env vars from existing Secrets/ConfigMaps, e.g. [{secretRef: {name: my-secret}}]
+envFrom: []
+
 
 # Config for exporter.
 # Default config is in the configmap, you can override it by providing your own config in extraConfig.default
+# Helm merges maps: the chart's default section stays unless you set config.default: null
 config:
   default:
     auth:
