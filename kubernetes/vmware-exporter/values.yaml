@@ -1,8 +1,13 @@
 # # Global values
 # global:
 #   imageRegistry: ghcr.io
-#   imagePullSecrets: abc
 #   timezone: Asia/Ho_Chi_Minh
+global:
+  # Pod-level image pull secrets for every workload in this chart. An umbrella
+  # chart's global.imagePullSecrets replaces this list; set [] when all images are public.
+  imagePullSecrets:
+    - ghcr-pull-secret
+
 # Default values for sample-chart.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -27,7 +32,7 @@ image:
   pullPolicy: IfNotPresent
   # Required: image tag (no appVersion fallback).
   tag: "v0.18.4"
-  pullSecret: "" # This is the name of the secret to use for pulling the image, if required.
+  pullSecrets: [] # Extra pull secrets for this image only, added to global.imagePullSecrets.
 
 
 # This is to override the chart name.

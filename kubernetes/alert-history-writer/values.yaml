@@ -1,8 +1,13 @@
 # # Global values
 # global:
 #   imageRegistry: ghcr.io
-#   imagePullSecrets: abc
 #   timezone: Asia/Ho_Chi_Minh
+global:
+  # Pod-level image pull secrets for every workload in this chart. An umbrella
+  # chart's global.imagePullSecrets replaces this list; set [] when all images are public.
+  imagePullSecrets:
+    - ghcr-pull-secret
+
 # Default values for alert-history-writer.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
@@ -30,6 +35,7 @@ image:
   tag: "v0.0.3" # Required: image tag (no appVersion fallback)
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
+  pullSecrets: [] # Extra pull secrets for this image only, added to global.imagePullSecrets.
 
 # This is to override the chart name.
 nameOverride: ""
@@ -304,6 +310,7 @@ redis:
     repository: svtechnmaa/redis
     tag: "7.2.3"
     pullPolicy: IfNotPresent
+    pullSecrets: []
   # Single node: the app has no Sentinel support, so there is nothing to fail over to.
   replicaCount: 1
   # Refer to https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies for more information.
