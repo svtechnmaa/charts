@@ -1,3 +1,6 @@
+{{- if or (not (regexMatch "^[0-9]+$" (toString .Values.migration.markerHistory))) (lt (int .Values.migration.markerHistory) 1) }}
+{{- fail "migration.markerHistory must be a positive integer" }}
+{{- end }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -63,10 +66,17 @@ spec:
               python manage.py collectstatic --noinput
               mkdir -p {{ dir (include "speedtest.migrationMarker" .) | quote }}
               touch {{ include "speedtest.migrationMarker" . | quote }}
+              # Keep rollback history; never delete a marker from a newer revision.
+              cutoff={{ sub (int .Release.Revision) (int .Values.migration.markerHistory) }}
+              for path in {{ printf "/migration-state/.speedtest/%s" .Release.Name | quote }}/r*; do
+                revision="${path##*/r}"
+                case "$revision" in ''|*[!0-9]*) continue ;; esac
+                if [ "$revision" -le "$cutoff" ]; then rm -rf -- "$path"; fi
+              done
           volumeMounts:
             - name: static-volume
               mountPath: {{ .Values.django.staticRoot | quote }}
-            - name: static-volume
+            - name: backup-volume
               mountPath: /migration-state
           env:
             - name: TZ

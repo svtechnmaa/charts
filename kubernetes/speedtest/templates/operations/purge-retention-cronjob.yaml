@@ -13,7 +13,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
-  schedule: "0 3 * * *"  # Every day at 3:00 AM
+  schedule: {{ .Values.purgeRetention.schedule | quote }}
   jobTemplate:
     metadata:
       labels:

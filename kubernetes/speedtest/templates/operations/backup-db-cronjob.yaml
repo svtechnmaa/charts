@@ -1,3 +1,6 @@
+{{- if not (regexMatch "^[0-9]+$" (toString .Values.backup.retentionDays)) }}
+{{- fail "backup.retentionDays must be a non-negative integer" }}
+{{- end }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -14,7 +17,7 @@ metadata:
   {{- end }}
 spec:
   concurrencyPolicy: Forbid
-  schedule: "0 2 * * *"  # Every day at 2:00 AM
+  schedule: {{ .Values.backup.schedule | quote }}
   jobTemplate:
     metadata:
       labels:
@@ -45,7 +48,7 @@ spec:
             - name: backup-db
               image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
               imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
-              command: ["/bin/sh", "-c", "find /app/backup-db -type f -name '*.sql' -mtime +90 -delete && python manage.py backup_database"]
+              command: ["/bin/sh", "-c", "find /app/backup-db -type f -name '*.sql' -mtime +{{ .Values.backup.retentionDays | int }} -delete && python manage.py backup_database"]
               volumeMounts:
                 - name: backup-volume
                   mountPath: "/app/backup-db"

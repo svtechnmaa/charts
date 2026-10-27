@@ -100,5 +100,5 @@
 {{- define "speedtest.migrationVolume" -}}
 - name: migration-state
   persistentVolumeClaim:
-    claimName: {{ include "speedtest.pvcName" (dict "group" "static" "context" .) }}
+    claimName: {{ include "speedtest.pvcName" (dict "group" "backupDb" "context" .) }}
 {{- end -}}

@@ -110,7 +110,7 @@ vite:
   mqttBrokerPort: "80" #<= Change to "443" if using secure WebSocketSecure
   mqttBrokerProtocol: "ws" # <= Change to "wss" if using secure WebSocketSecure
   mqttBrokerPath: "/speedtest/ws-ep" # Must match brokerWs path of emqx
-  mqttBrokerHost: "" # <= Leave empty to use the global frontendVip
+  mqttBrokerHost: "" # <= Leave empty to use the browser page hostname (application fallback)
   defaultLang: "en"
 #####################################################
 django:
@@ -128,7 +128,7 @@ django:
   csrfTrustedOrigins: "" # <= Comma-separated origins for your frontendVip or domain
   tenantDbNames: "" # <= Comma separated list of tenant database names if using multi-tenancy
   reportChartFrontendBaseUrl: "" # <= Defaults to http(s)://<global.frontendVip><paths.userPortal> when left empty
-  reportChartBackendBaseUrl: "" # <= Defaults to http(s)://<global.frontendVip><paths.userPortal> when left empty
+  reportChartBackendBaseUrl: "" # Optional separate backend cookie origin for report export; empty uses only the frontend origin
   reportChartScreenshotTimeoutMs: "30000"
   reportChartScreenshotSettleDelayBaseMs: "1000"
   reportChartScreenshotSettleDelayPerChartMs: "500"
@@ -162,6 +162,13 @@ paths: # This can be used to change the paths of the admin and user portals, can
 
 # Normal, single-Pod Job. Workloads wait for this release's completion marker.
 migration:
+  markerHistory: 5 # Keep this many recent revision markers on the private backup PVC.
   waitTimeoutSeconds: 1800
   activeDeadlineSeconds: 1800
   backoffLimit: 1
+
+backup:
+  schedule: "0 2 * * *"
+  retentionDays: 45
+purgeRetention:
+  schedule: "0 3 * * *"

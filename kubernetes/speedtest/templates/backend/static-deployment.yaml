@@ -56,5 +56,7 @@ spec:
         - name: media-volume
           persistentVolumeClaim:
             claimName: {{ include "speedtest.pvcName" (dict "group" "media" "context" .) }}
+      {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-        - name: ghcr-pull-secret
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -242,18 +242,20 @@ rotate the service account and restart consumers together.
 
 ## Installation
 
-Review `values.yaml`, then install or upgrade the release:
+Only one Speedtest release per namespace is supported: Service names are fixed.
+Supply DB/MQTT credentials (or existing Secret references), and Django username/email
+when init-data is enabled. Save these inputs in a private overlay before installing:
 
 ```sh
 helm upgrade --install speedtest . --namespace speedtest --create-namespace \
-  --timeout 35m --wait
+  -f /etc/svtech/speedtest-values.yaml --timeout 35m --wait
 ```
 
 Validate the release:
 
 ```sh
-helm lint .
-helm template speedtest .
+helm lint . -f ci/values.yaml
+helm template speedtest . -f ci/values.yaml
 kubectl get pods,svc,ingress,pvc -n speedtest
 ```
 
@@ -301,3 +303,30 @@ django:
     password: "" # Auto-generate; or provide the initial admin password.
     existingSecret: ""
 ```
+The CI fixture is for rendering only; it does not provision external DB/MQTT
+accounts and must not be used as production credentials. Default values alone
+intentionally fail when required credentials are absent.
+
+## Migration markers and backup maintenance
+
+Migrations still run once per release revision using the application's existing
+`backup-and-migrate.sh`. Marker files now live on the backup PVC, outside public
+static storage. Django, the report worker, and init-data mount that PVC read-only
+for their wait step. The backup PVC must support RWX across their nodes.
+
+`migration.markerHistory` (default 10) retains recent revision markers. Cleanup
+runs after successful collectstatic; it does not remove newer revision markers.
+Recreating Pods from revisions outside that history may wait for a deleted
+marker: deploy the desired image in a new upgrade to run a fresh migration Job.
+Moving markers does not remove old `.speedtest/` files from the static PVC;
+remove those only after old workloads no longer need them. Do not delete either
+PVC as part of this change.
+
+Configure `backup.schedule` (default `0 2 * * *`), `backup.retentionDays` (90), and
+`purgeRetention.schedule` (`0 3 * * *`). Retention uses `find -mtime +N` and removes
+only `.sql` backups. Monitor storage usage; retention by age is not a size limit.
+
+An empty `vite.mqttBrokerHost` uses the browser's page hostname in the frontend
+application. An empty `django.reportChartBackendBaseUrl` leaves report export
+using only its frontend origin; set it when a separate backend cookie origin is
+needed. These fallbacks belong to the application, not Helm.
