@@ -1,0 +1,516 @@
+# # Global values
+# global:
+#   imageRegistry: ghcr.io
+#   timezone: Asia/Ho_Chi_Minh
+global:
+  # Pod-level image pull secrets for every workload in this chart. An umbrella
+  # chart's global.imagePullSecrets replaces this list; set [] when all images are public.
+  imagePullSecrets:
+    - ghcr-pull-secret
+
+# Default values for alert-history-writer.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+#
+# One image, four workloads, plus a bundled Redis:
+#   redis       StatefulSet Redis 7 holding the alert event stream (AOF, PVC)
+#   migrate     Job         alembic upgrade head (must succeed first)
+#   ingest      Deployment  Alertmanager webhook -> Redis stream (MODE=ingest)
+#   consumer    Deployment  Redis stream -> MariaDB (MODE=consumer)
+#   maintenance CronJob     daily partition create/drop
+# To use an external Redis instead, set redis.enabled: false and config.REDIS_HOST.
+# Consumer pods block in an initContainer until the database is at the Alembic
+# head revision, so they never start against an unmigrated schema. Ingest only
+# writes to Redis and does not wait.
+#
+# Resource names follow common.names.fullname (= release name when it contains
+# "alert-history-writer"), so several releases can share a namespace. envFrom,
+# volumes, redis.env, redis.volumes and config values are rendered as templates
+# and reference those names through {{ include "common.names.fullname" . }}.
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/alert-history-writer
+  tag: "v0.0.3" # Required: image tag (no appVersion fallback)
+  # This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  pullSecrets: [] # Extra pull secrets for this image only, added to global.imagePullSecrets.
+
+# This is to override the chart name.
+nameOverride: ""
+# Must be <= 40 characters: the CronJob <fullname>-maintenance is limited to 52.
+fullnameOverride: ""
+
+# Labels and annotations
+commonLabels: {}
+commonAnnotations: {}
+#This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Automatically mount a ServiceAccount's API credentials?
+  # The app never talks to the Kubernetes API, so the token stays unmounted.
+  automount: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template;
+  # if not set and create is false, the namespace's "default" ServiceAccount is used.
+  name: ""
+
+# Applied to every pod of the chart.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001       # match the image's non-root UID
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+# Applied to every main container of the chart.
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+# This is for setting up the ingest service (Alertmanager webhook receiver) more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  nodePortEnabled: false # set to true if using NodePort and you want to specify ports
+
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  # targetPort must match config.LISTEN_PORT.
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+      # nodePort: 30080
+  loadBalancerIP: "" # set to the IP you want to use for the LoadBalancer
+  loadBalancerSourceRanges: [] # list of IP CIDRs allowed access to load balancer (if supported)
+
+
+  # externalIPs: ["10.98.0.143"]
+
+  ## Set the Cluster IP to use
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#choosing-your-own-ip-address
+  ##
+  # clusterIP: None
+
+  annotations: {}
+
+  externalTrafficPolicy: Cluster
+
+  # Set the service SessionAffinity for session stickiness
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#proxy-mode-userspace
+  # Webhook posts are stateless, so requests are spread across ingest replicas.
+  sessionAffinity: ""
+
+  # Customize the SessionAntiAffinity configuration. The default value for sessionAffinityConfig.clientIP.timeoutSeconds is 10800 (3 hours)
+  sessionAffinityConfig: {}
+    # clientIP:
+    #   timeoutSeconds: 7200
+
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  paths:
+    - path: /
+      pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+#This section is for setting up autoscaling of the ingest Deployment more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on every pod of the chart.
+# logs and tmp are needed because the root filesystem is read-only.
+volumes:
+  - name: logs
+    emptyDir: {}
+  - name: tmp
+    emptyDir: {}
+# Additional volumeMounts on every container of the chart (wait-for-migrations included).
+volumeMounts:
+  - name: logs
+    mountPath: /var/log/alert_history_writer   # directory of config.LOG_FILE
+  - name: tmp
+    mountPath: /tmp
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Presets apply to every workload of the chart and are scoped by component, so
+# "hard" spreads replicas of one component without repelling the others.
+podAffinityPreset: ""
+podAntiAffinityPreset: ""
+nodeAffinityPreset:
+  type: ""
+  key: ""
+  values: []
+
+timezone: "Asia/Ho_Chi_Minh"
+
+# Extra environment variables added to every main container.
+env: {}
+
+# Loaded into every container of the chart: app settings (configmap.yaml) and credentials (secret.yaml).
+# Rendered as a template.
+envFrom:
+  - configMapRef:
+      name: '{{ include "common.names.fullname" . }}-config'
+  - secretRef:
+      name: '{{ include "common.names.fullname" . }}-secret'
+
+# Init container of the consumer: blocks until the database is at the Alembic head
+# revision (see templates/_helpers.tpl). It reuses image, envFrom, volumeMounts and
+# securityContext from the top-level values.
+waitForMigrations:
+  enabled: true
+  # Fails the init container (Init:CrashLoopBackOff) instead of hanging forever.
+  # Matches migrate.activeDeadlineSeconds.
+  timeoutSeconds: 900
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# Alertmanager webhook -> Redis stream
+ingest:
+  # This will set the replicaset count more information can be found here: https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/
+  replicaCount: 2
+  # Refer to https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#strategy for more information.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  terminationGracePeriodSeconds: 30
+  initContainers: []
+  # Extra pod disruption budget: ingest is the Alertmanager webhook entrypoint.
+  pdb:
+    enabled: true
+    minAvailable: 1
+  command: ["python", "-m", "app.run"]
+  args: []
+  env:
+    MODE: ingest
+  # Resources required by the container. More information can be found here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  # No HTTP health endpoint exists; TCP checks confirm uvicorn is listening.
+  livenessProbe:
+    tcpSocket:
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 15
+  readinessProbe:
+    tcpSocket:
+      port: http
+    periodSeconds: 5
+  startupProbe: {}
+
+# Redis stream -> MariaDB
+consumer:
+  # Each pod joins the consumer group under its own name (pod hostname);
+  # deliveries left pending by a replaced pod are reclaimed after CLAIM_IDLE_MS.
+  replicaCount: 2
+  strategy: {}
+  terminationGracePeriodSeconds: 60
+  # Extra init containers; wait-for-migrations is added by the template (waitForMigrations).
+  initContainers: []
+  command: ["python", "-m", "app.run"]
+  args: []
+  env:
+    MODE: consumer
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  livenessProbe: {}
+  readinessProbe: {}
+  startupProbe: {}
+
+# alembic upgrade head. Job pod templates are immutable, so the Job name carries
+# a hash of its values and config: a new Job runs whenever the image or the
+# database settings change, instead of failing to patch the old one.
+migrate:
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  # Empty by default: the Job name carries a config hash, so Helm/ArgoCD prune the
+  # previous Job on the next change. A TTL makes ArgoCD see the Job as missing
+  # (OutOfSync) and, with self-heal, recreate it and rerun the migration.
+  ttlSecondsAfterFinished: ""
+  initContainers: []
+  command: ["alembic", "upgrade", "head"]
+  args: []
+  env: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# Daily partition create/drop. Runs in `timezone` (or global.timezone); config.TIMEZONE
+# is derived from the same value so the start time and the partition boundaries agree.
+maintenance:
+  enabled: true
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  backoffLimit: 2
+  activeDeadlineSeconds: 3600
+  initContainers: []
+  command: ["/usr/local/bin/run-maintenance"]
+  args: []
+  env: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# Single-node Redis holding the alert event stream. AOF is on and eviction is
+# off: the stream carries events not yet written to MariaDB, so losing or
+# evicting entries means losing alerts.
+redis:
+  enabled: true
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/redis
+    tag: "7.2.3"
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  # Single node: the app has no Sentinel support, so there is nothing to fail over to.
+  replicaCount: 1
+  # Refer to https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#update-strategies for more information.
+  updateStrategy:
+    type: RollingUpdate
+  terminationGracePeriodSeconds: 30
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999         # redis user of the official image
+    runAsGroup: 999
+    fsGroup: 999
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+
+  # Affinity and nodeSelector are mutually exclusive. If you set affinity, the presets are ignored.
+  podAntiAffinityPreset: ""
+  podAffinityPreset: ""
+  nodeAffinityPreset:
+    type: ""
+    key: ""
+    values: []
+  affinity: {}
+  nodeSelector: {}
+  tolerations: []
+
+  # redis.conf, rendered into the ConfigMap <fullname>-redis-config.
+  # requirepass is appended at startup from the secret REDIS_PASSWORD, keep it out of here.
+  config: |
+    bind 0.0.0.0
+    port 6379
+    protected-mode no
+    dir /data
+    appendonly yes
+    appendfsync everysec
+    save 900 1 300 10 60 10000
+    maxmemory 768mb
+    maxmemory-policy noeviction
+
+  # requirepass goes into a generated config file rather than argv so the
+  # password is not visible in the process list.
+  command:
+    - sh
+    - -c
+    - |
+      # Covers secret.create=false with a Secret that lacks the key.
+      if [ -z "$REDIS_PASSWORD" ]; then
+        echo 'REDIS_PASSWORD is required' >&2
+        exit 1
+      fi
+      # A newline would end the requirepass directive and inject further config lines.
+      nl='
+      '
+      case "$REDIS_PASSWORD" in
+        *"$nl"*|*"$(printf '\r')"*) echo 'REDIS_PASSWORD must not contain newlines' >&2; exit 1;;
+      esac
+      # redis.conf quoted strings: escape backslash and double quote.
+      esc=$(printf '%s' "$REDIS_PASSWORD" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')
+      cp /etc/redis/redis.conf /tmp/redis.conf
+      printf 'requirepass "%s"\n' "$esc" >> /tmp/redis.conf
+      exec redis-server /tmp/redis.conf
+  args: []
+  ports:
+    - name: redis
+      containerPort: 6379
+      protocol: TCP
+  env:
+    - name: REDIS_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: '{{ include "common.names.fullname" . }}-secret'
+          key: REDIS_PASSWORD
+    # Read by redis-cli in the probes.
+    - name: REDISCLI_AUTH
+      valueFrom:
+        secretKeyRef:
+          name: '{{ include "common.names.fullname" . }}-secret'
+          key: REDIS_PASSWORD
+
+  # Resources required by the container. More information can be found here: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    # Headroom above maxmemory for AOF rewrite / RDB fork.
+    limits:
+      memory: 1536Mi
+
+  # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+  # startupProbe holds liveness off while a large AOF loads (10 minute budget).
+  startupProbe:
+    exec:
+      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 60
+  livenessProbe:
+    exec:
+      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command: ["sh", "-c", "redis-cli ping | grep -q PONG"]
+    periodSeconds: 5
+    timeoutSeconds: 3
+
+  # Additional volumes on the redis pod. "data" comes from persistence below.
+  volumes:
+    - name: config
+      configMap:
+        name: '{{ include "common.names.fullname" . }}-redis-config'
+    - name: tmp
+      emptyDir: {}
+  # Additional volumeMounts on the redis container.
+  volumeMounts:
+    - name: data
+      mountPath: /data
+    - name: config
+      mountPath: /etc/redis
+      readOnly: true
+    - name: tmp
+      mountPath: /tmp
+
+  persistence:
+    # false = emptyDir; unconsumed alerts are lost when the pod is rescheduled.
+    enabled: true
+    storageClass: ""
+    size: 5Gi
+    accessModes: ["ReadWriteOnce"]
+
+  # This is for setting up the redis service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+  service:
+    type: ClusterIP
+    annotations: {}
+    ports:
+      - name: redis
+        port: 6379
+        targetPort: redis
+        protocol: TCP
+
+# Non-secret app settings, rendered into the ConfigMap <fullname>-config.
+# Keep every value quoted: Helm reads bare numbers as floats and would render
+# 1048576 as 1.048576e+06.
+config:
+  LISTEN_PORT: "8080"                 # must match service.ports[0].targetPort
+  MAX_WEBHOOK_BODY_BYTES: "1048576"
+  MAX_ALERTS_PER_WEBHOOK: "1000"
+  MYSQL_HOST: "mariadb"
+  MYSQL_PORT: "3306"
+  MYSQL_DATABASE: "alert_history"
+  DB_POOL_SIZE: "5"
+  DB_CONNECT_TIMEOUT_SECONDS: "10"
+  DB_READ_TIMEOUT_SECONDS: "30"
+  DB_WRITE_TIMEOUT_SECONDS: "30"
+  MIGRATION_DB_RETRY_ATTEMPTS: "10"
+  MIGRATION_DB_RETRY_BASE_SECONDS: "2"
+  MIGRATION_DB_RETRY_MAX_SECONDS: "30"
+  # Service of the bundled Redis (redis.enabled). For an external Redis use AOF and
+  # maxmemory-policy noeviction there: the stream carries events not yet written to MariaDB.
+  REDIS_HOST: '{{ include "common.names.fullname" . }}-redis'
+  REDIS_PORT: "6379"
+  REDIS_STREAM_DB: "2"
+  REDIS_STREAM_NAME: "alert_events_stream"
+  REDIS_CONSUMER_GROUP: "alert_event_writers"
+  REDIS_STREAM_MAXLEN: "500000"
+  REDIS_RECONNECT_BASE_SECONDS: "1"
+  REDIS_RECONNECT_MAX_SECONDS: "30"
+  CONSUMER_BATCH_SIZE: "200"
+  CONSUMER_BLOCK_MS: "1000"
+  CLAIM_IDLE_MS: "60000"
+  MAX_RETRY_ATTEMPTS: "3"
+  RETRY_BASE_SECONDS: "45"
+  MONITOR_INTERVAL_SECONDS: "60"
+  LAG_WARNING: "5000"
+  LAG_CRITICAL: "50000"
+  ALERT_RETENTION_DAYS: "365"
+  # Derived from timezone/global.timezone, do not hard-code.
+  TIMEZONE: '{{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}'
+  LOG_FILE: "/var/log/alert_history_writer/alert_history_writer.log"
+  LOG_ROTATION: "10 MB"
+  LOG_RETENTION: "14 days"
+
+# Credentials, rendered into the Secret <fullname>-secret.
+# Empty by default: rendering fails until ALERTMANAGER_API_KEYS, MYSQL_USER and MYSQL_PASSWORD
+# (plus REDIS_PASSWORD when redis.enabled) are set.
+# Alternatively set create: false and create the Secret out of band
+# (sealed-secrets / external-secrets) under that name, or point envFrom at your own Secret.
+secret:
+  create: true
+  data:
+    ALERTMANAGER_API_KEYS: ""
+    MYSQL_USER: ""
+    MYSQL_PASSWORD: ""
+    # Required when redis.enabled (used as requirepass by the bundled Redis).
+    # May stay empty with redis.enabled=false and an external Redis.
+    REDIS_PASSWORD: ""
