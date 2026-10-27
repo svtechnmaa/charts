@@ -80,3 +80,20 @@ The connection keys are under `grafanaConfig.database`, including `mysqlHost`,
 The Deployment and GDG Job read the same admin Secret. The importer file has an
 empty password; the Job supplies `GDG_CONTEXTS__MAIN__PASSWORD` and
 `GDG_CONTEXTS__MAIN__USER_NAME` from the configured credentials.
+
+## Compatibility and upgrade notes
+
+Legacy `global.adminUser` / `global.adminPassword` remain accepted temporarily.
+For username and initial password independently, precedence is nonempty
+`global.authenUsers.grafana.*`, then nonempty legacy `global.admin*`, then local
+`grafanaConfig.auth.*`. Remove legacy keys when moving to local auth fields.
+External Secret references and already stored managed passwords take priority
+for passwords. The temporary local defaults are retained for older stacks; do
+not assume they match the account already stored in an existing Grafana database.
+
+A managed Secret containing only the DB key can gain an admin key: the chart uses
+the configured password, or generates 32 characters when empty. An existing empty
+admin key fails explicitly rather than silently deploying an empty password.
+If the Grafana database is already initialized, supply its current password when
+switching from external to managed auth; generating a Secret does not change the
+account stored in SQL. GDG uses that same credential.

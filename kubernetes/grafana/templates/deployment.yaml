@@ -117,10 +117,14 @@ spec:
               value: accessControlOnCall,idForwarding
             - name: GF_REPORTER_PLUGIN_APP_URL
               value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
+            {{- with .Values.renderer.url }}
             - name: GF_RENDERING_SERVER_URL
-              value: http://renderer:8081/render
+              value: {{ tpl . $ | quote }}
+            {{- end }}
+            {{- with .Values.chrome.url }}
             - name: GF_REPORTER_PLUGIN_REMOTE_CHROME_URL
-              value: http://chrome:9222
+              value: {{ tpl . $ | quote }}
+            {{- end }}
             - name: GF_RENDERING_CALLBACK_URL
               value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
             - name: GF_REPORTER_PLUGIN_SKIP_TLS_CHECK
@@ -155,12 +159,7 @@ spec:
             protocol: TCP
             name: chrome
           resources:
-            requests:
-              memory: "1Gi"
-              cpu: "500m"
-            limits:
-              memory: "2Gi"
-              cpu: "1000m"
+            {{- toYaml .Values.chrome.resources | nindent 12 }}
           volumeMounts:
           - mountPath: /dev/shm
             name: shm

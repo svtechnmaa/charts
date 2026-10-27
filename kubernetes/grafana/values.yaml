@@ -1,4 +1,5 @@
 global:
+  # Legacy adminUser/adminPassword are accepted temporarily; nonempty authenUsers wins.
   authenUsers:
     grafana:
       user: "" # Non-empty global input overrides grafanaConfig.auth.username
@@ -30,6 +31,7 @@ image:
 
 renderer:
   enabled: true
+  url: "http://renderer:8081/render" # May point to a shared/external renderer; empty omits the env.
   image:
     registry: ghcr.io
     repository: svtechnmaa/grafana-image-renderer
@@ -41,6 +43,14 @@ renderer:
 
 chrome:
   enabled: true
+  url: "http://chrome:9222" # May point to shared/external Chrome; empty omits the env.
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
   image:
     registry: ghcr.io
     repository: svtechnmaa/headless-shell
@@ -192,8 +202,8 @@ grafanaConfig:
     mysqlPort: 3306
     mysqlDB: grafana
   auth:
-    username: thrukadmin
-    password: "thrukadmin"
+    username: ""
+    password: ""
     existingSecret: ""
     existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
   subPath: /grafana

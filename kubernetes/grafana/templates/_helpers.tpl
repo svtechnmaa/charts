@@ -1,7 +1,8 @@
 {{- define "grafana.adminUser" -}}
 {{- $local := tpl .Values.grafanaConfig.auth.username . -}}
 {{- $global := tpl (default "" .Values.global.authenUsers.grafana.user) . -}}
-{{- default $local $global | required "grafanaConfig.auth.username or global.authenUsers.grafana.user is required" -}}
+{{- $legacy := tpl (default "" .Values.global.adminUser | toString) . -}}
+{{- default (default $local $legacy) $global | required "grafanaConfig.auth.username or global.authenUsers.grafana.user is required" -}}
 {{- end -}}
 
 {{- define "grafana.adminSecretName" -}}
