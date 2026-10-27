@@ -79,3 +79,9 @@ mqtt:
     repository: svtechnmaa/busybox
     tag: "1.33"
     pullPolicy: IfNotPresent
+
+# Dashboard credentials are separate from mqtt.auth and bootstrapAPIKeys.
+# Expose only after configuring the dashboard account and access restrictions.
+dashboard:
+  ingress:
+    enabled: false

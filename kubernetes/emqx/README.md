@@ -206,3 +206,21 @@ configuration changes can be applied at runtime without replacing Pods. Check
 `kubectl describe emqx <name> -n speedtest` and the active authentication chain;
 Pod age alone does not prove that an upgrade failed. Updating a bootstrap Secret
 or restarting a Pod does not guarantee rotation of a user stored in EMQX's database.
+
+## Dashboard exposure
+
+`dashboard.ingress.enabled` defaults to `false`; MQTT WS/WSS ingress remains
+available. Enable the dashboard ingress explicitly only after securing dashboard
+credentials and access. MQTT credentials and bootstrap API keys do not set the
+dashboard login password. To configure the account before exposing it, use a
+local port-forward to the dashboard Service or your existing administrative access.
+
+```yaml
+dashboard:
+  ingress:
+    enabled: false
+```
+
+Upgrading from a version that always exposed the dashboard removes its managed
+Ingress unless this flag is set to true. The dashboard Service remains available
+inside the cluster. This flag does not rotate or reset dashboard credentials.
