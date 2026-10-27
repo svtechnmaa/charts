@@ -7,7 +7,6 @@ This chart deploys Redis; RedisInsight is optional. Connection settings and Redi
 ```yaml
 replicaCount: 1
 service:
-  name: redis
   type: ClusterIP
 args:
   - redis-server
