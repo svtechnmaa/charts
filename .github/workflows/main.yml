@@ -109,7 +109,6 @@ jobs:
         changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
         mappingFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/image_chart_mapping.yml"
         dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/Chart.yaml"
-        # Deprecated charts: not deployed/tested in NMAA CI, so they must not trigger it
         skipCharts=" proxy thruk nagvis airflow airflow-postgresql-ha "
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
