@@ -25,6 +25,10 @@ image:
 # This is to override the chart name.
 nameOverride: ""
 fullnameOverride: ""
+commonLabels: {}
+commonAnnotations: {}
+
+updateStrategy: Recreate
 
 podSecurityContext: {}
   # fsGroup: 2000
@@ -111,19 +115,28 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 sharedPersistenceVolume:
-  enabled: false
-  # volumeName: redis-data
-  # pvcName: redis-data-pvc
-  # storageSize: 1Gi
-  # accessModes: ReadWriteMany
-  # storageClass: seaweedfs-storage
-  # path: /data
+  enabled: true
+  volumeName: redis-data
+  pvcName: redis-data-pvc # Defaults to <fullname>-data; preserve the previous name on upgrade.
+  storageSize: 1Gi
+  accessModes: ReadWriteMany
+  storageClass: seaweedfs-storage
+  path: /data
 
 # Additional volumes on the output Deployment definition.
-volumes: []
+volumes: |
+  {{- if .Values.sharedPersistenceVolume.enabled }}
+  - name: {{ .Values.sharedPersistenceVolume.volumeName }}
+    persistentVolumeClaim:
+      claimName: {{ .Values.sharedPersistenceVolume.pvcName }}
+  {{- end }}
 
 # Additional volumeMounts on the output Deployment definition.
-volumeMounts: []
+volumeMounts: |
+  {{- if .Values.sharedPersistenceVolume.enabled }}
+  - name: {{ .Values.sharedPersistenceVolume.volumeName }}
+    mountPath: {{ .Values.sharedPersistenceVolume.path }}
+  {{- end }}
 
 nodeSelector: {}
 

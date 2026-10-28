@@ -102,3 +102,8 @@
   persistentVolumeClaim:
     claimName: {{ include "speedtest.pvcName" (dict "group" "backupDb" "context" .) }}
 {{- end -}}
+
+{{/* Validate the host used in absolute application URLs, without inventing a VIP. */}}
+{{- define "speedtest.frontendHost" -}}
+{{- required "global.frontendVip must be set to the public hostname or IP" .Values.global.frontendVip -}}
+{{- end -}}

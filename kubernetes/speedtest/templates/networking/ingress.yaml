@@ -13,7 +13,6 @@ metadata:
     {{- with .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
     {{- end }}
-    nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"

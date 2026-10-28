@@ -34,7 +34,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      {{- $reportChartFrontendBaseUrl := .Values.django.reportChartFrontendBaseUrl | default (printf "%s://%s%s" (ternary "https" "http" .Values.global.enableHttps) .Values.global.frontendVip .Values.paths.userPortal) }}
+      {{- $reportChartFrontendBaseUrl := .Values.django.reportChartFrontendBaseUrl | default (printf "%s://%s%s" (ternary "https" "http" .Values.global.enableHttps) (include "speedtest.frontendHost" .) .Values.paths.userPortal) }}
       initContainers:
         {{- include "speedtest.migrationWait" . | nindent 8 }}
       containers:

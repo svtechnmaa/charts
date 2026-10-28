@@ -47,7 +47,7 @@ coreTemplate:
   extraVolumeMounts: []
   persistence:
     enabled: true
-    storageClass: local-path
+    storageClass: local-path # null: cluster default; "": no StorageClass (static PV).
     size: 1Gi
     accessModes:
       - ReadWriteOnce

@@ -13,7 +13,9 @@ spec:
   parallelism: 1
   completions: 1
   backoffLimit: {{ .Values.migration.backoffLimit }}
+  {{- if gt (int .Values.migration.activeDeadlineSeconds) 0 }}
   activeDeadlineSeconds: {{ .Values.migration.activeDeadlineSeconds }}
+  {{- end }}
   template:
     metadata:
       labels:

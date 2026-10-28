@@ -52,6 +52,25 @@ kubectl wait --for=condition=Ready pods \
 | `coreTemplate.persistence.storageClass` | PVC storage class | `local-path` |
 | `coreTemplate.persistence.size` | PVC size | `1Gi` |
 
+## Pod disruption budget
+
+Set only one of `coreTemplate.minAvailable` or `coreTemplate.maxUnavailable`;
+leave the other as `""`. Kubernetes does not allow both in the same PDB.
+Use a non-negative integer (including `0`) or a percentage such as `"50%"`.
+Leaving both empty omits these fields from the EMQX resource.
+
+```yaml
+coreTemplate:
+  replicaCount: 3
+  minAvailable: ""
+  maxUnavailable: 1
+```
+
+This permits at most one unavailable Pod during voluntary eviction. Alternatively,
+use `minAvailable: 2` and `maxUnavailable: ""` to require two healthy Pods.
+With one replica, `minAvailable: 1` or `maxUnavailable: 0` blocks eviction of the
+healthy Pod and can prevent node drain. PDBs do not prevent node failures.
+
 ## Custom EMQX Config
 
 Set `config.data` to replace the generated websocket config block:

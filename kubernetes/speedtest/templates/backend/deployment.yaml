@@ -34,7 +34,7 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      {{- $reportChartFrontendBaseUrl := .Values.django.reportChartFrontendBaseUrl | default (printf "%s://%s%s" (ternary "https" "http" .Values.global.enableHttps) .Values.global.frontendVip .Values.paths.userPortal) }}
+      {{- $reportChartFrontendBaseUrl := .Values.django.reportChartFrontendBaseUrl | default (printf "%s://%s%s" (ternary "https" "http" .Values.global.enableHttps) (include "speedtest.frontendHost" .) .Values.paths.userPortal) }}
       initContainers:
         - name: wait-for-mariadb
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.image.initWaitDb "global" .Values.global) }}
@@ -91,7 +91,7 @@ spec:
             - name: REDIS_DB
               value: "0"
             - name: GRAFANA_ROOT_URL
-              value: {{ printf "%s://%s%s" (ternary "https" "http" (default false .Values.global.enableHttps)) .Values.global.frontendVip (tpl (index .Values.global "grafana-embed" "subPath") $) | quote }}
+              value: {{ printf "%s://%s%s" (ternary "https" "http" (default false .Values.global.enableHttps)) (include "speedtest.frontendHost" .) (tpl (index .Values.global "grafana-embed" "subPath") $) | quote }}
             - name: REPORT_CHART_FRONTEND_BASE_URL
               value: {{ $reportChartFrontendBaseUrl | quote }}
             - name: REPORT_EXPORT_BACKEND_BASE_URL

@@ -2,12 +2,12 @@
 global:
   imageRegistry: ""
   backendVip: "" # <= Auto-assign with metalLB (Always set to empty string)
-  frontendVip: "" # <= Auto-assign with metalLB or set your own IP
+  frontendVip: "" # Required public hostname/IP. Helm cannot discover a future MetalLB assignment.
   enableHttps: false # <= Set to true if you want to enable HTTPS
   grafana-embed:
     subPath: "/speedtest/grafana"
   speedtest:
-    runInitDataJob: true # <= Set to true if you want to run the init data job
+    runInitDataJob: false # Enable only for initial provisioning; disable on subsequent upgrades.
 ######################################################
 timezone: Asia/Ho_Chi_Minh
 nameOverride: ""
@@ -69,18 +69,22 @@ pvc:
     claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 50Mi
+    accessModes: ReadWriteMany
   media:
     claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 300Mi
+    accessModes: ReadWriteMany
   backupDb:
     claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 2Gi
+    accessModes: ReadWriteMany
   mqttLogs:
     claimName: "" # Release-specific default; retain the previous name explicitly on upgrade.
     storageClass: seaweedfs-storage
     size: 1Gi
+    accessModes: ReadWriteMany
 ####################################################
 # Each credential accepts a Secret name or {name, keyMapping}.
 # Missing mapping entries fall back to existingSecretPasswordKey.
@@ -164,7 +168,7 @@ paths: # This can be used to change the paths of the admin and user portals, can
 migration:
   markerHistory: 5 # Keep this many recent revision markers on the private backup PVC.
   waitTimeoutSeconds: 1800
-  activeDeadlineSeconds: 1800
+  activeDeadlineSeconds: 0 # 0 omits the Job deadline to avoid interrupting database DDL.
   backoffLimit: 1
 
 backup:

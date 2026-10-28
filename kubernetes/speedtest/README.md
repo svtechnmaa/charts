@@ -162,8 +162,8 @@ flowchart LR
 
 - `global.frontendVip`: public IP address or hostname used by application URLs.
 - `global.enableHttps`: switches generated public URLs between HTTP and HTTPS.
-- `global.speedtest.runInitDataJob`: enables the one-time initialization job for creating default users, settings, and test-server data.
-- `timezone`: container timezone; `global.timezone` overrides it when set.
+- `global.speedtest.runInitDataJob`: defaults to false. Enable for initial provisioning, then disable; leaving it enabled reruns initialization on every upgrade.
+- `timezone`: container and CronJob schedule timezone; `global.timezone` overrides it when set.
 - `replicaCounts`: replica settings for application workloads.
 - `image`: image registry, repository, and tag for each application component.
 - `pvc`: claim name, StorageClass, and capacity for application file storage.
@@ -266,15 +266,13 @@ kubectl get pods,svc,ingress,pvc -n speedtest
 helm uninstall speedtest --namespace speedtest
 ```
 
-PVC retention depends on the StorageClass reclaim policy. Verify backups before manually deleting claims.
-
 ## Password and application setup checklist
 
 When installing this chart alone:
 
 1. Set `db.host`, `db.port`, `db.name`, and `db.auth.username` to the existing
    MariaDB endpoint/schema/account. Set `db.auth.existingSecret` to the actual
-   Secret name; the current default `avc` is only a placeholder.
+   Secret name, or supply the current password. No database account is created by this chart.
 2. Set `mqtt.brokerHost`, `mqtt.brokerPort`, `mqtt.brokerPath`, and
    `mqtt.auth.username`. Replace the Secret name with the
    EMQX producer Secret. These are server-side connection settings.
@@ -311,10 +309,10 @@ intentionally fail when required credentials are absent.
 
 Migrations still run once per release revision using the application's existing
 `backup-and-migrate.sh`. Marker files now live on the backup PVC, outside public
-static storage. Django, the report worker, and init-data mount that PVC read-only
-for their wait step. The backup PVC must support RWX across their nodes.
+static storage. Django, both workers, scheduler, Commander, init-data, and
+maintenance CronJobs mount that PVC read-only for their wait step. The backup PVC must support RWX across their nodes.
 
-`migration.markerHistory` (default 10) retains recent revision markers. Cleanup
+`migration.markerHistory` (default 5) retains recent revision markers. Cleanup
 runs after successful collectstatic; it does not remove newer revision markers.
 Recreating Pods from revisions outside that history may wait for a deleted
 marker: deploy the desired image in a new upgrade to run a fresh migration Job.
@@ -322,7 +320,7 @@ Moving markers does not remove old `.speedtest/` files from the static PVC;
 remove those only after old workloads no longer need them. Do not delete either
 PVC as part of this change.
 
-Configure `backup.schedule` (default `0 2 * * *`), `backup.retentionDays` (90), and
+Configure `backup.schedule` (default `0 2 * * *`), `backup.retentionDays` (45), and
 `purgeRetention.schedule` (`0 3 * * *`). Retention uses `find -mtime +N` and removes
 only `.sql` backups. Monitor storage usage; retention by age is not a size limit.
 

@@ -34,6 +34,8 @@ spec:
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- end }}
     spec:
+      initContainers:
+        {{- include "speedtest.migrationWait" . | nindent 8 }}
       containers:
         - name: worker
           image: {{ include "common.images.image" (dict "imageRoot" .Values.image.worker "global" .Values.global) }}
@@ -65,6 +67,7 @@ spec:
             - name: logs-volume
               mountPath: "/app/logs"
       volumes:
+        {{- include "speedtest.migrationVolume" . | nindent 8 }}
         - name: logs-volume
           persistentVolumeClaim:
             claimName: {{ include "speedtest.pvcName" (dict "group" "mqttLogs" "context" .) }}

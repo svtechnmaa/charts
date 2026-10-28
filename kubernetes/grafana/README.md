@@ -88,8 +88,8 @@ For username and initial password independently, precedence is nonempty
 `global.authenUsers.grafana.*`, then nonempty legacy `global.admin*`, then local
 `grafanaConfig.auth.*`. Remove legacy keys when moving to local auth fields.
 External Secret references and already stored managed passwords take priority
-for passwords. The temporary local defaults are retained for older stacks; do
-not assume they match the account already stored in an existing Grafana database.
+for passwords. Supply the credentials of the account already stored in an
+existing Grafana database; changing values alone does not rotate that account.
 
 A managed Secret containing only the DB key can gain an admin key: the chart uses
 the configured password, or generates 32 characters when empty. An existing empty

@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Chart.Name }}-ingress
+  name: {{ .Chart.Name }}-ws-ingress
   namespace: {{ .Release.Namespace | quote }}
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
@@ -13,7 +13,6 @@ metadata:
     {{- with .Values.commonAnnotations }}
     {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
     {{- end }}
-    nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-body-size: "0"
@@ -33,6 +32,35 @@ spec:
                 name: {{ include "common.names.fullname" . }}-listeners
                 port:
                   number: 8083
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Chart.Name }}-wss-ingress
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: emqx
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- with .Values.commonAnnotations }}
+    {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+    {{- end }}
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/client_max_body_size: "0"
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .Values.global.enableHttps | quote }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: {{ .Values.global.enableHttps | quote }}
+    nginx.ingress.kubernetes.io/preserve-trailing-slash: 'true'
+spec:
+  ingressClassName: {{ .Release.Name }}
+  rules:
+    - http:
+        paths:
           - path: {{ .Values.global.emqx.mqtt.secureWebsocket.mqttPath }}
             pathType: Prefix
             backend:

@@ -13,6 +13,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
+  timeZone: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) | quote }}
   schedule: {{ .Values.django.reportExportMaintenanceSchedule | quote }}
   concurrencyPolicy: Forbid
   jobTemplate:
@@ -41,6 +42,8 @@ spec:
           {{- end }}
         spec:
           restartPolicy: OnFailure
+          initContainers:
+            {{- include "speedtest.migrationWait" . | nindent 12 }}
           containers:
             - name: report-export-maintenance
               image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
@@ -64,6 +67,7 @@ spec:
                   value: {{ .Values.django.reportExportStaleHeartbeatSeconds | quote }}
                 {{- include "speedtest.databaseEnv" . | nindent 16 }}
           volumes:
+            {{- include "speedtest.migrationVolume" . | nindent 12 }}
             - name: media-volume
               persistentVolumeClaim:
                 claimName: {{ include "speedtest.pvcName" (dict "group" "media" "context" .) }}

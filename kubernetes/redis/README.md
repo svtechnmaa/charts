@@ -20,7 +20,3 @@ Run from the charts repository with your storage/configuration overlay:
 helm upgrade --install redis ./kubernetes/redis -n speedtest \
   --create-namespace -f /etc/svtech/redis-values.yaml
 ```
-
-Set `volumes` / `volumeMounts` to persist `/data`; AOF alone does not persist data
-across replacement of an ephemeral volume. The chart renders template strings in
-these fields. Check the supplied `values.yaml` for shared-volume and PVC options.

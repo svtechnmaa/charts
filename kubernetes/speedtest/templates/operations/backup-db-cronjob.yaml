@@ -16,6 +16,7 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
+  timeZone: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) | quote }}
   concurrencyPolicy: Forbid
   schedule: {{ .Values.backup.schedule | quote }}
   jobTemplate:
@@ -44,6 +45,8 @@ spec:
           {{- end }}
         spec:
           restartPolicy: OnFailure
+          initContainers:
+            {{- include "speedtest.migrationWait" (merge (dict "migrationVolumeName" "backup-volume") .) | nindent 12 }}
           containers:
             - name: backup-db
               image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}

@@ -1,5 +1,6 @@
 # Render/lint fixture only. External services are not provisioned by this file.
 global:
+  frontendVip: speedtest.example.invalid
   speedtest:
     runInitDataJob: true
 django:

@@ -58,7 +58,7 @@ spec:
               value: {{ .Values.django.dbEngine | quote }}
             {{- include "speedtest.djangoAuthEnv" . | nindent 12 }}
             - name: TEST_SERVER_HOST
-              value: {{ .Values.global.frontendVip | quote }}
+              value: {{ (include "speedtest.frontendHost" .) | quote }}
             - name: TEST_SERVER_URL_BASE
               value: {{ .Values.paths.speedtestServer | quote }}
             - name: ENABLE_HTTPS

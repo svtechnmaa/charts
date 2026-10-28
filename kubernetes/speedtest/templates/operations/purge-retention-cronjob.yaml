@@ -13,7 +13,9 @@ metadata:
   annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
   {{- end }}
 spec:
+  timeZone: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) | quote }}
   schedule: {{ .Values.purgeRetention.schedule | quote }}
+  concurrencyPolicy: Forbid
   jobTemplate:
     metadata:
       labels:
@@ -40,6 +42,8 @@ spec:
           {{- end }}
         spec:
           restartPolicy: OnFailure
+          initContainers:
+            {{- include "speedtest.migrationWait" . | nindent 12 }}
           containers:
             - name: purge-retention
               image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
@@ -59,6 +63,7 @@ spec:
                   value: {{ .Values.django.tenantDbNames | quote }}
                 {{- include "speedtest.databaseEnv" . | nindent 16 }}
           volumes:
+            {{- include "speedtest.migrationVolume" . | nindent 12 }}
             - name: media-volume
               persistentVolumeClaim:
                 claimName: {{ include "speedtest.pvcName" (dict "group" "media" "context" .) }}

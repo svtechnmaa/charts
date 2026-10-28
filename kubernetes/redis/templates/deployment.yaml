@@ -12,6 +12,8 @@ metadata:
   annotations: {{- include "common.tplvalues.render" ( dict "value" .Values.commonAnnotations "context" $ ) | nindent 4 }}
   {{- end }}
 spec:
+  strategy:
+    type: {{ .Values.updateStrategy }}
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.replicaCount "global" .Values.global ) }}
   {{- end }}

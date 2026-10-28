@@ -1,4 +1,5 @@
 {{- if .Values.sharedPersistenceVolume.enabled }}
+{{- $namespace := .Release.Namespace }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -9,14 +10,13 @@ metadata:
     {{- if .Values.commonLabels }}
     {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
     {{- end }}
-  {{- if .Values.commonAnnotations }}
-  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
-  {{- end }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes:
     - {{ .Values.sharedPersistenceVolume.accessModes }}
   resources:
     requests:
       storage: {{ .Values.sharedPersistenceVolume.storageSize }}
-  storageClassName: {{ .Values.sharedPersistenceVolume.storageClass }}
+  storageClassName: {{ .Values.sharedPersistenceVolume.storageClass | quote }}
 {{- end }}

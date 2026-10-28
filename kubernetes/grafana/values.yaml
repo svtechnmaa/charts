@@ -1,5 +1,6 @@
 global:
-  # Legacy adminUser/adminPassword are accepted temporarily; nonempty authenUsers wins.
+  # Auth precedence: nonempty authenUsers.grafana > legacy adminUser/adminPassword > grafanaConfig.auth.
+  # Remove legacy keys when migrating to local auth; stored Secrets take priority for passwords.
   authenUsers:
     grafana:
       user: "" # Non-empty global input overrides grafanaConfig.auth.username
