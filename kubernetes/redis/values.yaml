@@ -115,7 +115,7 @@ autoscaling:
   # targetMemoryUtilizationPercentage: 80
 
 sharedPersistenceVolume:
-  enabled: true
+  enabled: false
   volumeName: redis-data
   pvcName: redis-data-pvc # Defaults to <fullname>-data; preserve the previous name on upgrade.
   storageSize: 1Gi

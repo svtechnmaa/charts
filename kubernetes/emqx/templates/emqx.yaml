@@ -84,7 +84,8 @@ spec:
       {{- end }}
       {{- if ne (toString .Values.coreTemplate.maxUnavailable) "" }}
       maxUnavailable: {{ .Values.coreTemplate.maxUnavailable }}
-      {{- end }}      {{- if .Values.coreTemplate.nodeSelector }}
+      {{- end }}
+      {{- if .Values.coreTemplate.nodeSelector }}
       nodeSelector:
         {{- include "common.tplvalues.render" (dict "value" .Values.coreTemplate.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
