@@ -73,16 +73,42 @@ healthy Pod and can prevent node drain. PDBs do not prevent node failures.
 
 ## Custom EMQX Config
 
-Set `config.data` to replace the generated websocket config block:
+When `config.data` is empty, the chart generates both WS and WSS listener paths
+from `global.emqx.mqtt.*.mqttPath`. Setting `config.data` replaces that generated
+listener block, even when `config.mode` is `Merge`; the chart does not append or
+overwrite listener paths in your custom HOCON.
+
+The Ingress still uses `global.emqx.mqtt.websocket.mqttPath` and
+`global.emqx.mqtt.secureWebsocket.mqttPath`. Include matching paths for both
+listeners in custom config to avoid failed WebSocket connections. Since
+`config.data` supports Helm templates, reference those values directly:
 
 ```yaml
 config:
   mode: Merge
   data: |
     listeners.ws.default {
-      websocket.mqtt_path = "/mqtt"
+      websocket.mqtt_path = {{ .Values.global.emqx.mqtt.websocket.mqttPath | quote }}
+    }
+    listeners.wss.default {
+      websocket.mqtt_path = {{ .Values.global.emqx.mqtt.secureWebsocket.mqttPath | quote }}
     }
 ```
+
+## Ingress
+
+WS and WSS use separate Ingresses: WS forwards HTTP to port 8083, while WSS
+uses `nginx.ingress.kubernetes.io/backend-protocol: HTTPS` to port 8084.
+Both preserve the listener paths configured above. `ingressClassName` is the
+Helm release name; provide a matching IngressClass when installing standalone.
+`global.enableHttps` controls HTTPS redirects, not certificate provisioning:
+these Ingresses have no `tls` block. Configure the ingress controller's TLS
+certificate or the upstream TLS terminator in the deployment environment.
+
+Prefix-only WS/WSS paths do not enable regex. The optional dashboard Ingress
+still uses a regex/rewrite; ingress-nginx can apply regex matching to other paths
+on that same host. See [ingress-nginx annotations](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/annotations/#use-regex).
+
 
 ## Install
 
@@ -157,6 +183,13 @@ additional list for an HTTP backend that validates application users. Set
 owns the complete authentication chain. Enabling it on an existing anonymous broker will require
 credentials from every client. Existing custom volumes/initContainers must not
 reuse the reserved name `mqtt-bootstrap`.
+
+Disabling the built-in authenticator does not disable the broker. If both
+`mqtt.enabled: false` and `mqtt.additionalAuthentication: []` are set, supply
+authentication in `config.data` unless anonymous access is intentional.
+Without an authentication chain, clients can connect anonymously. Topic
+authorization is a separate policy; `authorization.no_match` does not replace
+client authentication.
 
 References:
 - [EMQX bootstrap authentication](https://docs.emqx.com/en/emqx/latest/guides/access-control/authn/mnesia.html)

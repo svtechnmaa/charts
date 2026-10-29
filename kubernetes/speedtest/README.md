@@ -160,7 +160,7 @@ flowchart LR
 
 ## Important Configuration
 
-- `global.frontendVip`: public IP address or hostname used by application URLs.
+- `global.frontendVip`: required public IP address or hostname used by application URLs. Helm cannot discover a MetalLB address assigned after rendering.
 - `global.enableHttps`: switches generated public URLs between HTTP and HTTPS.
 - `global.speedtest.runInitDataJob`: defaults to false. Enable for initial provisioning, then disable; leaving it enabled reruns initialization on every upgrade.
 - `timezone`: container and CronJob schedule timezone; `global.timezone` overrides it when set.
@@ -243,13 +243,16 @@ rotate the service account and restart consumers together.
 ## Installation
 
 Only one Speedtest release per namespace is supported: Service names are fixed.
-Supply DB/MQTT credentials (or existing Secret references), and Django username/email
+Supply `global.frontendVip`, DB/MQTT credentials (or existing Secret references), and Django username/email
 when init-data is enabled. Save these inputs in a private overlay before installing:
 
 ```sh
 helm upgrade --install speedtest . --namespace speedtest --create-namespace \
-  -f /etc/svtech/speedtest-values.yaml --timeout 35m --wait
+  -f /etc/svtech/speedtest-values.yaml --timeout 35m --wait --wait-for-jobs
 ```
+
+Size the timeout for your database and migration duration; 35 minutes is only an
+example. Read the migration notes below before upgrading an existing database.
 
 Validate the release:
 
@@ -265,6 +268,11 @@ kubectl get pods,svc,ingress,pvc -n speedtest
 ```sh
 helm uninstall speedtest --namespace speedtest
 ```
+
+All four chart-managed PVCs (static, media, MQTT logs, and DB backups) carry
+`helm.sh/resource-policy: keep` and remain after uninstall. There is no `retain`
+switch. Plan manual cleanup or reuse through `pvc.<group>.claimName`; do not
+delete claims containing data you still need. Retention is not an independent backup.
 
 ## Password and application setup checklist
 
@@ -328,3 +336,43 @@ An empty `vite.mqttBrokerHost` uses the browser's page hostname in the frontend
 application. An empty `django.reportChartBackendBaseUrl` leaves report export
 using only its frontend origin; set it when a separate backend cookie origin is
 needed. These fallbacks belong to the application, not Helm.
+
+Every Helm upgrade changes the revision marker and rolls workloads that wait on
+it, including configuration-only upgrades. The image tag alone is not used as a
+migration key because tenant/configuration changes can occur independently.
+The application's [backup-and-migrate.sh](https://github.com/svtechnmaa/SVTECH_centralized_speedtester/blob/main/backend/backup-and-migrate.sh)
+checks `showmigrations --plan` on the **default database** before taking a
+pre-migration backup. It does not unconditionally dump the DB on every upgrade,
+nor does that check separately detect pending migrations in tenant databases.
+Confirm the script in your selected image matches this behavior.
+
+`migration.activeDeadlineSeconds: 0` omits the migration Job deadline. A positive
+value caps the entire Job, including DB connection wait, backup, migration and
+collectstatic. `migration.waitTimeoutSeconds` (default 1800) separately limits
+each waiting initContainer attempt; it does not stop the migration Job.
+
+Avoid `helm upgrade --atomic` during non-transactional MariaDB migrations:
+rollback can delete the in-flight Job and cannot undo SQL DDL. Use a suitable
+Helm timeout, monitor the migration Job and investigate failures before rollback.
+Keep an independent verified DB backup. The gate only protects newly started
+Pods; existing Pods/jobs still need compatible schema changes or a maintenance window.
+
+## HTTPS access
+
+Set the real public hostname/IP before provisioning the initial test-server
+record. For HTTPS, configure the frontend origin(s) explicitly, including any
+non-default port:
+
+```yaml
+global:
+  frontendVip: speedtest.example.com
+  enableHttps: true
+django:
+  allowedHosts: speedtest.example.com
+  csrfTrustedOrigins: https://speedtest.example.com
+```
+
+An empty trusted-origins list does not inherently reject same-origin requests.
+Django must see the correct host and scheme; TLS termination/proxy handling is
+part of the application and ingress setup. Additional trusted origins must be
+listed explicitly. See [Django CSRF settings](https://docs.djangoproject.com/en/5.2/ref/settings/#csrf-trusted-origins).

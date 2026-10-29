@@ -3,43 +3,6 @@
 This chart deploys Grafana and an optional GDG import Job. Configure application
 login and the database connection separately; they are different accounts.
 
-## Standalone values
-
-Save this as a private overlay and replace the DB Secret with your own:
-
-```yaml
-grafanaConfig:
-  auth:
-    username: admin
-    password: "" # Initial login: generate if empty, or supply a password.
-    existingSecret: ""
-    existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
-  database:
-    mysqlHost: mariadb
-    mysqlPort: 3306
-    mysqlDB: grafana
-    auth:
-      username: grafana
-      password: ""
-      existingSecret: database-auth
-      existingSecretPasswordKey: grafana-password
-  subPath: /grafana
-gdgConfig:
-  runInitDataJob: false # Enable after configuring the desired import content.
-```
-
-Run from the charts repository:
-
-```sh
-helm upgrade --install grafana .
-kubectl get pods,svc
-```
-
-Set `image`, `service`, `ingress`, persistence, and `grafanaConfig.subPath` to
-match your deployment. When `global.mariadb-galera.enabled` is true, Grafana
-uses `mysqlDB` directly. Otherwise it uses `<namespace>_<mysqlDB>`; the external
-Ansible provisioning flow must create the matching database.
-
 ## Admin password choices
 
 | Choice | `grafanaConfig.auth` |
@@ -97,3 +60,54 @@ admin key fails explicitly rather than silently deploying an empty password.
 If the Grafana database is already initialized, supply its current password when
 switching from external to managed auth; generating a Secret does not change the
 account stored in SQL. GDG uses that same credential.
+
+## Local and external rendering services
+
+`renderer.enabled` and `chrome.enabled` control deployment of local containers.
+Their `url` settings independently select the service used by Grafana. Set
+`enabled: false` and supply a reachable URL to use a shared/external service.
+To disable an integration entirely, also clear its URL:
+
+```yaml
+renderer:
+  enabled: false
+  url: ""
+chrome:
+  enabled: false
+  url: ""
+```
+
+Leaving the default URL while disabling the local component requires another
+service at that address. Beside that, `chrome.resources` configures the local Chrome container.
+
+## Standalone values
+
+Save this as a private overlay and replace the DB Secret with your own:
+
+```yaml
+grafanaConfig:
+  auth:
+    username: admin
+    password: "" # Initial login: generate if empty, or supply a password.
+    existingSecret: ""
+    existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
+  database:
+    mysqlHost: mariadb
+    mysqlPort: 3306
+    mysqlDB: grafana
+    auth:
+      username: grafana
+      password: ""
+      existingSecret: database-auth
+      existingSecretPasswordKey: grafana-password
+  subPath: /grafana
+gdgConfig:
+  runInitDataJob: false # Enable after configuring the desired import content.
+```
+
+Run from the charts repository:
+
+```sh
+helm upgrade --install grafana .
+kubectl get pods,svc
+```
