@@ -35,12 +35,12 @@ envFrom and volumeMounts come from the top-level values directly, so overrides r
     - -c
     - |
       deadline="${WAIT_FOR_MIGRATIONS_TIMEOUT_SECONDS:-900}"
-      heads="$(alembic heads | awk '{print $1}' | sort)" || exit 1
+      heads="$(alembic heads 2>/dev/null | awk '/^[A-Za-z0-9_.-]+( \(|$)/{print $1}' | sort)" || exit 1
       [ -n "$heads" ] || { echo 'cannot resolve alembic head revision' >&2; exit 1; }
       start=$(date +%s)
       while :; do
         out="$(alembic current 2>&1)"; rc=$?
-        cur="$(printf '%s\n' "$out" | awk '/^[0-9a-f]+( |$)/{print $1}' | sort)"
+        cur="$(printf '%s\n' "$out" | awk '/^[A-Za-z0-9_.-]+( \(|$)/{print $1}' | sort)"
         [ "$cur" = "$heads" ] && exit 0
         case "$out" in
           *"Can't locate revision"*) echo "database revision is newer than this image: $out" >&2; exit 1;;
