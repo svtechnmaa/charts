@@ -109,14 +109,9 @@ jobs:
         changed_charts="${{ steps.get_changed_charts.outputs.changed_charts}}"
         mappingFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/image_chart_mapping.yml"
         dependencyFile="${{ github.workspace }}/stacked_charts/kubernetes/nmaa/Chart.yaml"
-        skipCharts=" proxy thruk nagvis airflow airflow-postgresql-ha "
         found=0
         IFS=',' read -ra items <<< "$changed_charts"
         for item in "${items[@]}"; do
-            if [[ "$skipCharts" == *" ${item} "* ]]; then
-                echo "Skip chart '$item': deprecated in NMAA CI"
-                continue
-            fi
             chartPattern="(^|[^[:alnum:]_-])${item}([^[:alnum:]_-]|$)"
             echo "Checking if chart '$item' exists in $mappingFile or $dependencyFile"
             if { [ -f "$mappingFile" ] && grep -Eq "$chartPattern" "$mappingFile"; } || { [ -f "$dependencyFile" ] && grep -Eq "$chartPattern" "$dependencyFile"; }; then

@@ -1,0 +1,85 @@
+{{- if .Values.routes.enabled }}
+{{- $g := .Values.global }}
+{{- $nginx := dig "ingress-nginx" "enabled" false $g }}
+{{- $routers := list }}
+{{- range $name, $port := .Values.routes.apps }}
+{{- if dig $name "enabled" false $g }}
+{{- $routers = append $routers (dict "name" $name "rule" (printf "PathPrefix(`/%s`)" $name) "url" (printf "http://%s:%v" $name $port)) }}
+{{- end }}
+{{- end }}
+{{- if dig "mage-ai" "enabled" false $g }}
+{{- $routers = append $routers (dict "name" "mage-ai" "rule" "PathPrefix(`/mageai`)" "url" "http://mage-ai:6789") }}
+{{- end }}
+{{- if dig "csv-view" "enabled" false $g }}
+{{- $routers = append $routers (dict "name" "csv-view" "rule" "PathPrefix(`/csv/`)" "url" "http://csv-view:8000" "strip" "/csv") }}
+{{- end }}
+{{- if $nginx }}
+{{- $nginxUrl := printf "http://%s-ingress-frontend:80" .Release.Name }}
+{{- $routers = append $routers (dict "name" "ingress-nginx" "rule" "PathPrefix(`/`)" "url" $nginxUrl "priority" 1 "noSticky" true) }}
+{{- if dig "grafana" "enabled" false $g }}
+{{- $routers = append $routers (dict "name" "grafana" "rule" "PathPrefix(`/grafana`)" "url" $nginxUrl "noSticky" true) }}
+{{- end }}
+{{- else }}
+{{- if dig "grafana" "enabled" false $g }}
+{{- $routers = append $routers (dict "name" "grafana" "rule" "PathPrefix(`/grafana`)" "url" "http://grafana:3000") }}
+{{- end }}
+{{- if dig "icinga2-report" "enabled" false $g }}
+{{- $routers = append $routers (dict "name" "icinga2-report" "rule" "PathPrefix(`/grafana/send_request/`)" "url" "http://icinga2-report:8888" "strip" "/grafana/send_request") }}
+{{- end }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}-routes
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  routes.yaml: |-
+    http:
+      routers:
+        {{- range $r := $routers }}
+        {{- range $tls := list false true }}
+        {{ $r.name }}{{ if $tls }}-tls{{ end }}:
+          rule: {{ $r.rule | quote }}
+          service: {{ $r.name }}
+          priority: {{ $r.priority | default (add 1000 (len $r.rule)) }}
+          {{- if $r.strip }}
+          middlewares:
+            - {{ $r.name }}-strip
+          {{- end }}
+          {{- if $tls }}
+          tls: {}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+      middlewares:
+        {{- range $r := $routers }}
+        {{- if $r.strip }}
+        {{ $r.name }}-strip:
+          stripPrefix:
+            prefixes:
+              - {{ $r.strip | quote }}
+        {{- end }}
+        {{- end }}
+      services:
+        {{- range $r := $routers }}
+        {{ $r.name }}:
+          loadBalancer:
+            {{- if not $r.noSticky }}
+            sticky:
+              cookie:
+                name: {{ $r.name }}_sticky
+                httpOnly: true
+                secure: {{ not $g.ci }}
+            {{- end }}
+            servers:
+              - url: {{ $r.url | quote }}
+        {{- end }}
+    {{- if not (dig "topology-app" "enabled" false $g) }}
+    tls:
+      stores:
+        default:
+          defaultCertificate:
+            certFile: /tls/tls.crt
+            keyFile: /tls/tls.key
+    {{- end }}
+{{- end }}
