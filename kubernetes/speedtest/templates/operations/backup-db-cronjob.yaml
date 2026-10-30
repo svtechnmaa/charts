@@ -1,0 +1,71 @@
+{{- if not (regexMatch "^[0-9]+$" (toString .Values.backup.retentionDays)) }}
+{{- fail "backup.retentionDays must be a non-negative integer" }}
+{{- end }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "speedtest.resourceName" (dict "suffix" "backup-db-cronjob" "context" .) }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: backup-db
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.commonAnnotations }}
+  annotations: {{- include "common.tplvalues.render" (dict "value" .Values.commonAnnotations "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  timeZone: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) | quote }}
+  concurrencyPolicy: Forbid
+  schedule: {{ .Values.backup.schedule | quote }}
+  jobTemplate:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: backup-db
+        {{- if .Values.commonLabels }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 8 }}
+        {{- end }}
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "common.labels.standard" . | nindent 12 }}
+            app.kubernetes.io/component: backup-db
+            {{- if .Values.commonLabels }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 12 }}
+            {{- end }}
+            {{- with .Values.podLabels }}
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+            {{- end }}
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 12 }}
+          {{- end }}
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+            {{- include "speedtest.migrationWait" (merge (dict "migrationVolumeName" "backup-volume") .) | nindent 12 }}
+          containers:
+            - name: backup-db
+              image: {{ include "common.images.image" (dict "imageRoot" .Values.image.django "global" .Values.global) }}
+              imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+              command: ["/bin/sh", "-c", "find /app/backup-db -type f -name '*.sql' -mtime +{{ .Values.backup.retentionDays | int }} -delete && python manage.py backup_database"]
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: "/app/backup-db"
+              env:
+                - name: TZ
+                  value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+                - name: DB_ENGINE
+                  value: {{ .Values.django.dbEngine | quote }}
+                {{- include "speedtest.databaseEnv" . | nindent 16 }}
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: {{ include "speedtest.pvcName" (dict "group" "backupDb" "context" .) }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

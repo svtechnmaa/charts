@@ -56,8 +56,8 @@ spec:
             - /bin/sh
             - -c
             - |
-              {{- if .Values.grafanaConfig.mysqlHost }}
-              until nc -zvw5 {{ .Values.grafanaConfig.mysqlHost }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
+              {{- if .Values.grafanaConfig.database.mysqlHost }}
+              until nc -zvw5 {{ .Values.grafanaConfig.database.mysqlHost }} 3306; do echo "Waiting for MariaDB..."; sleep 2; done
               {{- else }}
               until nc -zvw5 mariadb 3306; do echo "Waiting for MariaDB..."; sleep 2; done
               {{- end }}
@@ -76,23 +76,23 @@ spec:
             - name: GF_DATABASE_TYPE
               value: mysql
             - name: GF_DATABASE_HOST
-              value: {{ .Values.grafanaConfig.mysqlHost | quote }}
+              value: {{ .Values.grafanaConfig.database.mysqlHost | quote }}
             - name: GF_DATABASE_PORT
-              value: {{ .Values.grafanaConfig.mysqlPort | quote }}
+              value: {{ .Values.grafanaConfig.database.mysqlPort | quote }}
             - name: GF_DATABASE_NAME
             {{- if index (index .Values.global "mariadb-galera") "enabled" }}
-              value: {{ .Values.grafanaConfig.mysqlDB | quote }}
+              value: {{ tpl .Values.grafanaConfig.database.mysqlDB . | required "grafanaConfig.database.mysqlDB is required" | quote }}
             {{- else }}
-              value: "{{ .Release.Namespace }}_{{ .Values.grafanaConfig.mysqlDB }}"
+              value: {{ printf "%s_%s" .Release.Namespace (tpl .Values.grafanaConfig.database.mysqlDB . | required "grafanaConfig.database.mysqlDB is required") | quote }}
             {{- end }}
             - name: GF_DATABASE_USER
-              value: {{ .Values.grafanaConfig.mysqlUser | quote }}
+              value: {{ tpl .Values.grafanaConfig.database.auth.username . | required "grafanaConfig.database.auth.username is required" | quote }}
             - name: GF_DATABASE_PASSWORD
-              value: {{ .Values.grafanaConfig.mysqlPassword | quote }}
-            - name: GF_SECURITY_ADMIN_USER
-              value: {{ include "admin.user" . }}
-            - name: GF_SECURITY_ADMIN_PASSWORD
-              value: {{ include "admin.password" . }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.databaseSecretName" . | quote }}
+                  key: {{ include "grafana.databaseSecretKey" . | quote }}
+            {{- include "grafana.adminEnv" . | nindent 12 }}
             - name: GF_SECURITY_ANGULAR_SUPPORT_ENABLED
               value: "true"
             - name: GF_SECURITY_ALLOW_EMBEDDING
@@ -104,9 +104,9 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_SERVER_ROOT_URL
-              value: "https://{{ .Values.global.frontendVip }}/grafana"
+              value: {{ default (printf "%s://%s%s" (ternary "https" "http" (default false .Values.global.enableHttps)) .Values.global.frontendVip .Values.grafanaConfig.subPath) .Values.grafanaConfig.rootUrl | quote }}
             - name: GF_SERVER_SERVE_FROM_SUB_PATH
-              value: "true"
+              value: {{ (ternary "true" "false" (not (empty .Values.grafanaConfig.subPath))) | quote }}
             - name: GF_PANELS_DISABLE_SANITIZE_HTML
               value: "true"
             - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
@@ -116,13 +116,17 @@ spec:
             - name: GF_FEATURE_TOGGLES_ENABLE
               value: accessControlOnCall,idForwarding
             - name: GF_REPORTER_PLUGIN_APP_URL
-              value: http://grafana:3000/grafana/
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
+            {{- with .Values.renderer.url }}
             - name: GF_RENDERING_SERVER_URL
-              value: http://renderer:8081/render
+              value: {{ tpl . $ | quote }}
+            {{- end }}
+            {{- with .Values.chrome.url }}
             - name: GF_REPORTER_PLUGIN_REMOTE_CHROME_URL
-              value: http://chrome:9222
+              value: {{ tpl . $ | quote }}
+            {{- end }}
             - name: GF_RENDERING_CALLBACK_URL
-              value: http://grafana:3000/grafana/
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}{{ .Values.grafanaConfig.subPath }}"
             - name: GF_REPORTER_PLUGIN_SKIP_TLS_CHECK
               value: "true"
             - name: GF_REPORTER_PLUGIN_NATIVE_RENDERER
@@ -133,12 +137,20 @@ spec:
               value: grid
             - name: GF_REPORTER_PLUGIN_REPORT_DASHBOARD_MODE
               value: full
+            {{- if .Values.grafanaConfig.env }}
+            {{- include "common.tplvalues.render" ( dict "value" .Values.grafanaConfig.env "context" $ ) | nindent 12 }}
+            {{- end }}
+
           ports:
             - name: grafana
               containerPort: 3000
+        {{- if .Values.chrome.enabled }}
         - args:
           - --ignore-certificate-errors
           - --disable-gpu
+          - --headless
+          - --no-sandbox
+          - --disable-dev-shm-usage
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.chrome.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.chrome.image.pullPolicy | quote }}
           name: chrome
@@ -146,9 +158,13 @@ spec:
           - containerPort: {{ .Values.chrome.service.port }}
             protocol: TCP
             name: chrome
+          resources:
+            {{- toYaml .Values.chrome.resources | nindent 12 }}
           volumeMounts:
           - mountPath: /dev/shm
             name: shm
+        {{- end }}
+        {{- if .Values.renderer.enabled }}
         - env:
           - name: IGNORE_HTTPS_ERRORS
             value: "true"
@@ -167,10 +183,13 @@ spec:
           - containerPort: {{ .Values.renderer.service.port }}
             name: renderer
             protocol: TCP
+        {{- end }}
       volumes:
+      {{- if .Values.chrome.enabled }}
       - emptyDir:
           medium: Memory
           sizeLimit: 2Gi
         name: shm
+      {{- end }}
       imagePullSecrets:
       - name: ghcr-pull-secret

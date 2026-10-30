@@ -1,0 +1,13 @@
+{{/* Fail on retired credential paths rather than silently use another account. */}}
+{{- if hasKey .Values.mqtt "username" }}
+{{- fail "Move mqtt.username to mqtt.auth.username" }}
+{{- end }}
+{{- if hasKey .Values.mqtt "password" }}
+{{- fail "Move mqtt.password to mqtt.auth.password" }}
+{{- end }}
+{{- if hasKey .Values.mqtt "existingSecret" }}
+{{- fail "Move mqtt.existingSecret to mqtt.auth.existingSecret" }}
+{{- end }}
+{{- if hasKey .Values.mqtt "existingSecretPasswordKey" }}
+{{- fail "Move mqtt.existingSecretPasswordKey to mqtt.auth.existingSecretPasswordKey" }}
+{{- end }}
