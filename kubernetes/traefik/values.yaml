@@ -160,6 +160,7 @@ args:
   httpEndpoint: "http://topology-app/api/v1/traefik"
   apiDashboard: "true"
   logLevel: "INFO"
+  readTimeout: "300s"
   entryPoints:
     web:
       address: ":80"
@@ -169,6 +170,13 @@ args:
       asDefault: true
     traefik:
       address: ":8080"
+
+routes:
+  enabled: true
+  apps:
+    rundeck: 4440
+    icingaweb: 8080
+    gitlist: 80
 
 timezone: Asia/Ho_Chi_Minh
 env: {}

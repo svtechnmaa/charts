@@ -24,6 +24,10 @@ spec:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: {{ .Chart.Name }} # replace if needed
+      {{- if .Values.routes.enabled }}
+      annotations:
+        checksum/routes: {{ include (print $.Template.BasePath "/routes-configmap.yaml") . | sha256sum }}
+      {{- end }}
     spec:
       # Allocate pods to nodes
       {{- if .Values.affinity }}
@@ -61,6 +65,9 @@ spec:
             {{- end }}       
           args:
             - --providers.http.endpoint={{ .Values.args.httpEndpoint }}
+            {{- if .Values.routes.enabled }}
+            - --providers.file.filename=/etc/traefik/dynamic/routes.yaml
+            {{- end }}
             - --api.dashboard={{ .Values.args.apiDashboard }}
             - --log.level={{ .Values.args.logLevel }}
             - --entryPoints.web.address={{ .Values.args.entryPoints.web.address }}
@@ -68,9 +75,13 @@ spec:
             - --entryPoints.websecure.address={{ .Values.args.entryPoints.websecure.address }}
             - --entryPoints.websecure.asDefault={{ .Values.args.entryPoints.websecure.asDefault }}
             - --entryPoints.traefik.address={{ .Values.args.entryPoints.traefik.address }}
+            - --entryPoints.web.transport.respondingTimeouts.readTimeout={{ .Values.args.readTimeout }}
+            - --entryPoints.websecure.transport.respondingTimeouts.readTimeout={{ .Values.args.readTimeout }}
+            {{- if not .Values.global.ci }}
             - --entrypoints.web.http.redirections.entryPoint.to=websecure
             - --entrypoints.web.http.redirections.entryPoint.scheme=https
             - --entrypoints.web.http.redirections.entrypoint.permanent=true
+            {{- end }}
           env:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
@@ -102,6 +113,11 @@ spec:
             {{- if .Values.volumeMounts }}
             {{- toYaml .Values.volumeMounts | nindent 12 }}
             {{- end }}
+            {{- if .Values.routes.enabled }}
+            - name: traefik-routes
+              mountPath: /etc/traefik/dynamic
+              readOnly: true
+            {{- end }}
 
       volumes:
       # shareVolume(volume): define in the global values
@@ -117,4 +133,9 @@ spec:
       # unshareVolume(volume): define in the chart's values.yaml
         {{- if .Values.volumes }}
         {{- toYaml .Values.volumes | nindent 8 }}
+        {{- end }}
+        {{- if .Values.routes.enabled }}
+        - name: traefik-routes
+          configMap:
+            name: {{ include "common.names.fullname" . }}-routes
         {{- end }}
