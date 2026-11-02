@@ -1,0 +1,122 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Chart.Name }}-datasource-init
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-entities-init
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "20"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "20"
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: grafana-entities-init
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "common.names.fullname" . }}-cd
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      volumes:
+      # shareVolume(volume): define in the global values
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+      # unshareVolume(volume): define in the chart's values.yaml
+        {{- if .Values.volumes }}
+        {{- tpl (toYaml .Values.volumes) $ | nindent 8 }}
+        {{- end }}
+        - name: grafana-entities
+          emptyDir: {}
+      initContainers:
+        - name: grafana-entities
+          image: duchieu2920/grafana-entities:v1.0.2
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CD_URL
+              value: {{ required "cd.url is required for the grafana-entities push" .Values.cd.url | quote }}
+            - name: GIT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: signer_name
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: token
+            - name: GIT_TERMINAL_PROMPT
+              value: "0"
+          volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+            - name: grafana-entities
+              mountPath: /opt/grafana-entities
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -Eeuo pipefail
+
+              log() {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+
+              askpass_file="$(mktemp)"
+              trap 'rm -f "$askpass_file"' EXIT
+              cat > "$askpass_file" <<'EOF'
+              #!/bin/sh
+              case "$1" in
+                *Username*) printf '%s\n' "$GIT_USERNAME" ;;
+                *Password*) printf '%s\n' "$GIT_TOKEN" ;;
+              esac
+              EOF
+              chmod 700 "$askpass_file"
+              export GIT_ASKPASS="$askpass_file"
+
+              until git ls-remote "$CD_URL" >/dev/null 2>&1; do
+                log "Waiting for Git repository ${CD_URL} to become available..."
+                sleep 5
+              done
+
+              log "Pushing Grafana entities to git server"
+              cd /tmp/grafana-entities
+              if ! git push "$CD_URL" \
+                HEAD:refs/heads/main \
+                HEAD:refs/heads/upstream; then
+                log "Failed to push Grafana entities to git server"
+                exit 1
+              fi
+              log "Grafana entities pushed to git server successfully"
+              log "Preparing Grafana entities for init datasources and library panels"
+              cp -r /tmp/grafana-entities/* /opt/grafana-entities/
+      containers:
+{{ include "grafana.initDatasources" . }}
+{{ include "grafana.libraryInitContainer" . }}
+{{ include "grafana.gitsyncProvisioning" . }}

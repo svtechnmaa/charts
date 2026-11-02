@@ -1,0 +1,305 @@
+{{- define "grafana.libraryInitContainer" }}
+        - name: library-init
+          image: duchieu2920/svtech_grafana:v13.1.3-ubuntu
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CD_ORGANIZATIONS_JSON
+              value: {{ .Values.cd.organizations | default list | toJson | quote }}
+            - name: CD_DEFAULT_PATHS_JSON
+              value: {{ .Values.cd.path | default list | toJson | quote }}
+            - name: GRAFANA_SERVER
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
+            - name: GRAFANA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_user
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_password
+            # GDG v0.9.x requires the password key to exist in the config and
+            # reads the actual secret through this environment override.
+            - name: GDG_CONTEXTS__RUNTIME__PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_password
+          volumeMounts:
+            - name: grafana-entities
+              mountPath: /opt/grafana/grafana-entities
+              readOnly: true
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -Eeuo pipefail
+
+              log() {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+
+              trim() {
+                sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$1"
+              }
+
+              validate_repository_path() {
+                local path="$1"
+
+                if [[ -z "$path" || "$path" == /* || "/$path/" == *"/../"* ]]; then
+                  log "Invalid cd.path entry: ${path}" >&2
+                  return 1
+                fi
+              }
+
+              organization_folder() {
+                local org="$1"
+                local slug
+
+                slug="$(
+                  printf '%s' "$org" |
+                    tr '[:upper:]' '[:lower:]' |
+                    sed 's/[^a-z0-9]/-/g; s/-\+/-/g; s/^-//; s/-$//'
+                )"
+                [[ -n "$slug" ]] || slug="main-org"
+                printf 'org_%s\n' "$slug"
+              }
+
+              wait_grafana() {
+                local timeout="${1:-300}"
+
+                until curl -fsS \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/health" >/dev/null; do
+                  timeout=$((timeout - 5))
+                  if (( timeout <= 0 )); then
+                    log "Timeout waiting for Grafana at ${GRAFANA_SERVER}" >&2
+                    exit 1
+                  fi
+                  log "Waiting for Grafana at ${GRAFANA_SERVER}..."
+                  sleep 5
+                done
+              }
+
+              resolve_org_name() {
+                local requested_org="$1"
+
+                if [[ "${requested_org,,}" == "main" || "${requested_org,,}" == "default" ]]; then
+                  jq -r 'first(.[] | select(.id == 1) | .name) // empty' <<< "$TARGET_ORGS"
+                  return
+                fi
+
+                jq -r --arg org "$requested_org" \
+                  'first(.[] | select((.name | ascii_downcase) == ($org | ascii_downcase)) | .name) // empty' \
+                  <<< "$TARGET_ORGS"
+              }
+
+              normalize_library_panel() {
+                local source_file="$1"
+                local nested_path="$2"
+                local output_file="$3"
+
+                if jq -e 'type == "object" and (.Entity | type == "object")' \
+                  "$source_file" >/dev/null; then
+                  jq --arg nested_path "$nested_path" \
+                    '.NestedPath = $nested_path' \
+                    "$source_file" > "$output_file"
+                elif jq -e 'type == "object"' "$source_file" >/dev/null; then
+                  jq --arg nested_path "$nested_path" \
+                    '{Entity: ., NestedPath: $nested_path}' \
+                    "$source_file" > "$output_file"
+                else
+                  log "Invalid library-panel JSON object: ${source_file}" >&2
+                  return 1
+                fi
+
+                if ! jq -e '
+                  (.Entity.uid | type == "string" and length > 0) and
+                  (.Entity.name | type == "string" and length > 0) and
+                  (.Entity.model | type == "object")
+                ' "$output_file" >/dev/null; then
+                  log "Library panel is missing Entity.uid, Entity.name, or Entity.model: ${source_file}" >&2
+                  return 1
+                fi
+              }
+
+              merge_library_panels() {
+                local destination="$1"
+                local raw_path repository_path source file relative target
+                local nested_path candidate
+                local count=0
+
+                mkdir -p "$destination"
+
+                for raw_path in "${REPOSITORY_PATHS[@]}"; do
+                  repository_path="$(trim "$raw_path")"
+                  [[ -n "$repository_path" ]] || continue
+                  validate_repository_path "$repository_path"
+
+                  source="/opt/grafana/grafana-entities/${repository_path}/libraryelements"
+                  if [[ ! -d "$source" ]]; then
+                    log "Library-panel directory not found; skipping ${repository_path}: ${source}"
+                    continue
+                  fi
+
+                  while IFS= read -r -d '' file; do
+                    relative="${file#"$source"/}"
+                    target="${destination}/${relative}"
+                    mkdir -p "$(dirname "$target")"
+
+                    nested_path="$(dirname "$relative")"
+                    if [[ "$nested_path" == "." ]]; then
+                      nested_path="General"
+                    fi
+
+                    candidate="$(mktemp /tmp/grafana-library-panel.XXXXXX)"
+                    if ! normalize_library_panel "$file" "$nested_path" "$candidate"; then
+                      rm -f "$candidate"
+                      exit 1
+                    fi
+
+                    if [[ -e "$target" ]]; then
+                      if ! cmp -s "$candidate" "$target"; then
+                        rm -f "$candidate"
+                        log "Library-panel collision: ${relative} differs in ${repository_path}" >&2
+                        exit 1
+                      fi
+                      rm -f "$candidate"
+                      log "Skipping identical library panel ${relative} from ${repository_path}"
+                      continue
+                    fi
+
+                    mv "$candidate" "$target"
+                    count=$((count + 1))
+                    log "Adding library panel ${relative} from ${repository_path}"
+                  done < <(find "$source" -type f -name '*.json' -size +0c -print0 | sort -z)
+                done
+
+                if (( count == 0 )); then
+                  log "No library-panel JSON files found below the configured cd.path entries; nothing to upload"
+                else
+                  log "Prepared ${count} unique library-panel files"
+                fi
+
+                LIBRARY_PANEL_COUNT="$count"
+              }
+
+              write_gdg_config() {
+                local config_dir="$1"
+                local output_dir="$2"
+                local org="$3"
+                local org_json output_json server_json user_json
+
+                org_json="$(jq -Rn --arg value "$org" '$value')"
+                output_json="$(jq -Rn --arg value "$output_dir" '$value')"
+                server_json="$(jq -Rn --arg value "$GRAFANA_SERVER" '$value')"
+                user_json="$(jq -Rn --arg value "$GRAFANA_USER" '$value')"
+
+                mkdir -p "$config_dir"
+                cat > "${config_dir}/gdg.yml" <<EOF
+              context_name: runtime
+              storage_engine: {}
+              contexts:
+                runtime:
+                  organization_name: ${org_json}
+                  output_path: ${output_json}
+                  user_name: ${user_json}
+                  password: ""
+                  url: ${server_json}
+                  watched: []
+                  dashboard_settings:
+                    ignore_filters: true
+              global:
+                debug: false
+                api_debug: false
+                clear_output: false
+                ignore_ssl_errors: false
+                retry_count: 2
+                retry_delay: 5s
+              EOF
+              }
+
+              upload_library_panels() {
+                local config_dir="$1"
+                local timeout="${2:-300}"
+
+                until (cd "$config_dir" && gdg backup lib upload --context runtime); do
+                  timeout=$((timeout - 5))
+                  if (( timeout <= 0 )); then
+                    log "Failed to upload library panels after retries" >&2
+                    return 1
+                  fi
+                  log "Library-panel upload is not ready; retrying in 5 seconds..."
+                  sleep 5
+                done
+              }
+
+              wait_grafana
+              TARGET_ORGS="$(
+                curl -fsS \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/orgs"
+              )"
+
+              rm -rf /tmp/grafana-library
+              configured_orgs=0
+              declare -A CONFIGURED_ORG_NAMES=()
+
+              while IFS= read -r organization_config; do
+                requested_org="$(jq -r '.org // empty' <<< "$organization_config")"
+                mapfile -t REPOSITORY_PATHS < <(
+                  jq -r --argjson default "$CD_DEFAULT_PATHS_JSON" \
+                    '(.path // .paths // $default)[]? // empty' <<< "$organization_config"
+                )
+
+                if [[ -z "$requested_org" ]]; then
+                  log "Every cd.organizations entry requires org" >&2
+                  exit 1
+                fi
+                if (( ${#REPOSITORY_PATHS[@]} == 0 )); then
+                  log "Organization ${requested_org} requires at least one path" >&2
+                  exit 1
+                fi
+
+                org="$(resolve_org_name "$requested_org")"
+                if [[ -z "$org" ]]; then
+                  log "Grafana organization not found: ${requested_org}" >&2
+                  exit 1
+                fi
+                org_key="${org,,}"
+                if [[ -n "${CONFIGURED_ORG_NAMES[$org_key]:-}" ]]; then
+                  log "Duplicate organization configuration: ${org}" >&2
+                  exit 1
+                fi
+                CONFIGURED_ORG_NAMES[$org_key]="$org"
+
+                SOURCE_LIBRARY_DIR="/tmp/grafana-library/source-${configured_orgs}"
+                LIBRARY_PANEL_COUNT=0
+                merge_library_panels "$SOURCE_LIBRARY_DIR"
+                if (( LIBRARY_PANEL_COUNT == 0 )); then
+                  log "No library panels configured for ${org}; skipping upload"
+                  continue
+                fi
+
+                org_folder="$(organization_folder "$org")"
+                config_dir="/tmp/grafana-library/config-${configured_orgs}"
+                output_dir="/tmp/grafana-library/output-${configured_orgs}"
+                target_dir="${output_dir}/${org_folder}/libraryelements"
+
+                mkdir -p "$target_dir"
+                cp -a "${SOURCE_LIBRARY_DIR}/." "$target_dir/"
+                write_gdg_config "$config_dir" "$output_dir" "$org"
+
+                log "Uploading library panels to ${org}"
+                upload_library_panels "$config_dir"
+                configured_orgs=$((configured_orgs + 1))
+              done < <(jq -c '.[]' <<< "$CD_ORGANIZATIONS_JSON")
+
+              if (( configured_orgs == 0 )); then
+                log "No organizations contained library panels; nothing to upload"
+                exit 0
+              fi
+
+              log "Library-panel initialization completed for ${configured_orgs} organizations"
+{{- end }}

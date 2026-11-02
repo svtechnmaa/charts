@@ -1,0 +1,439 @@
+{{- define "grafana.initDatasources" }}
+        - name: datasource-init
+          image: duchieu2920/svtech_grafana:v13.1.3-ubuntu
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CD_ORGANIZATIONS_JSON
+              value: {{ .Values.cd.organizations | default list | toJson | quote }}
+            - name: CD_DEFAULT_PATHS_JSON
+              value: {{ .Values.cd.path | default list | toJson | quote }}
+            - name: GRAFANA_SERVER
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
+            - name: GRAFANA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_user
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_password
+            - name: RUNTIME_CONFIGMAP_NAME
+              value: {{ include "common.names.fullname" . }}-datasources
+            - name: RUNTIME_MOUNT_FILE
+              value: /etc/grafana/provisioning/datasources/datasources.yaml
+          volumeMounts:
+          # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+            - name: grafana-entities
+              mountPath: /opt/grafana/grafana-entities
+              readOnly: true
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -Eeuo pipefail
+
+              log () {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+
+              mkdir -p /tmp/grafana
+              SOURCE_BODY_FILE=/tmp/grafana/source-datasource-body.yaml
+              RUNTIME_FILE=/tmp/grafana/datasources.yaml
+
+              trim() {
+                sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$1"
+              }
+
+              wait_grafana() {
+                local timeout="${1:-300}"
+
+                until curl --fail --silent --show-error \
+                  --user "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/health" >/dev/null; do
+                  timeout=$((timeout - 5))
+                  if (( timeout <= 0 )); then
+                    log "Timeout waiting for Grafana at ${GRAFANA_SERVER}" >&2
+                    exit 1
+                  fi
+                  log "Waiting for Grafana at ${GRAFANA_SERVER}..."
+                  sleep 5
+                done
+              }
+
+              wait_for_datasource_directories() {
+                local timeout="${1:-300}"
+                local all_ready
+                local raw_path
+                local repository_path
+                local datasource_dir
+
+                while (( timeout > 0 )); do
+                  all_ready=true
+
+                  for raw_path in "${REPOSITORY_PATHS[@]}"; do
+                    repository_path="$(trim "$raw_path")"
+                    datasource_dir="/opt/grafana/grafana-entities/${repository_path}/datasources"
+
+                    if [[ ! -d "$datasource_dir" ]] || \
+                       [[ -z "$(find "$datasource_dir" -maxdepth 1 -type f \
+                         \( -name '*.yaml' -o -name '*.yml' \) -size +0c -print -quit)" ]]; then
+                      log "Waiting for datasource fragments in ${datasource_dir}..."
+                      all_ready=false
+                    fi
+                  done
+
+                  if [[ "$all_ready" == "true" ]]; then
+                    return 0
+                  fi
+
+                  sleep 5
+                  timeout=$((timeout - 5))
+                done
+
+                log "Timeout waiting for datasource files below /opt/grafana/grafana-entities" >&2
+                exit 1
+              }
+
+              append_datasource_fragment() {
+                local file="$1"
+                local repository_path="$2"
+                local entry_count
+                local datasource_name
+                local first_content
+
+                first_content="$(sed -n '
+                  /^[[:space:]]*$/d
+                  /^[[:space:]]*#/d
+                  p
+                  q
+                ' "$file")"
+                if [[ ! "$first_content" =~ ^[[:space:]]*-[[:space:]]*name:[[:space:]]* ]]; then
+                  log "${file} must start with one '- name:' datasource list item" >&2
+                  exit 1
+                fi
+
+                entry_count="$(
+                  awk '
+                    /^[[:space:]]*-[[:space:]]*name:[[:space:]]*/ { count++ }
+                    END { print count + 0 }
+                  ' "$file"
+                )"
+
+                if (( entry_count < 1 )); then
+                  log "${file} must contain at least one '- name:' datasource entry" >&2
+                  exit 1
+                fi
+
+                if grep -Eq '^[[:space:]]*(apiVersion|prune|datasources|deleteDatasources):' "$file"; then
+                  log "${file} must contain one datasource list item, not a provisioning document" >&2
+                  exit 1
+                fi
+
+                log "Found ${entry_count} datasource entries in ${file}"
+
+                datasource_name="$(awk '
+                  /^[[:space:]]*-[[:space:]]*name:[[:space:]]*/ {
+                    value=$0
+                    sub(/^[[:space:]]*-[[:space:]]*name:[[:space:]]*/, "", value)
+                    print value
+                    exit
+                  }
+                ' "$file")"
+
+                if [[ -n "${DATASOURCE_SOURCE_BY_NAME[$datasource_name]:-}" ]]; then
+                  log "Duplicate datasource name ${datasource_name}: ${file} and ${DATASOURCE_SOURCE_BY_NAME[$datasource_name]}" >&2
+                  exit 1
+                fi
+                DATASOURCE_SOURCE_BY_NAME[$datasource_name]="${repository_path}/${file##*/}"
+
+                log "Adding datasource ${datasource_name} from ${repository_path}/datasources/${file##*/}"
+
+                # Nest the fragment below `datasources:` and discard its source
+                # orgId. The target organization ID is injected afterwards.
+                awk '
+                  /^[[:space:]]*-[[:space:]]*name:[[:space:]]*/ {
+                    match($0, /^[[:space:]]*/)
+                    datasource_indent=RLENGTH
+                    found=1
+                    print "  " $0
+                    next
+                  }
+                  {
+                    match($0, /^[[:space:]]*/)
+                    indent=RLENGTH
+                    property=substr($0, RLENGTH + 1)
+                    if (found && indent == datasource_indent + 2 && property ~ /^(orgId|id):[[:space:]]*/) {
+                      next
+                    }
+                    print "  " $0
+                  }
+                ' "$file" >> "$SOURCE_BODY_FILE"
+              }
+
+              combine_datasource_fragments() {
+                local raw_path
+                local repository_path
+                local datasource_dir
+                local file
+                local count=0
+
+                : > "$SOURCE_BODY_FILE"
+
+                for raw_path in "${REPOSITORY_PATHS[@]}"; do
+                  repository_path="$(trim "$raw_path")"
+                  datasource_dir="/opt/grafana/grafana-entities/${repository_path}/datasources"
+
+                  while IFS= read -r -d '' file; do
+                    append_datasource_fragment "$file" "$repository_path"
+                    count=$((count + 1))
+                  done < <(
+                    find "$datasource_dir" -maxdepth 1 -type f \
+                      \( -name '*.yaml' -o -name '*.yml' \) -size +0c \
+                      -print0 | sort -z
+                  )
+                done
+
+                if (( count == 0 )); then
+                  log "No datasource fragments found for organization ${CURRENT_ORG}" >&2
+                  exit 1
+                fi
+
+                log "Combined ${count} datasource fragments"
+              }
+
+              resolve_org_id() {
+                local org="$1"
+
+                if [[ "${org,,}" == "main" || "${org,,}" == "default" ]]; then
+                  echo "1"
+                  return 0
+                fi
+
+                jq -r --arg org "$org" \
+                  'first(.[] | select((.name | ascii_downcase) == ($org | ascii_downcase)) | .id) // empty' \
+                  <<< "$TARGET_ORGS"
+              }
+
+              append_organization_datasources() {
+                local org="$1"
+                local org_id="$2"
+
+                log "Datasource provisioning target: ${org} (${org_id})"
+                awk -v orgId="$org_id" '
+                    /^[[:space:]]*-[[:space:]]*name:[[:space:]]*/ {
+                      print
+
+                      match($0, /^[[:space:]]*/)
+                      datasource_indent=RLENGTH
+                      indent=substr($0, RSTART, RLENGTH)
+
+                      current_name=$0
+                      sub(/^[[:space:]]*-[[:space:]]*name:[[:space:]]*/, "", current_name)
+
+                      print indent "  orgId: " orgId
+                      next
+                    }
+
+                    {
+                      match($0, /^[[:space:]]*/)
+                      property_indent=RLENGTH
+                      property=substr($0, RLENGTH + 1)
+
+                      if ( property_indent == datasource_indent + 2 && property ~ /^isDefault:[[:space:]]*true([[:space:]]*(#.*)?)?$/) {
+                        if (default_seen) {
+                          sub(/isDefault:[[:space:]]*true/, "isDefault: false")
+                          print "Disabling additional default datasource: " current_name > "/dev/stderr"
+                        } else {
+                          default_seen=1
+                          print "Default datasource for orgId " orgId ": " current_name > "/dev/stderr"
+                        }
+                      }
+
+                      print
+                    }
+                ' "$SOURCE_BODY_FILE" >> "$RUNTIME_FILE"
+              }
+
+              publish_runtime_configmap() {
+                local service_account_token
+                local service_account_namespace
+                local kube_ca
+                local kube_api
+                local patch_body
+                local create_body
+                local http_code
+
+                service_account_token="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+                service_account_namespace="$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
+                kube_ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                kube_api=https://kubernetes.default.svc.cluster.local
+
+                patch_body="$(jq -n --rawfile yaml "$RUNTIME_FILE" \
+                  '{data: {"datasources.yaml": $yaml}}')"
+
+                http_code="$(curl --silent --show-error \
+                  --output /tmp/configmap-response \
+                  --write-out '%{http_code}' \
+                  --cacert "$kube_ca" \
+                  --header "Authorization: Bearer ${service_account_token}" \
+                  --header 'Content-Type: application/merge-patch+json' \
+                  --request PATCH \
+                  --data "$patch_body" \
+                  "${kube_api}/api/v1/namespaces/${service_account_namespace}/configmaps/${RUNTIME_CONFIGMAP_NAME}")"
+
+                if [[ "$http_code" == "404" ]]; then
+                  create_body="$(jq -n \
+                    --arg name "$RUNTIME_CONFIGMAP_NAME" \
+                    --rawfile yaml "$RUNTIME_FILE" \
+                    '{apiVersion: "v1", kind: "ConfigMap", metadata: {name: $name}, data: {"datasources.yaml": $yaml}}')"
+
+                  http_code="$(curl --silent --show-error \
+                    --output /tmp/configmap-response \
+                    --write-out '%{http_code}' \
+                    --cacert "$kube_ca" \
+                    --header "Authorization: Bearer ${service_account_token}" \
+                    --header 'Content-Type: application/json' \
+                    --request POST \
+                    --data "$create_body" \
+                    "${kube_api}/api/v1/namespaces/${service_account_namespace}/configmaps")"
+                fi
+
+                if [[ ! "$http_code" =~ ^2 ]]; then
+                  cat /tmp/configmap-response >&2
+                  log "Failed to create or update ConfigMap ${RUNTIME_CONFIGMAP_NAME}; HTTP ${http_code}" >&2
+                  exit 1
+                fi
+
+                log "Updated runtime datasource ConfigMap ${RUNTIME_CONFIGMAP_NAME}"
+              }
+
+              wait_for_runtime_projection() {
+                local timeout="${1:-180}"
+                local expected_checksum
+                local observed_checksum
+
+                expected_checksum="$(sha256sum "$RUNTIME_FILE" | awk '{print $1}')"
+
+                while (( timeout > 0 )); do
+                  if [[ -s "$RUNTIME_MOUNT_FILE" ]]; then
+                    observed_checksum="$(sha256sum "$RUNTIME_MOUNT_FILE" | awk '{print $1}')"
+                    if [[ "$observed_checksum" == "$expected_checksum" ]]; then
+                      log "Observed updated datasource ConfigMap projection"
+                      return 0
+                    fi
+                  fi
+
+                  log "Waiting for datasource ConfigMap projection..."
+                  sleep 5
+                  timeout=$((timeout - 5))
+                done
+
+                log "Timeout waiting for ConfigMap ${RUNTIME_CONFIGMAP_NAME} to be projected" >&2
+                exit 1
+              }
+
+              reload_datasources() {
+                local attempts="${1:-6}"
+                local attempt
+
+                for ((attempt = 1; attempt <= attempts; attempt++)); do
+                  if curl --fail --silent --show-error \
+                    --request POST \
+                    --user "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                    "${GRAFANA_SERVER}/api/admin/provisioning/datasources/reload"; then
+                    log "Reloaded Grafana datasource provisioning"
+                    return 0
+                  fi
+
+                  if (( attempt < attempts )); then
+                    log "Datasource reload failed; retrying (${attempt}/${attempts})..." >&2
+                    sleep 5
+                  fi
+                done
+
+                log "Failed to reload Grafana datasource provisioning" >&2
+                exit 1
+              }
+
+              declare -A CONFIGURED_ORG_IDS=()
+
+              wait_grafana 300
+              TARGET_ORGS="$(curl --fail --silent --show-error \
+                --user "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                "${GRAFANA_SERVER}/api/orgs")"
+
+              printf '%s\n' \
+                'apiVersion: 1' \
+                'prune: true' \
+                'datasources:' > "$RUNTIME_FILE"
+
+              configured_orgs=0
+              while IFS= read -r organization_config; do
+                CURRENT_ORG="$(jq -r '.org // empty' <<< "$organization_config")"
+                mapfile -t REPOSITORY_PATHS < <(
+                  jq -r --argjson default "$CD_DEFAULT_PATHS_JSON" \
+                    '(.path // .paths // $default)[]? // empty' <<< "$organization_config"
+                )
+
+                if [[ -z "$CURRENT_ORG" ]]; then
+                  log "Every cd.organizations entry requires org" >&2
+                  exit 1
+                fi
+                if (( ${#REPOSITORY_PATHS[@]} == 0 )); then
+                  log "Organization ${CURRENT_ORG} requires at least one path" >&2
+                  exit 1
+                fi
+
+                org_id="$(resolve_org_id "$CURRENT_ORG")"
+                if [[ -z "$org_id" ]]; then
+                  log "Organization not found in Grafana; skipping: ${CURRENT_ORG}" >&2
+                  continue
+                fi
+                if [[ -n "${CONFIGURED_ORG_IDS[$org_id]:-}" ]]; then
+                  log "Organization ${CURRENT_ORG} resolves to duplicate orgId ${org_id}" >&2
+                  exit 1
+                fi
+                CONFIGURED_ORG_IDS[$org_id]="$CURRENT_ORG"
+
+                unset DATASOURCE_SOURCE_BY_NAME
+                declare -A DATASOURCE_SOURCE_BY_NAME=()
+                wait_for_datasource_directories 300
+                combine_datasource_fragments
+                append_organization_datasources "$CURRENT_ORG" "$org_id"
+                configured_orgs=$((configured_orgs + 1))
+              done < <(jq -c '.[]' <<< "$CD_ORGANIZATIONS_JSON")
+
+              if (( configured_orgs == 0 )); then
+                log "None of the configured organizations exist; refusing to publish an empty datasource file" >&2
+                exit 1
+              fi
+              if (( $(wc -c < "$RUNTIME_FILE") > 900000 )); then
+                log "Generated datasource configuration is too large for a ConfigMap" >&2
+                exit 1
+              fi
+
+              sed \
+                -e 's/[[:blank:]]*$//' \
+                -e 's/\r$//' \
+                "$RUNTIME_FILE" > "${RUNTIME_FILE}.clean"
+
+              mv "${RUNTIME_FILE}.clean" "$RUNTIME_FILE"
+
+              publish_runtime_configmap
+              wait_for_runtime_projection 180
+              reload_datasources 6
+{{- end -}}

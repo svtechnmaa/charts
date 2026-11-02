@@ -1,0 +1,363 @@
+{{- define "grafana.gitsyncProvisioning" }}
+        - name: gitsync-init
+          image: duchieu2920/svtech_grafana:v13.1.3-ubuntu
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: CD_ORGANIZATIONS_JSON
+              value: {{ .Values.cd.organizations | default list | toJson | quote }}
+            - name: CD_DEFAULT_URL
+              value: {{ default "" .Values.cd.url | quote }}
+            - name: CD_DEFAULT_BRANCH
+              value: {{ default "" .Values.cd.branch | quote }}
+            - name: CD_DEFAULT_PATHS_JSON
+              value: {{ .Values.cd.path | default list | toJson | quote }}
+            - name: CD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: token
+                  optional: true
+            - name: CD_GIT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: signer_name
+                  optional: true
+            - name: CD_GIT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: token
+                  optional: true
+            - name: CD_REPOSITORY_NAME
+              value: {{ printf "%s-gitsync" (include "common.names.name" .) | trunc 63 | trimSuffix "-" | quote }}
+            - name: CD_REPOSITORY_TITLE
+              value: {{ printf "%s Git Sync" (include "common.names.name" .) | title | quote }}
+            - name: CD_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: signing_key
+                  optional: true
+            - name: CD_SIGNER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: signer_name
+                  optional: true
+            - name: CD_SIGNER_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: signer_email
+                  optional: true
+            - name: CD_COMMIT_MESSAGE_TEMPLATE
+              value: {{ default "fix: {{action}} {{title}}" .Values.cd.commitMessageTemplate | quote }}
+            - name: GRAFANA_SERVER
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
+            - name: GRAFANA_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_user
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_password
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -Eeuo pipefail
+              export PATH="/root/.local/bin:$PATH"
+
+              log() {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+              wait_grafana() {
+                local timeout="${1:-300}"
+                until curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" "${GRAFANA_SERVER}/api/health" >/dev/null; do
+                  timeout=$((timeout - 5))
+                  if [ "$timeout" -le 0 ]; then
+                    log "Timeout waiting for Grafana at ${GRAFANA_SERVER}"
+                    exit 1
+                  fi
+                  log "Waiting for Grafana at ${GRAFANA_SERVER}..."
+                  sleep 5
+                done
+              }
+
+              resolve_org_id() {
+                local org="$1"
+
+                if [[ "${org,,}" == "main" || "${org,,}" == "default" ]]; then
+                  echo "1"
+                  return 0
+                fi
+
+                jq -r --arg org "$org" \
+                  'first(.[] | select((.name | ascii_downcase) == ($org | ascii_downcase)) | .id) // empty' \
+                  <<< "$TARGET_ORGS"
+              }
+
+              ensure_org_id() {
+                local org="$1"
+                local org_id create_payload create_response
+
+                org_id="$(resolve_org_id "$org")"
+                if [[ -n "$org_id" ]]; then
+                  printf '%s\n' "$org_id"
+                  return 0
+                fi
+
+                log "Organization ${org} does not exist; creating it" >&2
+                create_payload="$(jq -n --arg name "$org" '{name: $name}')"
+                if create_response="$(
+                  curl -fsS \
+                    -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                    -H "Content-Type: application/json" \
+                    -X POST \
+                    -d "$create_payload" \
+                    "${GRAFANA_SERVER}/api/orgs"
+                )"; then
+                  org_id="$(jq -r '.orgId // .id // empty' <<< "$create_response")"
+                fi
+
+                # A concurrent initializer may have created the organization.
+                # Refresh the list before treating a failed create as fatal.
+                if [[ -z "$org_id" ]]; then
+                  TARGET_ORGS="$(
+                    curl -fsS \
+                      -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                      "${GRAFANA_SERVER}/api/orgs"
+                  )"
+                  org_id="$(resolve_org_id "$org")"
+                fi
+
+                if [[ -z "$org_id" ]]; then
+                  log "Failed to create or resolve Grafana organization: ${org}" >&2
+                  return 1
+                fi
+
+                printf '%s\n' "$org_id"
+              }
+
+              repository_name_for_path() {
+                local path="$1"
+                local slug hash prefix name
+
+                slug="$(
+                  printf '%s' "$path" |
+                    tr '[:upper:]' '[:lower:]' |
+                    sed 's#[^a-z0-9-]#-#g; s/-\+/-/g; s/^-//; s/-$//'
+                )"
+                [[ -n "$slug" ]] || slug="root"
+
+                name="${CD_REPOSITORY_NAME}-${slug}"
+
+                printf '%s\n' "$name"
+              }
+
+              push_repository() {
+                timeout=$1
+                repository=$2
+
+                cat "$WORKDIR/repository.yaml"
+
+                until gcx resources push --path "$WORKDIR" --on-error abort; do
+                  timeout=$((timeout - 5))
+                  if ((timeout <= 0)); then
+                    log "Fail to push repository $repository..." >&2
+                    return 1
+                  fi
+                  log "Repository $repository is not ready; retrying in 5 seconds..."
+                  sleep 5
+                done
+              }
+
+              wait_grafana
+
+              TARGET_ORGS="$(curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" "${GRAFANA_SERVER}/api/orgs")"
+              WORKDIR="/tmp/grafana-gitsync"
+              rm -rf "$WORKDIR"
+              mkdir -p "$WORKDIR"
+
+              configured_repositories=0
+              organization_count="$(jq 'length' <<< "$CD_ORGANIZATIONS_JSON")"
+              if (( organization_count == 0 )); then
+                log "cd.organizations must contain at least one organization" >&2
+                exit 1
+              fi
+
+              repository_url="$CD_DEFAULT_URL"
+              if [[ -z "$repository_url" ]]; then
+                log "cd.url is required" >&2
+                exit 1
+              fi
+              if [[ "${repository_url,,}" == *github* ]]; then
+                repository_type=github
+              else
+                repository_type=git
+              fi
+              log "Using shared ${repository_type} repository: ${repository_url}"
+
+              while IFS= read -r organization_config; do
+                org="$(jq -r '.org // empty' <<< "$organization_config")"
+                write="$(jq -r 'if has("write") then (.write | tostring) else "false" end' <<< "$organization_config")"
+                repository_branch="$(jq -r --arg default "$CD_DEFAULT_BRANCH" '.branch // $default' <<< "$organization_config")"
+                mapfile -t PATHS < <(
+                  jq -r --argjson default "$CD_DEFAULT_PATHS_JSON" \
+                    '(.path // .paths // $default)[]? // empty' <<< "$organization_config"
+                )
+
+                log "#################### ORG: $org ####################"
+                if [[ -z "$org" ]]; then
+                  log "Every cd.organizations entry requires org" >&2
+                  exit 1
+                fi
+                if (( ${#PATHS[@]} == 0 )); then
+                  log "Organization ${org} requires at least one path" >&2
+                  exit 1
+                fi
+                if [[ -z "$repository_branch" ]]; then
+                  log "Organization ${org} requires a branch" >&2
+                  exit 1
+                fi
+
+                if ! org_id="$(ensure_org_id "$org")"; then
+                  exit 1
+                fi
+                log "Configuring Git Sync for org: ${org} (${org_id})"
+                export GRAFANA_ORG_ID="$org_id"
+
+                for raw_path in "${PATHS[@]}"; do
+                  repository_path="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$raw_path")"
+                  [[ -n "$repository_path" ]] || continue
+
+                  repository_name="$(repository_name_for_path "$repository_path")"
+                  repository_title_json="$(
+                    jq -Rn --arg value "${CD_REPOSITORY_TITLE} - ${repository_path}" '$value'
+                  )"
+                  repository_path_json="$(
+                    jq -Rn --arg value "${repository_path}/dashboards" '$value'
+                  )"
+                  write_enabled=false
+
+                  if gcx resources get repositories | grep -q "${repository_name}"; then
+                    log "Repository ${repository_name} already exists; skipping creation"
+                    configured_repositories=$((configured_repositories + 1))
+                    continue
+                  fi
+
+                  log "Configuring ${repository_name}"
+                  log "Organization: ${org} (ID: ${org_id})"
+                  log "Repository path: ${repository_path}"
+
+                  cat > "${WORKDIR}/repository.yaml" <<EOF
+              apiVersion: provisioning.grafana.app/v0alpha1
+              kind: Repository
+              metadata:
+                name: ${repository_name}
+              spec:
+                title: ${repository_title_json}
+                sync:
+                  enabled: true
+                  intervalSeconds: 60
+                  target: folderless
+              EOF
+
+                  cat >> "${WORKDIR}/repository.yaml" <<EOF
+                type: ${repository_type}
+              EOF
+                  if [[ "$write" == "true" ]]; then
+                    write_enabled=true
+                    commit_template_json="$(
+                      jq -Rn --arg value "$CD_COMMIT_MESSAGE_TEMPLATE" '$value'
+                    )"
+                    cat >> "${WORKDIR}/repository.yaml" <<EOF
+                workflows:
+                  - write
+                commit:
+                  singleResourceMessageTemplate: ${commit_template_json}
+                  enforceTemplate: true
+              EOF
+                    if [[ "$repository_type" == "github" ]]; then
+                      signing_method=gpg
+                      if [[ "${CD_SIGNING_KEY^^}" == *SSH* ]]; then
+                        signing_method=ssh
+                      fi
+                      signer_name_json="$(
+                        jq -Rn --arg value "$CD_SIGNER_NAME" '$value'
+                      )"
+                      signer_email_json="$(
+                        jq -Rn --arg value "$CD_SIGNER_EMAIL" '$value'
+                      )"
+                      cat >> "${WORKDIR}/repository.yaml" <<EOF
+                  signingMethod: ${signing_method}
+                  signerName: ${signer_name_json}
+                  signerEmail: ${signer_email_json}
+              EOF
+                    fi
+                    log "Direct push to synchronized branch enabled for ${org} (${org_id})"
+                  else
+                    log "Git Sync repository is read-only for ${org} (${org_id})"
+                  fi
+
+                  repository_url_json="$(jq -Rn --arg value "$repository_url" '$value')"
+                  repository_branch_json="$(jq -Rn --arg value "$repository_branch" '$value')"
+
+                  if [[ "$repository_type" == "github" ]]; then
+                    repository_token_json="$(jq -Rn --arg value "$CD_TOKEN" '$value')"
+                    cat >> "${WORKDIR}/repository.yaml" <<EOF
+                github:
+                  url: ${repository_url_json}
+                  branch: ${repository_branch_json}
+                  path: ${repository_path_json}
+              secure:
+                token:
+                  create: ${repository_token_json}
+              EOF
+                  else
+                    git_user_json="$(jq -Rn --arg value "$CD_GIT_USER" '$value')"
+                    repository_token_json="$(jq -Rn --arg value "$CD_GIT_PASSWORD" '$value')"
+                    cat >> "${WORKDIR}/repository.yaml" <<EOF
+                git:
+                  url: ${repository_url_json}
+                  branch: ${repository_branch_json}
+                  path: ${repository_path_json}
+                  tokenUser: ${git_user_json}
+              secure:
+                token:
+                  create: ${repository_token_json}
+              EOF
+                  fi
+
+                  if [[ "$write_enabled" == true && "$repository_type" == "github" ]]; then
+                    signing_key_json="$(
+                      jq -Rn --arg value "$CD_SIGNING_KEY" '$value'
+                    )"
+                    cat >> "${WORKDIR}/repository.yaml" <<EOF
+                commitSigningKey:
+                  create: ${signing_key_json}
+              EOF
+                  fi
+                  log "Apply configure for ${org}"
+                  gcx config check
+                  push_repository 300 ${repository_name}
+                  printf "\n"
+                  printf "\n"
+                  configured_repositories=$((configured_repositories + 1))
+                done
+                gcx resources get repositories
+                log "################# END OF ORG: $org #################"
+                printf "\n"
+                printf "\n"
+                printf "\n"
+              done < <(jq -c '.[]' <<< "$CD_ORGANIZATIONS_JSON")
+
+              if ((configured_repositories == 0)); then
+                log "No repositories configured; check cd.organizations" >&2
+                exit 1
+              fi
+{{- end}}
