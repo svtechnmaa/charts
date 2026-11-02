@@ -12,6 +12,7 @@
 {{- end }}
 {{- if dig "csv-view" "enabled" false $g }}
 {{- $routers = append $routers (dict "name" "csv-view" "rule" "PathPrefix(`/csv/`)" "url" "http://csv-view:8000" "strip" "/csv") }}
+{{- $routers = append $routers (dict "name" "csv-view-static" "rule" "PathPrefix(`/static_csv/`)" "url" "http://csv-view:8000" "noSticky" true) }}
 {{- end }}
 {{- if $nginx }}
 {{- $nginxUrl := printf "http://%s-ingress-frontend:80" .Release.Name }}
