@@ -71,8 +71,12 @@ spec:
           securityContext:
             runAsUser: {{ .Values.securityContext.runAsUser }}
           {{- end }}
-
+          envFrom:
+          - secretRef:
+              name: {{ include "common.names.fullname" . }}-auth
           env:
+            - name: TZ
+              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: GF_DATABASE_TYPE
               value: mysql
             - name: GF_DATABASE_HOST
@@ -86,13 +90,25 @@ spec:
               value: {{ printf "%s_%s" .Release.Namespace (tpl .Values.grafanaConfig.database.mysqlDB . | required "grafanaConfig.database.mysqlDB is required") | quote }}
             {{- end }}
             - name: GF_DATABASE_USER
-              value: {{ tpl .Values.grafanaConfig.database.auth.username . | required "grafanaConfig.database.auth.username is required" | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_database_user
             - name: GF_DATABASE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "grafana.databaseSecretName" . | quote }}
-                  key: {{ include "grafana.databaseSecretKey" . | quote }}
-            {{- include "grafana.adminEnv" . | nindent 12 }}
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_database_password
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "common.names.fullname" . }}-auth
+                  key: grafana_admin_password
             - name: GF_SECURITY_ANGULAR_SUPPORT_ENABLED
               value: "true"
             - name: GF_SECURITY_ALLOW_EMBEDDING
@@ -101,8 +117,12 @@ spec:
               value: "true"
             - name: GF_SECURITY_COOKIE_SAMESITE
               value: none
-            - name: TZ
-              value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
+            - name: GF_AUTH_BASIC_ENABLED
+              value: "true"
+            - name: GF_PROVISIONING_ALLOWED_GIT_URLS
+              value: git-http:8080
+            - name: GF_PROVISIONING_ALLOW_INSECURE
+              value: true
             - name: GF_SERVER_ROOT_URL
               value: {{ default (printf "%s://%s%s" (ternary "https" "http" (default false .Values.global.enableHttps)) .Values.global.frontendVip .Values.grafanaConfig.subPath) .Values.grafanaConfig.rootUrl | quote }}
             - name: GF_SERVER_SERVE_FROM_SUB_PATH
@@ -140,10 +160,23 @@ spec:
             {{- if .Values.grafanaConfig.env }}
             {{- include "common.tplvalues.render" ( dict "value" .Values.grafanaConfig.env "context" $ ) | nindent 12 }}
             {{- end }}
-
           ports:
             - name: grafana
               containerPort: 3000
+          volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
         {{- if .Values.chrome.enabled }}
         - args:
           - --ignore-certificate-errors
@@ -191,5 +224,19 @@ spec:
           sizeLimit: 2Gi
         name: shm
       {{- end }}
+      # shareVolume(volume): define in the global values
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+      # unshareVolume(volume): define in the chart's values.yaml
+        {{- if .Values.volumes }}
+        {{- tpl (toYaml .Values.volumes) $ | nindent 8 }}
+        {{- end }}
       imagePullSecrets:
       - name: ghcr-pull-secret
