@@ -1,0 +1,179 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: git-http
+    {{- with .Values.commonLabels }}
+    {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+    {{- end }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: {{ .Values.updateStrategy }}
+    {{- if eq .Values.updateStrategy "Recreate" }}
+    rollingUpdate: null
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/component: git-http
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: git-http
+        {{- with .Values.commonLabels }}
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+        {{- end }}
+    spec:
+      imagePullSecrets:
+        - ghcr-pull-secret
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.repositories }}
+      initContainers:
+        - name: init-repositories
+          image: {{ include "git-http.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: GIT_REPOSITORY_ROOT
+              value: {{ .Values.apache.repositoryRoot | quote }}
+            - name: GIT_REPOSITORIES
+              value: {{ join "\n" .Values.repositories | quote }}
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              set -eu
+
+              mkdir -p "$GIT_REPOSITORY_ROOT"
+
+              printf '%s\n' "$GIT_REPOSITORIES" | while IFS= read -r REPO; do
+                [ -n "$REPO" ] || continue
+
+                case "$REPO" in
+                  */*|.|..)
+                    echo "Invalid repository name: $REPO" >&2
+                    exit 1
+                    ;;
+                esac
+
+                REPO_PATH="${GIT_REPOSITORY_ROOT%/}/$REPO"
+
+                if [ -L "$REPO_PATH" ]; then
+                  echo "Repository path must not be a symbolic link: $REPO_PATH" >&2
+                  exit 1
+                elif [ -e "$REPO_PATH" ]; then
+                  if [ ! -d "$REPO_PATH" ] ||
+                     [ "$(git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" rev-parse --is-bare-repository 2>/dev/null)" != "true" ]; then
+                    echo "Repository path exists but is not a bare Git repository: $REPO_PATH" >&2
+                    exit 1
+                  fi
+                  echo "Bare repository already exists: $REPO_PATH"
+                else
+                  echo "Initializing bare repository: $REPO_PATH"
+                  git init --bare --initial-branch=main "$REPO_PATH"
+                fi
+                chmod -R og+w "$REPO_PATH"
+                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config uploadpack.allowFilter true
+                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config receive.denyNonFastForwards true
+                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config receive.denyDeletes true
+                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config http.receivepack true
+              done
+          volumeMounts:
+            # shareVolume: VolumeMount defined in global values
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume: VolumeMount defined in this chart's values.yaml
+            {{- with .Values.volumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+      {{- end }}
+      containers:
+        - name: git-http
+          image: {{ include "git-http.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command:
+            {{- toYaml .Values.command | nindent 12 }}
+          args:
+            {{- toYaml .Values.args | nindent 12 }}
+          env:
+            - name: HOME
+              value: /tmp
+            - name: TZ
+              value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            # shareVolume: VolumeMount defined in global values
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume: VolumeMount defined in this chart's values.yaml
+            {{- with .Values.volumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+      volumes:
+        # shareVolume defined in global values
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        # unshareVolume defined in this chart's values.yaml
+        {{- with .Values.volumes }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}

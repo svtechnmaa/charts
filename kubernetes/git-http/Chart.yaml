@@ -1,0 +1,15 @@
+apiVersion: v2
+annotations:
+  category: Infrastructure
+name: git-http
+description: Lightweight Git Smart HTTP backend for Grafana Git Sync
+type: application
+engine: gotpl
+
+dependencies:
+  - name: common
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
+    version: 1.x.x
+
+version: 0.1.0
+appVersion: "v1.0.0"
