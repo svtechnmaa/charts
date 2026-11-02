@@ -50,8 +50,8 @@ securityContext: {}
 # This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
 service:
   # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
-  type: ClusterIP
-  
+  type: LoadBalancer
+
   nodePortEnabled: false # set to true if using NodePort and you want to specify ports
 
   # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
@@ -170,13 +170,6 @@ args:
       asDefault: true
     traefik:
       address: ":8080"
-
-routes:
-  enabled: true
-  apps:
-    rundeck: 4440
-    icingaweb: 8080
-    gitlist: 80
 
 timezone: Asia/Ho_Chi_Minh
 env: {}

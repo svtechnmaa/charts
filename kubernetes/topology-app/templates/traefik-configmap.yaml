@@ -1,3 +1,8 @@
+{{- $g := .Values.global }}
+{{- $csv := dig "csv-view" "enabled" false $g }}
+{{- $mageai := dig "mage-ai" "enabled" false $g }}
+{{- $report := dig "icinga2-report" "enabled" false $g }}
+{{- $nginx := dig "ingress-nginx" "enabled" false $g }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -31,6 +36,18 @@ data:
             regex: '^(https?://[^/]+)/?([?].*)?$'
             replacement: "${1}/app${2}"
             permanent: true
+        {{- if $csv }}
+        csv-strip:
+          stripPrefix:
+            prefixes:
+              - "/csv"
+        {{- end }}
+        {{- if $report }}
+        icinga2-report-strip:
+          stripPrefix:
+            prefixes:
+              - "/grafana/send_request"
+        {{- end }}
 
       routers:
         default:
@@ -87,6 +104,66 @@ data:
             PathPrefix(`/api/templates`)
           service: "frontend"
           tls: {}
+        {{- if $csv }}
+        csv:
+          middlewares:
+            - "csv-strip"
+          rule: "PathPrefix(`/csv/`)"
+          service: "csv-view"
+        csv-tls:
+          middlewares:
+            - "csv-strip"
+          rule: "PathPrefix(`/csv/`)"
+          service: "csv-view"
+          tls: {}
+        static-csv:
+          rule: "PathPrefix(`/static_csv/`)"
+          service: "csv-view"
+        static-csv-tls:
+          rule: "PathPrefix(`/static_csv/`)"
+          service: "csv-view"
+          tls: {}
+        {{- end }}
+        {{- if $mageai }}
+        mage-ai:
+          rule: "PathPrefix(`/mageai`)"
+          service: "mage-ai"
+        mage-ai-tls:
+          rule: "PathPrefix(`/mageai`)"
+          service: "mage-ai"
+          tls: {}
+        {{- end }}
+        {{- if $report }}
+        icinga2-report:
+          middlewares:
+            - "icinga2-report-strip"
+          rule: "PathPrefix(`/grafana/send_request/`)"
+          service: "icinga2-report"
+        icinga2-report-tls:
+          middlewares:
+            - "icinga2-report-strip"
+          rule: "PathPrefix(`/grafana/send_request/`)"
+          service: "icinga2-report"
+          tls: {}
+        {{- end }}
+        {{- if $nginx }}
+        ingress-nginx:
+          priority: 1
+          rule: "PathPrefix(`/`)"
+          service: "ingress-nginx"
+        ingress-nginx-tls:
+          priority: 1
+          rule: "PathPrefix(`/`)"
+          service: "ingress-nginx"
+          tls: {}
+        report-grafana-redirect:
+          rule: "PathPrefix(`/grafana-redirect-report-nmaa`)"
+          service: "ingress-nginx"
+        report-grafana-redirect-tls:
+          rule: "PathPrefix(`/grafana-redirect-report-nmaa`)"
+          service: "ingress-nginx"
+          tls: {}
+        {{- end }}
 
       #   icingaweb:
       #     middlewares:
@@ -159,6 +236,30 @@ data:
           loadBalancer:
             servers:
               - url: "http://topology-web"
+        {{- if $csv }}
+        csv-view:
+          loadBalancer:
+            servers:
+              - url: "http://csv-view:8000"
+        {{- end }}
+        {{- if $mageai }}
+        mage-ai:
+          loadBalancer:
+            servers:
+              - url: "http://mage-ai:6789"
+        {{- end }}
+        {{- if $report }}
+        icinga2-report:
+          loadBalancer:
+            servers:
+              - url: "http://icinga2-report:8888"
+        {{- end }}
+        {{- if $nginx }}
+        ingress-nginx:
+          loadBalancer:
+            servers:
+              - url: "http://{{ .Release.Name }}-ingress-frontend:80"
+        {{- end }}
       #   icingaweb:
       #     loadBalancer:
       #       servers:

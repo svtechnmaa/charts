@@ -11,10 +11,9 @@ spec:
       - traefik
   dnsNames:
     - {{ .Values.tls.commonName | quote }}
-  {{- $vip := .Values.global.frontendVip | default .Values.global.frontendVIP }}
-  {{- if $vip }}
+  {{- if .Values.global.frontendVip }}
   ipAddresses:
-    - {{ $vip | quote }}
+    - {{ .Values.global.frontendVip | quote }}
   {{- end }}
   duration: {{ printf "%dh" (mul (int .Values.tls.durationDays) 24) | quote }}
   renewBefore: {{ .Values.tls.renewBefore | quote }}
