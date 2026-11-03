@@ -3,8 +3,19 @@ global:
     user: ""
     fg_token: ""
   sharedVolume:
-    enabled: false
-  sharedPersistenceVolume: []
+    enabled: true    # Enable for adding Volume/VolumeMounts to pod
+  sharedPersistenceVolume:
+    - volumeName: git-repository
+      pvcName: git-repository-pvc
+      storageSize: 2Gi
+      path: /srv/git
+      accessModes: ReadWriteOnce
+      shareFor:
+        - git-http
+      # storageClass: seaweedfs-storage
+      storageClass: git-repository-hostpath # for hostPath PV (need folderName for syncthing to share between nodes)
+      folderName: git-repository # for syncthing
+
 
 timezone: Asia/Ho_Chi_Minh
 
@@ -31,6 +42,19 @@ podSecurityContext:
   seccompProfile:
     type: RuntimeDefault
 
+initContainerSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+
 containerSecurityContext:
   allowPrivilegeEscalation: false
   capabilities:
@@ -45,24 +69,15 @@ args:
     rm -f /tmp/httpd.pid /tmp/cgisock.*
     exec httpd -DFOREGROUND -f /etc/git-http/httpd.conf
 
-auth:
-  # Empty values fall back to global.adminUser/global.adminPassword.
-  username: ""
-  password: ""
-  realm: git-server
-
 apache:
   serverName: git.internal
   repositoryRoot: /srv/git
   # Empty trusts every repository directly below repositoryRoot. Set an exact
   # path when this server should expose only one bare repository.
   safeDirectory: ""
-  forceProtocolV2: true
-
-# Bare repositories created by the init container. Repository names must be
-# direct children of apache.repositoryRoot and cannot contain '/'.
-repositories:
-  - grafana-entities.git
+  # Forward the client's Git-Protocol header. Do not force v2 globally because
+  # git-receive-pack may advertise an empty repository using protocol v0.
+  forceProtocolV2: false
 
 service:
   type: ClusterIP
@@ -107,8 +122,6 @@ resources:
   requests: {}
 
 affinity: {}
-nodeSelector:
-  kubernetes.io/hostname: nms-01
 tolerations: []
 
 # Repository storage can come from global.sharedPersistenceVolume or these
@@ -121,8 +134,6 @@ volumes:
   - name: auth
     secret:
       secretName: '{{ .Chart.Name }}-auth'
-  - name: tmp
-    emptyDir: {}
 
 volumeMounts:
   - name: config
@@ -132,5 +143,8 @@ volumeMounts:
   - name: auth
     mountPath: /etc/git-http/auth
     readOnly: true
-  - name: tmp
-    mountPath: /tmp
+
+# Bare repositories created by the init container. Repository names must be
+# direct children of apache.repositoryRoot and cannot contain '/'.
+repositories:
+  - grafana-entities.git

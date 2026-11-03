@@ -38,15 +38,11 @@ spec:
         {{- end }}
     spec:
       imagePullSecrets:
-        - ghcr-pull-secret
+        - name: ghcr-pull-secret
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- with .Values.affinity }}
       affinity:
-        {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
-      {{- end }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- end }}
       {{- with .Values.tolerations }}
@@ -58,11 +54,17 @@ spec:
         - name: init-repositories
           image: {{ include "git-http.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          securityContext:
+            {{- toYaml .Values.initContainerSecurityContext | nindent 12 }}
           env:
             - name: GIT_REPOSITORY_ROOT
               value: {{ .Values.apache.repositoryRoot | quote }}
             - name: GIT_REPOSITORIES
               value: {{ join "\n" .Values.repositories | quote }}
+            - name: GIT_RUNTIME_UID
+              value: {{ .Values.podSecurityContext.runAsUser | quote }}
+            - name: GIT_RUNTIME_GID
+              value: {{ .Values.podSecurityContext.runAsGroup | quote }}
           command:
             - /bin/sh
             - -ec
@@ -98,11 +100,12 @@ spec:
                   echo "Initializing bare repository: $REPO_PATH"
                   git init --bare --initial-branch=main "$REPO_PATH"
                 fi
-                chmod -R og+w "$REPO_PATH"
                 git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config uploadpack.allowFilter true
                 git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config receive.denyNonFastForwards true
                 git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config receive.denyDeletes true
                 git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config http.receivepack true
+                chown -R "${GIT_RUNTIME_UID}:${GIT_RUNTIME_GID}" "$REPO_PATH"
+                chmod -R u+rwX,g+rwX,o-rwx "$REPO_PATH"
               done
           volumeMounts:
             # shareVolume: VolumeMount defined in global values
