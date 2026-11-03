@@ -3,74 +3,78 @@
           image: duchieu2920/svtech_grafana:v13.1.3-ubuntu
           imagePullPolicy: IfNotPresent
           env:
-            - name: CD_ORGANIZATIONS_JSON
-              value: {{ .Values.cd.organizations | default list | toJson | quote }}
-            - name: CD_DEFAULT_URL
-              value: {{ default "" .Values.cd.url | quote }}
-            - name: CD_DEFAULT_BRANCH
-              value: {{ default "" .Values.cd.branch | quote }}
-            - name: CD_DEFAULT_PATHS_JSON
-              value: {{ .Values.cd.path | default list | toJson | quote }}
-            - name: CD_TOKEN
+            - name: GITSYNC_ORGANIZATIONS_JSON
+              value: {{ .Values.gitsync.organizations | default list | toJson | quote }}
+            - name: GITSYNC_DEFAULT_URL
+              value: {{ default "" .Values.gitsync.url | quote }}
+            - name: GITSYNC_DEFAULT_BRANCH
+              value: {{ default "" .Values.gitsync.branch | quote }}
+            - name: GITSYNC_DEFAULT_PATHS_JSON
+              value: {{ .Values.gitsync.path | default list | toJson | quote }}
+            - name: GITSYNC_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: token
                   optional: true
-            - name: CD_GIT_USER
+            - name: GITSYNC_GIT_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: signer_name
                   optional: true
-            - name: CD_GIT_PASSWORD
+            - name: GITSYNC_GIT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: token
                   optional: true
-            - name: CD_REPOSITORY_NAME
+            - name: GITSYNC_REPOSITORY_NAME
               value: {{ printf "%s-gitsync" (include "common.names.name" .) | trunc 63 | trimSuffix "-" | quote }}
-            - name: CD_REPOSITORY_TITLE
+            - name: GITSYNC_REPOSITORY_TITLE
               value: {{ printf "%s Git Sync" (include "common.names.name" .) | title | quote }}
-            - name: CD_SIGNING_KEY
+            - name: GITSYNC_SIGNING_KEY
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: signing_key
                   optional: true
-            - name: CD_SIGNER_NAME
+            - name: GITSYNC_SIGNER_NAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: signer_name
                   optional: true
-            - name: CD_SIGNER_EMAIL
+            - name: GITSYNC_SIGNER_EMAIL
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: signer_email
                   optional: true
-            - name: CD_COMMIT_MESSAGE_TEMPLATE
-              value: {{ default "fix: {{action}} {{title}}" .Values.cd.commitMessageTemplate | quote }}
+            - name: GITSYNC_COMMIT_MESSAGE_TEMPLATE
+              value: {{ default "fix: {{action}} {{title}}" .Values.gitsync.commitMessageTemplate | quote }}
             - name: GRAFANA_SERVER
               value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
             - name: GRAFANA_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
-                  key: grafana_admin_user
+              value: {{ include "grafana.adminUser" . | quote }}
             - name: GRAFANA_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
-                  key: grafana_admin_password
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
           command:
             - /bin/bash
             - -ec
             - |
               set -Eeuo pipefail
               export PATH="/root/.local/bin:$PATH"
+
+              # Kubernetes does not define an environment variable when an
+              # optional Secret key is absent. Normalize optional Git signing
+              # values before any expansion under `set -u`.
+              GITSYNC_SIGNING_KEY="${GITSYNC_SIGNING_KEY:-}"
+              GITSYNC_SIGNER_NAME="${GITSYNC_SIGNER_NAME:-}"
+              GITSYNC_SIGNER_EMAIL="${GITSYNC_SIGNER_EMAIL:-}"
 
               log() {
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
@@ -154,7 +158,7 @@
                 )"
                 [[ -n "$slug" ]] || slug="root"
 
-                name="${CD_REPOSITORY_NAME}-${slug}"
+                name="${GITSYNC_REPOSITORY_NAME}-${slug}"
 
                 printf '%s\n' "$name"
               }
@@ -162,8 +166,6 @@
               push_repository() {
                 timeout=$1
                 repository=$2
-
-                cat "$WORKDIR/repository.yaml"
 
                 until gcx resources push --path "$WORKDIR" --on-error abort; do
                   timeout=$((timeout - 5))
@@ -184,15 +186,15 @@
               mkdir -p "$WORKDIR"
 
               configured_repositories=0
-              organization_count="$(jq 'length' <<< "$CD_ORGANIZATIONS_JSON")"
+              organization_count="$(jq 'length' <<< "$GITSYNC_ORGANIZATIONS_JSON")"
               if (( organization_count == 0 )); then
-                log "cd.organizations must contain at least one organization" >&2
+                log "gitsync.organizations must contain at least one organization" >&2
                 exit 1
               fi
 
-              repository_url="$CD_DEFAULT_URL"
+              repository_url="$GITSYNC_DEFAULT_URL"
               if [[ -z "$repository_url" ]]; then
-                log "cd.url is required" >&2
+                log "gitsync.url is required" >&2
                 exit 1
               fi
               if [[ "${repository_url,,}" == *github* ]]; then
@@ -205,15 +207,15 @@
               while IFS= read -r organization_config; do
                 org="$(jq -r '.org // empty' <<< "$organization_config")"
                 write="$(jq -r 'if has("write") then (.write | tostring) else "false" end' <<< "$organization_config")"
-                repository_branch="$(jq -r --arg default "$CD_DEFAULT_BRANCH" '.branch // $default' <<< "$organization_config")"
+                repository_branch="$(jq -r --arg default "$GITSYNC_DEFAULT_BRANCH" '.branch // $default' <<< "$organization_config")"
                 mapfile -t PATHS < <(
-                  jq -r --argjson default "$CD_DEFAULT_PATHS_JSON" \
+                  jq -r --argjson default "$GITSYNC_DEFAULT_PATHS_JSON" \
                     '(.path // .paths // $default)[]? // empty' <<< "$organization_config"
                 )
 
                 log "#################### ORG: $org ####################"
                 if [[ -z "$org" ]]; then
-                  log "Every cd.organizations entry requires org" >&2
+                  log "Every gitsync.organizations entry requires org" >&2
                   exit 1
                 fi
                 if (( ${#PATHS[@]} == 0 )); then
@@ -237,12 +239,13 @@
 
                   repository_name="$(repository_name_for_path "$repository_path")"
                   repository_title_json="$(
-                    jq -Rn --arg value "${CD_REPOSITORY_TITLE} - ${repository_path}" '$value'
+                    jq -Rn --arg value "${GITSYNC_REPOSITORY_TITLE} - ${repository_path}" '$value'
                   )"
                   repository_path_json="$(
                     jq -Rn --arg value "${repository_path}/dashboards" '$value'
                   )"
                   write_enabled=false
+                  signing_enabled=false
 
                   if gcx resources get repositories | grep -q "${repository_name}"; then
                     log "Repository ${repository_name} already exists; skipping creation"
@@ -273,7 +276,7 @@
                   if [[ "$write" == "true" ]]; then
                     write_enabled=true
                     commit_template_json="$(
-                      jq -Rn --arg value "$CD_COMMIT_MESSAGE_TEMPLATE" '$value'
+                      jq -Rn --arg value "$GITSYNC_COMMIT_MESSAGE_TEMPLATE" '$value'
                     )"
                     cat >> "${WORKDIR}/repository.yaml" <<EOF
                 workflows:
@@ -282,22 +285,28 @@
                   singleResourceMessageTemplate: ${commit_template_json}
                   enforceTemplate: true
               EOF
-                    if [[ "$repository_type" == "github" ]]; then
+                    if [[ "$repository_type" == "github" && \
+                          -n "$GITSYNC_SIGNING_KEY" && \
+                          -n "$GITSYNC_SIGNER_NAME" && \
+                          -n "$GITSYNC_SIGNER_EMAIL" ]]; then
+                      signing_enabled=true
                       signing_method=gpg
-                      if [[ "${CD_SIGNING_KEY^^}" == *SSH* ]]; then
+                      if [[ "${GITSYNC_SIGNING_KEY^^}" == *SSH* ]]; then
                         signing_method=ssh
                       fi
                       signer_name_json="$(
-                        jq -Rn --arg value "$CD_SIGNER_NAME" '$value'
+                        jq -Rn --arg value "$GITSYNC_SIGNER_NAME" '$value'
                       )"
                       signer_email_json="$(
-                        jq -Rn --arg value "$CD_SIGNER_EMAIL" '$value'
+                        jq -Rn --arg value "$GITSYNC_SIGNER_EMAIL" '$value'
                       )"
                       cat >> "${WORKDIR}/repository.yaml" <<EOF
                   signingMethod: ${signing_method}
                   signerName: ${signer_name_json}
                   signerEmail: ${signer_email_json}
               EOF
+                    elif [[ "$repository_type" == "github" ]]; then
+                      log "Commit signing is disabled for ${repository_name}: signing key or signer identity is not configured"
                     fi
                     log "Direct push to synchronized branch enabled for ${org} (${org_id})"
                   else
@@ -308,7 +317,7 @@
                   repository_branch_json="$(jq -Rn --arg value "$repository_branch" '$value')"
 
                   if [[ "$repository_type" == "github" ]]; then
-                    repository_token_json="$(jq -Rn --arg value "$CD_TOKEN" '$value')"
+                    repository_token_json="$(jq -Rn --arg value "$GITSYNC_TOKEN" '$value')"
                     cat >> "${WORKDIR}/repository.yaml" <<EOF
                 github:
                   url: ${repository_url_json}
@@ -319,8 +328,8 @@
                   create: ${repository_token_json}
               EOF
                   else
-                    git_user_json="$(jq -Rn --arg value "$CD_GIT_USER" '$value')"
-                    repository_token_json="$(jq -Rn --arg value "$CD_GIT_PASSWORD" '$value')"
+                    git_user_json="$(jq -Rn --arg value "$GITSYNC_GIT_USER" '$value')"
+                    repository_token_json="$(jq -Rn --arg value "$GITSYNC_GIT_PASSWORD" '$value')"
                     cat >> "${WORKDIR}/repository.yaml" <<EOF
                 git:
                   url: ${repository_url_json}
@@ -333,9 +342,9 @@
               EOF
                   fi
 
-                  if [[ "$write_enabled" == true && "$repository_type" == "github" ]]; then
+                  if [[ "$write_enabled" == true && "$signing_enabled" == true ]]; then
                     signing_key_json="$(
-                      jq -Rn --arg value "$CD_SIGNING_KEY" '$value'
+                      jq -Rn --arg value "$GITSYNC_SIGNING_KEY" '$value'
                     )"
                     cat >> "${WORKDIR}/repository.yaml" <<EOF
                 commitSigningKey:
@@ -354,10 +363,10 @@
                 printf "\n"
                 printf "\n"
                 printf "\n"
-              done < <(jq -c '.[]' <<< "$CD_ORGANIZATIONS_JSON")
+              done < <(jq -c '.[]' <<< "$GITSYNC_ORGANIZATIONS_JSON")
 
               if ((configured_repositories == 0)); then
-                log "No repositories configured; check cd.organizations" >&2
+                log "No repositories configured; check gitsync.organizations" >&2
                 exit 1
               fi
 {{- end}}

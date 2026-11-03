@@ -5,6 +5,11 @@ global:
     grafana:
       user: "" # Non-empty global input overrides grafanaConfig.auth.username
       password: "" # Empty: generate and preserve a 32-character password.
+  github:
+    user: ""
+    email: ""
+    fg_token: ""
+    signing_key: |    # SSH or GPG private key 
 
   sharedVolume:
     enabled: false
@@ -24,9 +29,9 @@ init:
     pullPolicy: IfNotPresent
 
 image:
-  registry: ghcr.io
-  repository: svtechnmaa/svtech_grafana
-  tag: v1.3.1
+  registry: docker.io
+  repository: duchieu2920
+  tag: svtech_grafana:v13.1.3-ubuntu
   pullPolicy: IfNotPresent
   # debug: true
 
@@ -102,11 +107,17 @@ nodeSelector: {}
 tolerations: []
 
 ## Extra volumes to add to the deployment
-extraVolumes: []
+volumes:
+  - name: datasource-runtime
+    configMap:
+      name: '{{ include "common.names.fullname" . }}-datasources'
+      optional: true
 
 ## Extra volume mounts to add to the container
-extraVolumeMounts: []
-
+volumeMounts:
+  - name: datasource-runtime
+    mountPath: /etc/grafana/provisioning/datasources
+    readOnly: true
 securityContext:
   enabled: false
   fsGroup: 0
@@ -210,68 +221,23 @@ grafanaConfig:
   subPath: /grafana
   env: []
 
-gdgConfig:
-  runInitDataJob: true
-  contextName: main
-  storageEngine: {}
+gitsync:
+  url: "http://git-http:8080/git/grafana-entities.git"
+  branch: "main"
+  path: [nmaa, itim]
+  organizations:
+    - org: "Main"
+      write: true
+      branch: "main"
+      path: [nmaa, itim]
+    - org: "Upstream"
+      write: false
+      branch: "main"
+      path: [nmaa, itim]
 
-  # Main context configuration
-  mainContext:
-    # URL for Grafana
-    url: http://grafana:3000/grafana
-    organizationName: "Main Org."
-    outputPath: /opt/grafana-entities
-    dashboardSettings:
-      nestedFolders: true
-      ignoreFilters: true
-      ignoreBadFolders: false
-    watched:
-      - Library-Panels
-    watchedFoldersOverride: []
-
-    # Credentials - these should be provided in a separate secrets file
-    credentials:
-      username: "" # Will be populated from secrets
-      password: "" # Will be populated from secrets
-      token: ""    # Will be populated from secrets
-
-    # Connection credential rules
-    connectionRules:
-      - rules:
-          - field: name
-            regex: IcingaDB
-        secureData: icingadb.json
-      - rules:
-          - field: name
-            regex: influxdb_nms
-        secureData: influxdb.json
-      - rules:
-          - field: name
-            regex: junos_tableview
-        secureData: junos-tableview.json
-      - rules:
-          - field: name
-            regex: Audit_Config
-        secureData: audit-config.json
-      - rules:
-          - field: type
-            regex: elasticsearch
-        secureData: elasticsearch.json
-      - rules:
-          - field: name
-            regex: thruk
-        secureData: thruk.json
-
-  # Global settings
-  global:
-    debug: true
-    apiDebug: false
-    ignoreSSLErrors: true
-    retryCount: 3
-    retryDelay: 5s
-    clearOutput: false
-
-  # gdg secure credential for connections(grafana datasource)
+  # Raw URL for one combined datasource file, or a GitHub Contents API URL
+  # for a directory whose files each contain one datasource list item.
+  # secure credential for connections(grafana datasource)
   secureFiles:
     icingadb:
       user: icingadb_user
@@ -288,6 +254,3 @@ gdgConfig:
     elasticsearch:
       user: elastic_user
       basicAuthPassword: elastic_password
-    thruk:
-      user: thruk_user
-      basicAuthPassword: thruk_password
