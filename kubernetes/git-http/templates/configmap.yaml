@@ -46,7 +46,7 @@ data:
 
     <Location /git/>
         AuthType Basic
-        AuthName {{ .Values.auth.realm | quote }}
+        AuthName git-server
         AuthUserFile /etc/git-http/auth/htpasswd
         Require valid-user
     </Location>
