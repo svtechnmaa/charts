@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Chart.Name }}-datasource-init
+  name: {{ .Chart.Name }}-init
   labels:
     {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: grafana-entities-init
@@ -9,9 +9,9 @@ metadata:
     helm.sh/hook: post-install,post-upgrade
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
     helm.sh/hook-weight: "20"
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
-    argocd.argoproj.io/sync-wave: "20"
+    argogitsync.argoproj.io/hook: PostSync
+    argogitsync.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argogitsync.argoproj.io/sync-wave: "20"
 spec:
   backoffLimit: 1
   activeDeadlineSeconds: 900
@@ -48,17 +48,17 @@ spec:
           image: duchieu2920/grafana-entities:v1.0.2
           imagePullPolicy: IfNotPresent
           env:
-            - name: CD_URL
-              value: {{ required "cd.url is required for the grafana-entities push" .Values.cd.url | quote }}
+            - name: GITSYNC_URL
+              value: {{ required "gitsync.url is required for the grafana-entities push" .Values.gitsync.url | quote }}
             - name: GIT_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: signer_name
             - name: GIT_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: token
             - name: GIT_TERMINAL_PROMPT
               value: "0"
@@ -100,20 +100,48 @@ spec:
               chmod 700 "$askpass_file"
               export GIT_ASKPASS="$askpass_file"
 
-              until git ls-remote "$CD_URL" >/dev/null 2>&1; do
-                log "Waiting for Git repository ${CD_URL} to become available..."
+              until git ls-remote "$GITSYNC_URL" >/dev/null 2>&1; do
+                log "Waiting for Git repository ${GITSYNC_URL} to become available..."
                 sleep 5
               done
 
-              log "Pushing Grafana entities to git server"
               cd /tmp/grafana-entities
-              if ! git push "$CD_URL" \
-                HEAD:refs/heads/main \
-                HEAD:refs/heads/upstream; then
-                log "Failed to push Grafana entities to git server"
-                exit 1
+
+              remote_refs="$(
+                git ls-remote --heads "$GITSYNC_URL" \
+                  refs/heads/main \
+                  refs/heads/upstream
+              )"
+              main_sha="$(
+                printf '%s\n' "$remote_refs" |
+                  awk '$2 == "refs/heads/main" { print $1; exit }'
+              )"
+              upstream_sha="$(
+                printf '%s\n' "$remote_refs" |
+                  awk '$2 == "refs/heads/upstream" { print $1; exit }'
+              )"
+
+              if [ -z "$main_sha" ] && [ -z "$upstream_sha" ]; then
+                log "Git repository is empty; seeding main and upstream"
+                if ! git push --atomic "$GITSYNC_URL" \
+                  HEAD:refs/heads/main \
+                  HEAD:refs/heads/upstream; then
+                  log "Failed to seed Grafana entities repository"
+                  exit 1
+                fi
+              elif [ -n "$main_sha" ] && [ -z "$upstream_sha" ]; then
+                log "main already exists; creating missing upstream from main"
+                git fetch --no-tags "$GITSYNC_URL" refs/heads/main
+                git push "$GITSYNC_URL" FETCH_HEAD:refs/heads/upstream
+              elif [ -z "$main_sha" ] && [ -n "$upstream_sha" ]; then
+                log "upstream already exists; creating missing main from upstream"
+                git fetch --no-tags "$GITSYNC_URL" refs/heads/upstream
+                git push "$GITSYNC_URL" FETCH_HEAD:refs/heads/main
+              else
+                log "main and upstream already exist; skipping repository seed"
               fi
-              log "Grafana entities pushed to git server successfully"
+
+              log "Grafana entities repository is ready"
               log "Preparing Grafana entities for init datasources and library panels"
               cp -r /tmp/grafana-entities/* /opt/grafana-entities/
       containers:

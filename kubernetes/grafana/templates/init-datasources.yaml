@@ -4,21 +4,18 @@
           imagePullPolicy: IfNotPresent
           env:
             - name: CD_ORGANIZATIONS_JSON
-              value: {{ .Values.cd.organizations | default list | toJson | quote }}
+              value: {{ .Values.gitsync.organizations | default list | toJson | quote }}
             - name: CD_DEFAULT_PATHS_JSON
-              value: {{ .Values.cd.path | default list | toJson | quote }}
+              value: {{ .Values.gitsync.path | default list | toJson | quote }}
             - name: GRAFANA_SERVER
               value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
             - name: GRAFANA_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
-                  key: grafana_admin_user
+              value: {{ include "grafana.adminUser" . | quote }}
             - name: GRAFANA_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
-                  key: grafana_admin_password
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
             - name: RUNTIME_CONFIGMAP_NAME
               value: {{ include "common.names.fullname" . }}-datasources
             - name: RUNTIME_MOUNT_FILE
@@ -390,7 +387,7 @@
                 )
 
                 if [[ -z "$CURRENT_ORG" ]]; then
-                  log "Every cd.organizations entry requires org" >&2
+                  log "Every gitsync.organizations entry requires org" >&2
                   exit 1
                 fi
                 if (( ${#REPOSITORY_PATHS[@]} == 0 )); then

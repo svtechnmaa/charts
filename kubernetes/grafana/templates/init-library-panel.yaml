@@ -3,29 +3,26 @@
           image: duchieu2920/svtech_grafana:v13.1.3-ubuntu
           imagePullPolicy: IfNotPresent
           env:
-            - name: CD_ORGANIZATIONS_JSON
-              value: {{ .Values.cd.organizations | default list | toJson | quote }}
-            - name: CD_DEFAULT_PATHS_JSON
-              value: {{ .Values.cd.path | default list | toJson | quote }}
+            - name: GITSYNC_ORGANIZATIONS_JSON
+              value: {{ .Values.gitsync.organizations | default list | toJson | quote }}
+            - name: GITSYNC_DEFAULT_PATHS_JSON
+              value: {{ .Values.gitsync.path | default list | toJson | quote }}
             - name: GRAFANA_SERVER
               value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
             - name: GRAFANA_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
-                  key: grafana_admin_user
+              value: {{ include "grafana.adminUser" . | quote }}
             - name: GRAFANA_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
-                  key: grafana_admin_password
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
             # GDG v0.9.x requires the password key to exist in the config and
             # reads the actual secret through this environment override.
             - name: GDG_CONTEXTS__RUNTIME__PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "common.names.fullname" . }}-auth
-                  key: grafana_admin_password
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
           volumeMounts:
             - name: grafana-entities
               mountPath: /opt/grafana/grafana-entities
@@ -48,7 +45,7 @@
                 local path="$1"
 
                 if [[ -z "$path" || "$path" == /* || "/$path/" == *"/../"* ]]; then
-                  log "Invalid cd.path entry: ${path}" >&2
+                  log "Invalid gitsync.path entry: ${path}" >&2
                   return 1
                 fi
               }
@@ -177,7 +174,7 @@
                 done
 
                 if (( count == 0 )); then
-                  log "No library-panel JSON files found below the configured cd.path entries; nothing to upload"
+                  log "No library-panel JSON files found below the configured gitsync.path entries; nothing to upload"
                 else
                   log "Prepared ${count} unique library-panel files"
                 fi
@@ -249,12 +246,12 @@
               while IFS= read -r organization_config; do
                 requested_org="$(jq -r '.org // empty' <<< "$organization_config")"
                 mapfile -t REPOSITORY_PATHS < <(
-                  jq -r --argjson default "$CD_DEFAULT_PATHS_JSON" \
+                  jq -r --argjson default "$GITSYNC_DEFAULT_PATHS_JSON" \
                     '(.path // .paths // $default)[]? // empty' <<< "$organization_config"
                 )
 
                 if [[ -z "$requested_org" ]]; then
-                  log "Every cd.organizations entry requires org" >&2
+                  log "Every gitsync.organizations entry requires org" >&2
                   exit 1
                 fi
                 if (( ${#REPOSITORY_PATHS[@]} == 0 )); then
@@ -294,7 +291,7 @@
                 log "Uploading library panels to ${org}"
                 upload_library_panels "$config_dir"
                 configured_orgs=$((configured_orgs + 1))
-              done < <(jq -c '.[]' <<< "$CD_ORGANIZATIONS_JSON")
+              done < <(jq -c '.[]' <<< "$GITSYNC_ORGANIZATIONS_JSON")
 
               if (( configured_orgs == 0 )); then
                 log "No organizations contained library panels; nothing to upload"

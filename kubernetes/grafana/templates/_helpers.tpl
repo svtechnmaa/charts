@@ -17,17 +17,7 @@
 {{- tpl .Values.grafanaConfig.auth.existingSecretPasswordKey . | required "grafanaConfig.auth.existingSecretPasswordKey is required" -}}
 {{- end -}}
 
-{{- define "grafana.adminEnv" -}}
-- name: GF_SECURITY_ADMIN_USER
-  value: {{ include "grafana.adminUser" . | quote }}
-- name: GF_SECURITY_ADMIN_PASSWORD
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "grafana.adminSecretName" . | quote }}
-      key: {{ include "grafana.adminSecretKey" . | quote }}
-{{- end -}}
-
-{{/* Local auth Secret remains chart-owned even when admin uses an external Secret. */}}
+{{/* Chart-managed credentials, including Git/CD keys, always use this Secret. */}}
 {{- define "grafana.managedAuthSecretName" -}}
 {{- printf "%s-admin" (include "common.names.fullname" . | trunc 57 | trimSuffix "-") -}}
 {{- end -}}
@@ -42,4 +32,13 @@
 
 {{- define "grafana.databaseSecretKey" -}}
 {{- tpl .Values.grafanaConfig.database.auth.existingSecretPasswordKey . | required "grafanaConfig.database.auth.existingSecretPasswordKey is required" -}}
+{{- end -}}
+
+{{/*
+Build a stable environment variable name for datasource secure fields.
+*/}}
+{{- define "grafana.datasourceEnvName" -}}
+{{- $name := regexReplaceAll "[^A-Z0-9_]" ((index . 0) | upper) "_" -}}
+{{- $field := regexReplaceAll "[^A-Z0-9_]" ((index . 1) | upper) "_" -}}
+{{- printf "GF_DS_%s_%s" $name $field -}}
 {{- end -}}
