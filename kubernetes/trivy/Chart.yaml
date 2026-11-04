@@ -1,0 +1,21 @@
+apiVersion: v2
+name: trivy-server
+description: Production-oriented wrapper chart for Trivy server with an embedded Redis cache
+version: 1.0.0
+appVersion: "0.72.0"
+home: https://github.com/aquasecurity/trivy
+keywords:
+  - security
+  - scanner
+  - trivy
+  - vulnerability
+  - redis
+maintainers:
+  - name: kiennkt
+dependencies:
+  - name: trivy
+    version: 0.24.0
+    repository: https://aquasecurity.github.io/helm-charts/
+  - name: common
+    version: 1.x.x
+    repository: https://svtechnmaa.github.io/charts/artifacthub/
