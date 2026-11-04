@@ -1,6 +1,5 @@
 {{- $g := .Values.global }}
 {{- $csv := dig "csv-view" "enabled" false $g }}
-{{- $mageai := dig "mage-ai" "enabled" false $g }}
 {{- $report := dig "icinga2-report" "enabled" false $g }}
 {{- $nginx := dig "ingress-nginx" "enabled" false $g }}
 apiVersion: v1
@@ -124,15 +123,6 @@ data:
           service: "csv-view"
           tls: {}
         {{- end }}
-        {{- if $mageai }}
-        mage-ai:
-          rule: "PathPrefix(`/mageai`)"
-          service: "mage-ai"
-        mage-ai-tls:
-          rule: "PathPrefix(`/mageai`)"
-          service: "mage-ai"
-          tls: {}
-        {{- end }}
         {{- if $report }}
         icinga2-report:
           middlewares:
@@ -241,12 +231,6 @@ data:
           loadBalancer:
             servers:
               - url: "http://csv-view:8000"
-        {{- end }}
-        {{- if $mageai }}
-        mage-ai:
-          loadBalancer:
-            servers:
-              - url: "http://mage-ai:6789"
         {{- end }}
         {{- if $report }}
         icinga2-report:
