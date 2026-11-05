@@ -106,3 +106,9 @@ routers:
 #     servers: [g1, m1]
 
 replicaCount: 2
+
+## Pod priorityClassName (e.g. system-cluster-critical); empty leaves it unset
+priorityClassName: ""
+
+## Pod tolerations (e.g. node.kubernetes.io/disk-pressure)
+tolerations: []
