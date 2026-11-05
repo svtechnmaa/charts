@@ -1,0 +1,9 @@
+# Apply after migration, credential bootstrap and gateway readiness.
+# Provision the artifact and deploy token as retained external Secrets first.
+seed:
+  enabled: true
+  artifactSecret: x-portal-admin-seed
+  artifactKey: seed.json
+  deployAuth:
+    existingSecret: x-portal-bootstrap
+    key: deploy

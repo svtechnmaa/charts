@@ -1,0 +1,191 @@
+# Temporary external MySQL for namespace test; apply separately from Helm.
+# Provision x-portal-mysql-test-auth first. Init runs only on an empty data PVC.
+# Preserve the PVC and matching credentials when restarting this one-replica DB.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: x-portal-mysql-test
+  namespace: test
+  labels:
+    app.kubernetes.io/name: x-portal-mysql-test
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: x-portal-mysql-test-init
+  namespace: test
+data:
+  01-init.sh: '#!/bin/bash
+
+    set -euo pipefail
+
+    gw_password="$(cat /run/mysql-test/gateway-password)"
+
+    home_password="$(cat /run/mysql-test/home-password)"
+
+    migrator_password="$(cat /run/mysql-test/migrator-password)"
+
+    MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=socket --user=root <<SQL
+
+    CREATE DATABASE IF NOT EXISTS x_portal_gateway_test CHARACTER SET utf8mb4 COLLATE
+    utf8mb4_unicode_ci;
+
+    CREATE DATABASE IF NOT EXISTS x_portal_home_test CHARACTER SET utf8mb4 COLLATE
+    utf8mb4_unicode_ci;
+
+    CREATE USER ''x_portal_gw_test''@''%'' IDENTIFIED BY ''${gw_password}'';
+
+    CREATE USER ''x_portal_home_test''@''%'' IDENTIFIED BY ''${home_password}'';
+
+    CREATE USER ''x_portal_migrate_test''@''%'' IDENTIFIED BY ''${migrator_password}'';
+
+    GRANT SELECT, INSERT, UPDATE, DELETE ON x_portal_gateway_test.* TO ''x_portal_gw_test''@''%'';
+
+    GRANT SELECT, INSERT, UPDATE, DELETE ON x_portal_home_test.* TO ''x_portal_home_test''@''%'';
+
+    GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES, TRIGGER,
+    DROP ON x_portal_home_test.* TO ''x_portal_migrate_test''@''%'';
+
+    SQL
+
+    '
+  02-gateway.sql: "USE x_portal_gateway_test;\n-- Fresh Gateway schema only. Select\
+    \ the customer Gateway database before running.\n-- IF NOT EXISTS does not upgrade\
+    \ or reconcile an existing schema.\nCREATE TABLE IF NOT EXISTS apps (\n    id\
+    \ VARCHAR(64) PRIMARY KEY,\n    display_name VARCHAR(255) NOT NULL,\n    upstream_url\
+    \ VARCHAR(1024) NOT NULL,\n    routing_mode VARCHAR(32) NOT NULL DEFAULT 'gateway',\n\
+    \    public_prefix VARCHAR(255) NOT NULL DEFAULT '',\n    auth_mode VARCHAR(32)\
+    \ NOT NULL DEFAULT 'none',\n    accent VARCHAR(32) NOT NULL,\n    enabled BOOLEAN\
+    \ NOT NULL DEFAULT TRUE,\n    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n\
+    \    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n\
+    );\n\nCREATE TABLE IF NOT EXISTS items (\n    id BIGINT UNSIGNED AUTO_INCREMENT\
+    \ PRIMARY KEY,\n    app_id VARCHAR(64) NOT NULL,\n    label VARCHAR(255) NOT NULL,\n\
+    \    description TEXT NOT NULL,\n    sort_order INT NOT NULL DEFAULT 0,\n    FOREIGN\
+    \ KEY (app_id) REFERENCES apps(id)\n);\n\nCREATE TABLE IF NOT EXISTS upstream_cookies\
+    \ (\n    gateway_session_id VARCHAR(64) NOT NULL,\n    app_id VARCHAR(64) NOT\
+    \ NULL,\n    scope_hash BINARY(32) NOT NULL,\n    name VARCHAR(255) NOT NULL,\n\
+    \    cookie_value TEXT NOT NULL,\n    domain VARCHAR(255) NOT NULL DEFAULT '',\n\
+    \    path VARCHAR(1024) NOT NULL DEFAULT '/',\n    expires_at DATETIME NULL,\n\
+    \    secure BOOLEAN NOT NULL DEFAULT FALSE,\n    http_only BOOLEAN NOT NULL DEFAULT\
+    \ FALSE,\n    same_site VARCHAR(16) NOT NULL DEFAULT '',\n    updated_at TIMESTAMP\
+    \ NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,\n    PRIMARY\
+    \ KEY (gateway_session_id, app_id, scope_hash),\n    INDEX idx_cookie_expiry (expires_at),\n\
+    \    FOREIGN KEY (app_id) REFERENCES apps(id)\n);\n\n"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: x-portal-mysql-test
+  namespace: test
+  labels: &id001
+    app.kubernetes.io/name: x-portal-mysql-test
+spec:
+  type: ClusterIP
+  selector: *id001
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: mysql
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: x-portal-mysql-test
+  namespace: test
+  labels: &id001
+    app.kubernetes.io/name: x-portal-mysql-test
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: *id001
+  template:
+    metadata:
+      labels: *id001
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: mysql
+        image: mirror.gcr.io/library/mysql:8.4.8@sha256:2952e3be7807f06fc18de50b3ea1a632d5c70d63482ff7d7376fe3aa8999babf
+        args:
+        - --log-bin-trust-function-creators=ON
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: x-portal-mysql-test-auth
+              key: root-password
+        ports:
+        - name: mysql
+          containerPort: 3306
+        resources:
+          requests:
+            cpu: 100m
+            memory: 512Mi
+          limits:
+            cpu: '2'
+            memory: 1536Mi
+        startupProbe:
+          exec: &id002
+            command:
+            - /bin/sh
+            - -ec
+            - MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql --protocol=socket --user=root
+              --execute="SELECT 1" >/dev/null
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 60
+        readinessProbe:
+          exec: *id002
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        livenessProbe:
+          exec: *id002
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 6
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        - name: init
+          mountPath: /docker-entrypoint-initdb.d
+          readOnly: true
+        - name: credentials
+          mountPath: /run/mysql-test
+          readOnly: true
+        - name: run
+          mountPath: /var/run/mysqld
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: x-portal-mysql-test
+      - name: init
+        configMap:
+          name: x-portal-mysql-test-init
+          defaultMode: 365
+      - name: credentials
+        secret:
+          secretName: x-portal-mysql-test-auth
+          defaultMode: 288
+      - name: run
+        emptyDir: {}

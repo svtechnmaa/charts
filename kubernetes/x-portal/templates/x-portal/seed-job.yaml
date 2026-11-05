@@ -1,0 +1,117 @@
+{{- if .Values.seed.enabled }}
+{{- $access := include "x-portal.seedAccessName" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $access }}
+  labels: {{- include "x-portal.labels" . | nindent 4 }}
+data:
+  seed.py: |
+    {{- .Files.Get "files/seed.py" | nindent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "x-portal.seedName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin-seed
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.seed.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "x-portal.labels" . | nindent 8 }}
+        app.kubernetes.io/component: admin-seed
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      serviceAccountName: {{ $access }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.seed.image .Values.seed.tunnel.image) "global" .Values.global) | nindent 6 }}
+      {{- include "x-portal.scheduling" . | nindent 6 }}
+      initContainers:
+        # A native sidecar terminates with the main client so the Job completes.
+        - name: tunnel
+          restartPolicy: Always
+          image: {{ include "x-portal.containerImage" (dict "image" .Values.seed.tunnel.image "context" .) | quote }}
+          imagePullPolicy: {{ .Values.seed.tunnel.image.pullPolicy }}
+          args:
+            - --namespace={{ .Release.Namespace }}
+            - --cache-dir=/tmp/cache
+            - port-forward
+            - deployment/{{ include "x-portal.name" . }}
+            - 18090:8090
+            - --address=127.0.0.1
+            - --pod-running-timeout=120s
+          env:
+            - name: HOME
+              value: /tmp
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          resources: {{- toYaml .Values.seed.tunnel.resources | nindent 12 }}
+          volumeMounts:
+            - name: api-access
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
+            - name: tunnel-tmp
+              mountPath: /tmp
+      containers:
+        - name: seed
+          image: {{ include "x-portal.containerImage" (dict "image" .Values.seed.image "context" .) | quote }}
+          imagePullPolicy: {{ .Values.seed.image.pullPolicy }}
+          command: [python3, -B, /scripts/seed.py]
+          env:
+            - name: SEED_TIMEOUT_SECONDS
+              value: {{ .Values.seed.timeoutSeconds | quote }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          resources: {{- toYaml .Values.seed.resources | nindent 12 }}
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+            - name: artifact
+              mountPath: /seed
+              readOnly: true
+            - name: deploy
+              mountPath: /deploy
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: {{ $access }}
+        - name: artifact
+          secret:
+            secretName: {{ tpl .Values.seed.artifactSecret . | required "seed.artifactSecret resolved empty" | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ tpl .Values.seed.artifactKey . | required "seed.artifactKey resolved empty" | quote }}
+                path: seed.json
+        - name: deploy
+          secret:
+            secretName: {{ tpl .Values.seed.deployAuth.existingSecret . | required "seed.deployAuth.existingSecret resolved empty" | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ tpl .Values.seed.deployAuth.key . | required "seed.deployAuth.key resolved empty" | quote }}
+                path: token
+        - name: tunnel-tmp
+          emptyDir: {}
+        - name: api-access
+          projected:
+            defaultMode: 0440
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        fieldPath: metadata.namespace
+{{- end }}

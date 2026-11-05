@@ -1,0 +1,183 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-portal.name" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+  {{- with .Values.commonAnnotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  # Home file secrets use a single writable PVC; avoid overlapping writers.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "x-portal.gatewaySelector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "x-portal.labels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/x-portal/configmap.yaml") . | sha256sum }}
+        checksum/trust: {{ include (print $.Template.BasePath "/x-portal/trust-configmap.yaml") . | sha256sum }}
+        checksum/auth: {{ include (print $.Template.BasePath "/x-portal/secrets.yaml") . | sha256sum }}
+        {{- if .Values.migration.enabled }}
+        x-portal/migration-job: {{ include "x-portal.migrationName" . | quote }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      {{- if .Values.migration.enabled }}
+      serviceAccountName: {{ include "x-portal.waiterName" . }}
+      {{- end }}
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.image .Values.migration.wait.image) "global" .Values.global) | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "x-portal.scheduling" . | nindent 6 }}
+      {{- if .Values.migration.enabled }}
+      initContainers:
+        - name: wait-for-home-migrate
+          image: {{ include "common.images.image" (dict "imageRoot" .Values.migration.wait.image "global" .Values.global) | quote }}
+          imagePullPolicy: {{ .Values.migration.wait.image.pullPolicy }}
+          command: ["/bin/kubectl"]
+          args:
+            - wait
+            - {{ printf "job/%s" (include "x-portal.migrationName" .) | quote }}
+            - --for=condition=complete
+            - {{ printf "--timeout=%s" .Values.migration.wait.timeout | quote }}
+            - {{ printf "--namespace=%s" .Release.Namespace | quote }}
+            - --cache-dir=/tmp/kubectl-cache
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.migration.wait.resources | nindent 12 }}
+          volumeMounts:
+            - name: migration-api-access
+              mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      {{- end }}
+      containers:
+        - name: gateway
+          image: {{ include "x-portal.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: https
+              containerPort: 8443
+          envFrom:
+            - configMapRef:
+                name: {{ include "x-portal.name" . }}
+          env:
+            - name: HOME_SECRET_DIR
+              value: /var/lib/home/secrets
+            {{- range $key := list "HOME_DEPLOY_CREDENTIAL_REF" "HOME_RECOVERY_CREDENTIAL_REF" "HOME_KEYCLOAK_CREDENTIAL_REF" "OIDC_TOKEN_URL" }}
+            - name: {{ $key }}
+              value: {{ tpl (required (printf "gateway.env.%s is required" $key) (index $.Values.gateway.env $key) | toString) $ | quote }}
+            {{- end }}
+            {{- range $field, $env := dict "mysqlDsn" "MYSQL_DSN" "homeMysqlDsn" "HOME_MYSQL_DSN" "oidcClientSecret" "OIDC_CLIENT_SECRET" }}
+            - name: {{ $env }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "x-portal.secretName" (dict "auth" $.Values.gateway.auth "component" "gateway" "context" $) | quote }}
+                  key: {{ include "x-portal.secretKey" (dict "auth" $.Values.gateway.auth "field" $field "context" $) | quote }}
+            {{- end }}
+            {{- with .Values.gateway.extraEnv }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe: {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: audit
+              mountPath: /var/lib/home/audit
+            {{- if .Values.trust.enabled }}
+            - name: trust
+              mountPath: /trust
+              readOnly: true
+            {{- end }}
+            - name: gateway-tls
+              mountPath: /certs
+              readOnly: true
+            - name: home-secrets
+              mountPath: /var/lib/home/secrets
+            - name: tmp
+              mountPath: /tmp
+            {{- with .Values.extraVolumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: audit
+          {{- if .Values.audit.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "x-portal.auditClaimName" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- if .Values.trust.enabled }}
+        - name: trust
+          configMap:
+            name: {{ include "x-portal.trustName" . }}
+            items:
+              - key: {{ .Values.trust.key | quote }}
+                path: ca.crt
+        {{- end }}
+        - name: gateway-tls
+          secret:
+            secretName: {{ include "x-portal.tlsSecretName" . | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.gateway.tls.certKey | quote }}
+                path: tls.crt
+              - key: {{ .Values.gateway.tls.privateKeyKey | quote }}
+                path: tls.key
+        - name: home-secrets
+          {{- if .Values.homeSecrets.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "x-portal.claimName" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.migration.enabled }}
+        # Only the waiter receives an API token; gateway has no token mount.
+        - name: migration-api-access
+          projected:
+            defaultMode: 0440
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
+              - downwardAPI:
+                  items:
+                    - path: namespace
+                      fieldRef:
+                        fieldPath: metadata.namespace
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+{{- end }}

@@ -1,0 +1,18 @@
+# Use an existing platform issuer instead of the default local SelfSigned Issuer.
+# Apply after existing-secrets.yaml; cert-manager and the issuer must exist.
+global:
+  frontendVip: 192.0.2.10
+gateway:
+  env:
+    GATEWAY_PUBLIC_URL: https://192.0.2.10
+  tls:
+    existingSecret: ""
+    certManager:
+      enabled: true
+      createIssuer: false
+      issuerRef:
+        name: site-ca
+        kind: ClusterIssuer
+        group: cert-manager.io
+      dnsNames: []
+      ipAddresses: []

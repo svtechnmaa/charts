@@ -1,0 +1,65 @@
+{{- if .Values.bootstrap.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "x-portal.bootstrapName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+    app.kubernetes.io/component: secret-bootstrap
+spec:
+  backoffLimit: {{ .Values.bootstrap.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.bootstrap.activeDeadlineSeconds }}
+  parallelism: 1
+  completions: 1
+  template:
+    metadata:
+      labels:
+        {{- include "x-portal.labels" . | nindent 8 }}
+        app.kubernetes.io/component: secret-bootstrap
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.image) "global" .Values.global) | nindent 6 }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "x-portal.scheduling" . | nindent 6 }}
+      containers:
+        - name: bootstrap
+          image: {{ include "x-portal.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              /usr/local/bin/x-portal-secret put "$KEYCLOAK_REF" < /bootstrap/keycloak-admin
+              /usr/local/bin/x-portal-secret put "$DEPLOY_REF" < /bootstrap/deploy
+              /usr/local/bin/x-portal-secret put "$RECOVERY_REF" < /bootstrap/recovery
+          env:
+            - name: HOME_SECRET_DIR
+              value: /var/lib/home/secrets
+            - name: KEYCLOAK_REF
+              value: {{ tpl .Values.gateway.env.HOME_KEYCLOAK_CREDENTIAL_REF . | quote }}
+            - name: DEPLOY_REF
+              value: {{ tpl .Values.gateway.env.HOME_DEPLOY_CREDENTIAL_REF . | quote }}
+            - name: RECOVERY_REF
+              value: {{ tpl .Values.gateway.env.HOME_RECOVERY_CREDENTIAL_REF . | quote }}
+          resources: {{- toYaml .Values.bootstrap.resources | nindent 12 }}
+          volumeMounts:
+            - name: store
+              mountPath: /var/lib/home/secrets
+            - name: bootstrap
+              mountPath: /bootstrap
+              readOnly: true
+      volumes:
+        - name: store
+          persistentVolumeClaim:
+            claimName: {{ include "x-portal.claimName" . }}
+        - name: bootstrap
+          secret:
+            secretName: {{ include "x-portal.secretName" (dict "auth" .Values.bootstrap.auth "component" "bootstrap" "context" .) | quote }}
+            defaultMode: 0440
+            items:
+              {{- range $field, $file := dict "keycloakAdmin" "keycloak-admin" "deploy" "deploy" "recovery" "recovery" }}
+              - key: {{ include "x-portal.secretKey" (dict "auth" $.Values.bootstrap.auth "field" $field "context" $) | quote }}
+                path: {{ $file }}
+              {{- end }}
+{{- end }}

@@ -1,0 +1,153 @@
+# Source: deploy/app-adapters @ 59ed07338aff16af203204d4b5b203b5cc9f6452
+# Both adapters are opt-in; no gateway, database or identity provider is installed.
+global: {}
+nameOverride: ''
+fullnameOverride: ''
+commonLabels: {}
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+  seccompProfile:
+    type: RuntimeDefault
+nodeSelector: {}
+tolerations: []
+affinity: {}
+adapters:
+  grafana:
+    enabled: false
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/x-portal
+      tag: ''
+      digest: ''
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    podSecurityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      fsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+    podAnnotations: {}
+    extraVolumes: []
+    extraVolumeMounts: []
+    descriptor:
+      protocol: x-portal-adapter
+      discovery_version: '1'
+      instance_id: grafana-01
+      product:
+        id: grafana
+        display_name: Grafana
+      implementation:
+        version: 1.0.0
+      api_versions:
+      - version: '1'
+        base_path: /adapter/v1
+        openapi_path: /adapter/v1/openapi.json
+      authorization:
+        mode: membership
+        enforced_by: application
+      capabilities:
+        permissions:
+          list: true
+        roles:
+          list: true
+          reference: true
+          compose: true
+          conditional_writes: false
+        membership:
+          read: true
+          write: true
+        sessions:
+          revoke_subject: false
+      management_auth:
+        mode: bearer
+        scope: cluster-internal
+      gateway:
+        upstream_url: http://grafana:3000
+        launch_path: /grafana/login/generic_oauth
+        login:
+          start_path: /grafana/login/generic_oauth
+          callback_path: /grafana/login/generic_oauth
+          logout_path: /grafana/logout
+        oidc:
+          issuer: https://keycloak:8443/auth/realms/nmaa
+          client_id: grafana
+        sessions:
+          maximum_native_session_seconds: null
+    auth:
+      existingSecret: ''
+      nativeCredentials: ''
+      managementToken: ''
+      secretKeys:
+        nativeCredentials: grafana
+        managementToken: token
+    nativeAuth:
+      existingSecret: ''
+      key: grafana
+  rundeck:
+    enabled: false
+    image:
+      registry: ghcr.io
+      repository: svtechnmaa/x-portal
+      tag: ''
+      digest: ''
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    podSecurityContext:
+      runAsUser: 1000
+      runAsGroup: 1000
+      runAsNonRoot: true
+      fsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    resources: {}
+    podAnnotations: {}
+    extraVolumes: []
+    extraVolumeMounts: []
+    config:
+      instance_id: rundeck-operations-01
+      native_url: http://rundeck:4440/rundeck
+      browser_url: http://{{ include "app-adapters.componentName" (dict "context" . "component" "rundeck-web") }}:4180
+      issuer: https://identity.example/realms/platform
+      client_id: rundeck-operations
+      management_address: 0.0.0.0:8090
+      session_directory: /var/lib/rundeck-adapter/sessions
+      policy_directories: []
+      policy_sources_complete: false
+      allowed_return_hosts:
+      - portal.example
+      secure_cookies: true
+    auth:
+      existingSecret: ''
+      nativeToken: ''
+      managementToken: ''
+      bindingKey: ''
+      clientSecret: ''
+      cookieSecret: ''
+      secretKeys:
+        nativeToken: native-token
+        managementToken: management-token
+        bindingKey: binding-key
+        clientSecret: client-secret
+        cookieSecret: cookie-secret
+    persistence:
+      enabled: true
+      existingClaim: ''
+      storageClass: ''
+      accessModes:
+      - ReadWriteOnce
+      size: 1Gi
+      annotations: {}

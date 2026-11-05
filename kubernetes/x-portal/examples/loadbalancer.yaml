@@ -1,0 +1,6 @@
+# Equivalent to deploy/kubernetes/overlays/loadbalancer.
+service:
+  type: LoadBalancer
+  port: 443
+  loadBalancerIP: ""
+  loadBalancerSourceRanges: []

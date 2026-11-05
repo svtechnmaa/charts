@@ -1,0 +1,58 @@
+# Test target: kubernetes-admin@cluster.local (node 10.98.5.231), namespace test.
+# Release: x-portal. Credentials are provisioned separately in test Secrets.
+# Temporary DB: x-portal-mysql-test.test.svc.cluster.local:3306 (examples/mysql-test.yaml).
+# MariaDB test databases are preserved for later compatibility testing.
+# Fresh setup: migrate with gateway=false, then bootstrap, then apply this file.
+global:
+  frontendVip: 10.98.5.236
+image:
+  tag: 59ed073
+  digest: sha256:2a603a84f804988b4ede22810180c2b85ecce360b9e404c0b55ef79d90628401
+  pullSecrets: [ghcr-pull-secret]
+gateway:
+  enabled: true
+  auth:
+    existingSecret: x-portal-mysql-runtime
+  env:
+    GATEWAY_PUBLIC_URL: https://10.98.5.236
+    REDIS_ADDR: redis.nmaa.svc.cluster.local:6379
+    HOME_KEYCLOAK_BASE_URL: https://10.98.5.234/keycloak
+    HOME_KEYCLOAK_REALM: NMAA
+    HOME_KEYCLOAK_CLIENT_ID: home-admin
+    OIDC_CLIENT_ID: home
+    HOME_OIDC_AUDIENCE: home
+    OIDC_PROXY_BASE_URL: https://10.98.5.234/keycloak
+    OIDC_ISSUER: https://10.98.5.234/keycloak/realms/NMAA
+    HOME_OIDC_ISSUER: https://10.98.5.234/keycloak/realms/NMAA
+    OIDC_AUTH_URL: https://10.98.5.234/keycloak/realms/NMAA/protocol/openid-connect/auth
+    OIDC_JWKS_URL: https://10.98.5.234/keycloak/realms/NMAA/protocol/openid-connect/certs
+    HOME_OIDC_JWKS_URL: https://10.98.5.234/keycloak/realms/NMAA/protocol/openid-connect/certs
+    OIDC_TOKEN_URL: https://10.98.5.234/keycloak/realms/NMAA/protocol/openid-connect/token
+trust:
+  existingConfigMap: x-portal-trust
+migration:
+  enabled: false
+  auth:
+    existingSecret: x-portal-mysql-migrator
+bootstrap:
+  enabled: false
+  auth:
+    existingSecret: x-portal-bootstrap
+service:
+  type: LoadBalancer
+  port: 443
+  loadBalancerIP: 10.98.5.236
+homeSecrets:
+  persistence:
+    storageClass: local-path
+audit:
+  persistence:
+    storageClass: local-path
+# Enable explicitly for one seed run, then disable after saving Job results.
+seed:
+  enabled: false
+  artifactSecret: x-portal-admin-seed
+  artifactKey: seed.json
+  deployAuth:
+    existingSecret: x-portal-bootstrap
+    key: deploy

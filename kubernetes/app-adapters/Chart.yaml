@@ -1,0 +1,14 @@
+apiVersion: v2
+name: app-adapters
+description: Grafana and Rundeck application adapters for X-Portal
+type: application
+version: 0.1.0
+home: https://github.com/svtechnmaa/x-portal
+sources:
+- https://github.com/svtechnmaa/x-portal
+dependencies:
+- name: common
+  repository: https://svtechnmaa.github.io/charts/artifacthub/
+  version: 1.5.3
+annotations:
+  x-portal/source-revision: 59ed07338aff16af203204d4b5b203b5cc9f6452

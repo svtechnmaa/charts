@@ -1,0 +1,29 @@
+{{- if and .Values.gateway.tls.certManager.enabled (not .Values.gateway.tls.existingSecret) }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "x-portal.componentName" (dict "context" . "component" "tls") }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "x-portal.tlsSecretName" . | quote }}
+  subject:
+    organizations: [SVTECH]
+  dnsNames:
+    {{- include "x-portal.tlsDnsNames" . | nindent 4 }}
+  {{- $ips := include "x-portal.tlsIpAddresses" . | fromYamlArray }}
+  {{- if $ips }}
+  ipAddresses:
+    {{- toYaml $ips | nindent 4 }}
+  {{- end }}
+  duration: {{ .Values.gateway.tls.certManager.duration | quote }}
+  renewBefore: {{ .Values.gateway.tls.certManager.renewBefore | quote }}
+  privateKey:
+    algorithm: RSA
+    size: 2048
+    rotationPolicy: Always
+  issuerRef:
+    name: {{ include "x-portal.tlsIssuerName" . | quote }}
+    kind: {{ .Values.gateway.tls.certManager.issuerRef.kind }}
+    group: {{ .Values.gateway.tls.certManager.issuerRef.group | quote }}
+{{- end }}

@@ -1,0 +1,237 @@
+{{- range $kind, $adapter := .Values.adapters -}}
+{{- if $adapter.enabled -}}
+{{- $name := include "app-adapters.componentName" (dict "context" $ "component" (printf "%s-adapter" $kind)) -}}
+{{- $authName := include "app-adapters.secretName" (dict "auth" $adapter.auth "component" $kind "context" $) -}}
+{{- $sessionClaim := "" -}}
+{{- if eq $kind "rundeck" -}}
+{{- $sessionClaim = default (include "app-adapters.componentName" (dict "context" $ "component" "rundeck-sessions")) (tpl $adapter.persistence.existingClaim $) -}}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "app-adapters.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $kind }}-adapter
+data:
+  {{- if eq $kind "grafana" }}
+  descriptor.json: |
+    {{- tpl (toYaml $adapter.descriptor) $ | fromYaml | toPrettyJson | nindent 4 }}
+  {{- else }}
+  config.json: |
+    {{- tpl (toYaml $adapter.config) $ | fromYaml | toPrettyJson | nindent 4 }}
+  {{- end }}
+{{- if eq $kind "rundeck" }}
+{{- if and $adapter.persistence.enabled (not $adapter.persistence.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $sessionClaim }}
+  labels:
+    {{- include "app-adapters.labels" $ | nindent 4 }}
+  {{- with $adapter.persistence.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes: {{- toYaml $adapter.persistence.accessModes | nindent 4 }}
+  {{- if eq $adapter.persistence.storageClass "-" }}
+  storageClassName: ""
+  {{- else if $adapter.persistence.storageClass }}
+  storageClassName: {{ $adapter.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $adapter.persistence.size | quote }}
+{{- end }}
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "app-adapters.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $kind }}-adapter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $kind }}-adapter
+  template:
+    metadata:
+      labels:
+        {{- include "app-adapters.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $kind }}-adapter
+      annotations:
+        checksum/config: {{ tpl (toYaml (ternary $adapter.descriptor $adapter.config (eq $kind "grafana"))) $ | sha256sum }}
+        {{- with $adapter.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {{- toYaml $adapter.podSecurityContext | nindent 8 }}
+      {{- include "common.images.pullSecrets" (dict "images" (list $adapter.image) "global" $.Values.global) | nindent 6 }}
+      {{- include "app-adapters.scheduling" $ | nindent 6 }}
+      containers:
+        - name: adapter
+          image: {{ include "app-adapters.containerImage" (dict "image" $adapter.image "context" $) | quote }}
+          imagePullPolicy: {{ $adapter.image.pullPolicy }}
+          securityContext: {{- toYaml $.Values.securityContext | nindent 12 }}
+          ports:
+            - name: management
+              containerPort: 8090
+            {{- if eq $kind "rundeck" }}
+            - name: browser
+              containerPort: 4180
+            {{- end }}
+          env:
+            {{- if eq $kind "grafana" }}
+            - name: GRAFANA_URL
+              value: {{ tpl $adapter.descriptor.gateway.upstream_url $ | quote }}
+            - name: GRAFANA_CREDENTIAL_FILE
+              value: /credentials/native/grafana.json
+            - name: ADAPTER_TOKEN_FILE
+              value: /credentials/service/token
+            - name: ADAPTER_DESCRIPTOR_FILE
+              value: /etc/adapter/descriptor.json
+            - name: ADAPTER_LISTEN_ADDR
+              value: "0.0.0.0:8090"
+            {{- else }}
+            - name: RUNDECK_ADAPTER_CONFIG
+              value: /config/config.json
+            {{- end }}
+          resources: {{- toYaml $adapter.resources | nindent 12 }}
+          readinessProbe:
+            {{- if eq $kind "grafana" }}
+            tcpSocket:
+              port: management
+            periodSeconds: 3
+            {{- else }}
+            httpGet:
+              path: /ready
+              port: browser
+            {{- end }}
+          livenessProbe:
+            tcpSocket:
+              port: management
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: {{ ternary "/etc/adapter" "/config" (eq $kind "grafana") }}
+              readOnly: true
+            {{- if eq $kind "grafana" }}
+            - name: native
+              mountPath: /credentials/native
+              readOnly: true
+            - name: service-token
+              mountPath: /credentials/service
+              readOnly: true
+            {{- else }}
+            - name: sessions
+              mountPath: /var/lib/rundeck-adapter
+            - name: native-token
+              mountPath: /run/native
+              readOnly: true
+            - name: management-token
+              mountPath: /run/management
+              readOnly: true
+            - name: binding-key
+              mountPath: /run/binding
+              readOnly: true
+            - name: oauth-secrets
+              mountPath: /run/oauth
+              readOnly: true
+            {{- end }}
+            {{- with $adapter.extraVolumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}
+        {{- if eq $kind "grafana" }}
+        - name: native
+          secret:
+            secretName: {{ tpl (default $authName $adapter.nativeAuth.existingSecret) $ | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ tpl (required "Grafana native credential key is required" (ternary $adapter.nativeAuth.key $adapter.auth.secretKeys.nativeCredentials (not (empty $adapter.nativeAuth.existingSecret)))) $ | quote }}
+                path: grafana.json
+        - name: service-token
+          secret:
+            secretName: {{ $authName | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ include "app-adapters.secretKey" (dict "auth" $adapter.auth "field" "managementToken" "context" $) | quote }}
+                path: token
+        {{- else }}
+        - name: sessions
+          {{- if $adapter.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ $sessionClaim }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- range $field, $projection := dict "nativeToken" (dict "volume" "native-token" "file" "token") "managementToken" (dict "volume" "management-token" "file" "token") "bindingKey" (dict "volume" "binding-key" "file" "key") }}
+        - name: {{ $projection.volume }}
+          secret:
+            secretName: {{ $authName | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ include "app-adapters.secretKey" (dict "auth" $adapter.auth "field" $field "context" $) | quote }}
+                path: {{ $projection.file }}
+        {{- end }}
+        - name: oauth-secrets
+          secret:
+            secretName: {{ $authName | quote }}
+            defaultMode: 0440
+            items:
+              - key: {{ include "app-adapters.secretKey" (dict "auth" $adapter.auth "field" "clientSecret" "context" $) | quote }}
+                path: client-secret
+              - key: {{ include "app-adapters.secretKey" (dict "auth" $adapter.auth "field" "cookieSecret" "context" $) | quote }}
+                path: cookie-secret
+        {{- end }}
+        {{- with $adapter.extraVolumes }}
+        {{- tpl (toYaml .) $ | nindent 8 }}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app-adapters.componentName" (dict "context" $ "component" (printf "%s-management" $kind)) }}
+  labels:
+    {{- include "app-adapters.labels" $ | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "common.labels.matchLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $kind }}-adapter
+  ports:
+    - name: management
+      port: 8090
+      targetPort: management
+{{- if eq $kind "rundeck" }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app-adapters.componentName" (dict "context" $ "component" "rundeck-web") }}
+  labels:
+    {{- include "app-adapters.labels" $ | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "common.labels.matchLabels" $ | nindent 4 }}
+    app.kubernetes.io/component: rundeck-adapter
+  ports:
+    - name: browser
+      port: 4180
+      targetPort: browser
+{{- end }}
+{{- end }}
+{{- end }}

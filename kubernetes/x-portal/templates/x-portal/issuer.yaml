@@ -1,0 +1,10 @@
+{{- if and .Values.gateway.tls.certManager.enabled .Values.gateway.tls.certManager.createIssuer (not .Values.gateway.tls.existingSecret) }}
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "x-portal.tlsIssuerName" . | quote }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+{{- end }}

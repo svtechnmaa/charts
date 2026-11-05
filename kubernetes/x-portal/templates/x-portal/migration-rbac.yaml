@@ -1,0 +1,36 @@
+{{- if and .Values.migration.enabled .Values.gateway.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "x-portal.waiterName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "x-portal.waiterName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [batch]
+    resources: [jobs]
+    resourceNames: [{{ include "x-portal.migrationName" . | quote }}]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "x-portal.waiterName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "x-portal.waiterName" . }}
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "x-portal.waiterName" . }}
+{{- end }}

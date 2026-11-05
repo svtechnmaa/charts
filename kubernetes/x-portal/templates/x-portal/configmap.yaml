@@ -1,0 +1,40 @@
+{{- if .Values.gateway.enabled }}
+{{- $reserved := list "MYSQL_DSN" "HOME_MYSQL_DSN" "OIDC_CLIENT_SECRET" "LISTEN_ADDR" "HOME_LISTEN_ADDR" "HOME_API_URL" "HOME_SECRET_DIR" "HOME_AUDIT_LOG_DIR" "HOME_AUDIT_LOG_RETENTION_DAYS" "TLS_CERT_FILE" "TLS_KEY_FILE" "TZ" -}}
+{{- range $key, $value := .Values.gateway.env -}}
+{{- if has $key $reserved -}}
+{{- fail (printf "gateway.env.%s is managed by the chart; use auth, tls or service settings" $key) -}}
+{{- end -}}
+{{- end -}}
+{{- range (tpl (toYaml .Values.gateway.extraEnv) . | fromYamlArray) -}}
+{{- if or (has .name $reserved) (hasKey $.Values.gateway.env .name) -}}
+{{- fail (printf "gateway.extraEnv must not override managed environment variable %s" .name) -}}
+{{- end -}}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-portal.name" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+data:
+  LISTEN_ADDR: ":8443"
+  HOME_LISTEN_ADDR: "127.0.0.1:8090"
+  HOME_API_URL: "http://127.0.0.1:8090"
+  HOME_AUDIT_LOG_DIR: /var/lib/home/audit
+  HOME_AUDIT_LOG_RETENTION_DAYS: {{ .Values.audit.retentionDays | quote }}
+  TLS_CERT_FILE: /certs/tls.crt
+  TLS_KEY_FILE: /certs/tls.key
+  {{- if .Values.trust.enabled }}
+  {{- range $key := list "OIDC_CA_FILE" "HOME_OIDC_CA_FILE" "HOME_KEYCLOAK_CA_FILE" "GATEWAY_UPSTREAM_CA_FILE" }}
+  {{- if not (hasKey $.Values.gateway.env $key) }}
+  {{ $key }}: /trust/ca.crt
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  TZ: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) | quote }}
+  {{- range $key, $value := .Values.gateway.env }}
+  {{- if not (has $key (list "HOME_DEPLOY_CREDENTIAL_REF" "HOME_RECOVERY_CREDENTIAL_REF" "HOME_KEYCLOAK_CREDENTIAL_REF" "OIDC_TOKEN_URL")) }}
+  {{ $key }}: {{ tpl ($value | toString) $ | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,11 @@
+{{- if and .Values.gateway.enabled .Values.trust.enabled (not .Values.trust.existingConfigMap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-portal.trustName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+data:
+  {{ .Values.trust.key | quote }}: |
+    {{- required "trust.existingConfigMap or trust.caBundle is required when trust.enabled=true" .Values.trust.caBundle | nindent 4 }}
+{{- end }}

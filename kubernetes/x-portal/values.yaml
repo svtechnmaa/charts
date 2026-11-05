@@ -1,0 +1,216 @@
+# Source: deploy/kubernetes @ 59ed07338aff16af203204d4b5b203b5cc9f6452
+# Set site endpoints and immutable image digests. Jobs are opt-in.
+global:
+  # Exact case: frontendVip. Added to the gateway Certificate's IP SANs.
+  frontendVip: ''
+nameOverride: ''
+fullnameOverride: ''
+commonLabels: {}
+commonAnnotations: {}
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/x-portal
+  tag: ''
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+  digest: ''
+replicaCount: 1
+timezone: Asia/Ho_Chi_Minh
+podAnnotations: {}
+podSecurityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+  seccompProfile:
+    type: RuntimeDefault
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+gateway:
+  enabled: true
+  auth:
+    existingSecret: ''
+    mysqlDsn: ''
+    homeMysqlDsn: ''
+    oidcClientSecret: ''
+    secretKeys:
+      mysqlDsn: MYSQL_DSN
+      homeMysqlDsn: HOME_MYSQL_DSN
+      oidcClientSecret: OIDC_CLIENT_SECRET
+  tls:
+    # External Secret takes precedence; leave empty to use cert-manager.
+    existingSecret: ''
+    certKey: tls.crt
+    privateKeyKey: tls.key
+    certManager:
+      enabled: true
+      # Empty generates a release-scoped <fullname>-tls name.
+      secretName: ''
+      # Create a namespaced SelfSigned Issuer, as in the Traefik chart.
+      # Set false and provide issuerRef.name to use an existing platform issuer.
+      createIssuer: true
+      issuerRef:
+        name: ''
+        kind: Issuer
+        group: cert-manager.io
+      duration: 2160h
+      renewBefore: 360h
+      # Additional SANs; Service DNS names and global.frontendVip are automatic.
+      dnsNames: []
+      ipAddresses: []
+  env:
+    GATEWAY_PUBLIC_URL: https://192.0.2.10
+    REDIS_ADDR: redis:6379
+    HOME_KEYCLOAK_BASE_URL: https://keycloak:8443/auth
+    HOME_KEYCLOAK_REALM: nmaa
+    HOME_KEYCLOAK_CLIENT_ID: home-admin
+    OIDC_CLIENT_ID: home
+    HOME_OIDC_AUDIENCE: home
+    OIDC_PROXY_BASE_URL: https://keycloak:8443/auth
+    OIDC_ISSUER: https://keycloak:8443/auth/realms/nmaa
+    HOME_OIDC_ISSUER: https://keycloak:8443/auth/realms/nmaa
+    OIDC_AUTH_URL: https://keycloak:8443/auth/realms/nmaa/protocol/openid-connect/auth
+    OIDC_JWKS_URL: https://keycloak:8443/auth/realms/nmaa/protocol/openid-connect/certs
+    HOME_OIDC_JWKS_URL: https://keycloak:8443/auth/realms/nmaa/protocol/openid-connect/certs
+    HOME_DEPLOY_CREDENTIAL_REF: secret://deploy/bootstrap
+    HOME_RECOVERY_CREDENTIAL_REF: secret://recovery/home
+    HOME_KEYCLOAK_CREDENTIAL_REF: secret://keycloak/home-admin
+    OIDC_TOKEN_URL: https://keycloak:8443/auth/realms/nmaa/protocol/openid-connect/token
+    GATEWAY_UPSTREAM_TLS_INSECURE_SKIP_VERIFY: 'false'
+    OIDC_TLS_INSECURE_SKIP_VERIFY: 'false'
+    HOME_OIDC_TLS_INSECURE_SKIP_VERIFY: 'false'
+    HOME_KEYCLOAK_TLS_INSECURE_SKIP_VERIFY: 'false'
+  extraEnv: []
+migration:
+  enabled: false
+  auth:
+    existingSecret: ''
+    mysqlDsn: ''
+    secretKeys:
+      mysqlDsn: HOME_MYSQL_DSN
+  logLevel: info
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  resources: {}
+  wait:
+    timeout: 660s
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.34.1
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    resources: {}
+homeSecrets:
+  persistence:
+    enabled: true
+    existingClaim: ''
+    storageClass: ''
+    accessModes:
+    - ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+service:
+  type: ClusterIP
+  port: 8443
+  nodePort: null
+  annotations: {}
+  loadBalancerIP: ''
+  loadBalancerSourceRanges: []
+startupProbe:
+  httpGet:
+    path: /healthz
+    port: https
+    scheme: HTTPS
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 30
+readinessProbe:
+  httpGet:
+    path: /healthz
+    port: https
+    scheme: HTTPS
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: https
+    scheme: HTTPS
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+extraVolumes: []
+extraVolumeMounts: []
+networkPolicy:
+  enabled: true
+bootstrap:
+  enabled: false
+  auth:
+    existingSecret: ''
+    keycloakAdmin: ''
+    deploy: ''
+    recovery: ''
+    secretKeys:
+      keycloakAdmin: keycloak-admin
+      deploy: deploy
+      recovery: recovery
+  backoffLimit: 0
+  activeDeadlineSeconds: 300
+  resources: {}
+audit:
+  retentionDays: 30
+  persistence:
+    enabled: true
+    existingClaim: ''
+    storageClass: ''
+    accessModes:
+    - ReadWriteOnce
+    size: 1Gi
+    annotations: {}
+trust:
+  enabled: true
+  existingConfigMap: ''
+  key: ca.crt
+  caBundle: ''
+# Operator-triggered role/user seeding after migration, credential bootstrap and
+# gateway readiness. Uses native sidecar port-forwarding (Kubernetes >=1.29).
+seed:
+  enabled: false
+  artifactSecret: ''
+  artifactKey: seed.json
+  deployAuth:
+    existingSecret: ''
+    key: deploy
+  timeoutSeconds: 300
+  activeDeadlineSeconds: 420
+  resources: {}
+  image:
+    registry: mirror.gcr.io
+    repository: library/python
+    tag: 3.12-alpine
+    digest: ''
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  tunnel:
+    image:
+      registry: registry.k8s.io
+      repository: kubectl
+      tag: v1.29.5
+      digest: ''
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    resources: {}

@@ -1,0 +1,24 @@
+# Test target: kubernetes-admin@cluster.local (node 10.98.5.231), namespace test.
+# Release: app-adapters. Native Grafana keeps its current InternalProduction OIDC.
+# Realm NMAA also has a grafana client; switching native Grafana to it is separate.
+adapters:
+  grafana:
+    enabled: true
+    image:
+      tag: grafana-adapter-eef3c91
+      digest: sha256:a0b749b24f2b05d09f7a249406149a71cdfa33b62edcf5523c0f8b50363a29f6
+      pullSecrets: [ghcr-pull-secret]
+    auth:
+      existingSecret: x-portal-grafana-auth
+    nativeAuth:
+      existingSecret: x-portal-grafana-auth
+      key: grafana
+    descriptor:
+      instance_id: test-grafana-01
+      gateway:
+        upstream_url: http://grafana.nmaa.svc.cluster.local:3000
+        oidc:
+          issuer: https://10.98.5.234/keycloak/realms/InternalProduction
+          client_id: grafana
+  rundeck:
+    enabled: false

@@ -1,0 +1,22 @@
+{{- if and .Values.homeSecrets.persistence.enabled (not .Values.homeSecrets.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "x-portal.claimName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+  {{- with .Values.homeSecrets.persistence.annotations }}
+  annotations: {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .Values.homeSecrets.persistence.accessModes | nindent 4 }}
+  {{- if eq .Values.homeSecrets.persistence.storageClass "-" }}
+  storageClassName: ""
+  {{- else if .Values.homeSecrets.persistence.storageClass }}
+  storageClassName: {{ .Values.homeSecrets.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.homeSecrets.persistence.size | quote }}
+{{- end }}

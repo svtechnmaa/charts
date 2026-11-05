@@ -1,0 +1,4 @@
+# Compatibility: use a site-managed TLS Secret, with no chart Certificate/Issuer.
+gateway:
+  tls:
+    existingSecret: x-portal-tls

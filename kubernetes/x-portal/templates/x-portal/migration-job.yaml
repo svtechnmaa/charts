@@ -1,0 +1,49 @@
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "x-portal.migrationName" . }}
+  labels:
+    {{- include "x-portal.labels" . | nindent 4 }}
+    app.kubernetes.io/component: home-migrate
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.migration.activeDeadlineSeconds }}
+  parallelism: 1
+  completions: 1
+  template:
+    metadata:
+      labels:
+        {{- include "x-portal.labels" . | nindent 8 }}
+        app.kubernetes.io/component: home-migrate
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      {{- include "common.images.pullSecrets" (dict "images" (list .Values.image) "global" .Values.global) | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "x-portal.scheduling" . | nindent 6 }}
+      containers:
+        - name: home-migrate
+          image: {{ include "x-portal.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/usr/local/bin/x-portal-migrate"]
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - name: HOME_MYSQL_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "x-portal.secretName" (dict "auth" .Values.migration.auth "component" "migration" "context" .) | quote }}
+                  key: {{ include "x-portal.secretKey" (dict "auth" .Values.migration.auth "field" "mysqlDsn" "context" .) | quote }}
+            - name: HOME_LOG_LEVEL
+              value: {{ .Values.migration.logLevel | quote }}
+          resources:
+            {{- toYaml .Values.migration.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+{{- end }}

@@ -1,0 +1,45 @@
+{{- if hasKey .Values "adapters" -}}
+{{- fail "adapters moved to the separate app-adapters chart; move adapters values to that chart and remove them from x-portal values" -}}
+{{- end -}}
+{{- if and .Values.bootstrap.enabled .Values.gateway.enabled -}}
+{{- fail "bootstrap.enabled requires gateway.enabled=false; stop the gateway before the bootstrap Job writes its RWO secret store" -}}
+{{- end -}}
+{{- if and .Values.bootstrap.enabled (not .Values.homeSecrets.persistence.enabled) -}}
+{{- fail "bootstrap.enabled requires homeSecrets.persistence.enabled=true" -}}
+{{- end -}}
+{{- if ne (toString .Values.replicaCount) "1" -}}
+{{- fail "replicaCount must be 1 for the single-writer Home secret store" -}}
+{{- end -}}
+{{- if not (regexMatch "^[1-9][0-9]*$" (toString .Values.audit.retentionDays)) -}}
+{{- fail "audit.retentionDays must be a positive integer" -}}
+{{- end -}}
+{{- if .Values.service.homeApi -}}
+{{- if .Values.service.homeApi.enabled -}}
+{{- fail "service.homeApi.enabled is no longer supported; Home stays on loopback" -}}
+{{- end -}}
+{{- end -}}
+
+{{- if and .Values.gateway.tls.certManager.enabled (not .Values.gateway.tls.existingSecret) -}}
+{{- if or (ne .Values.gateway.tls.certKey "tls.crt") (ne .Values.gateway.tls.privateKeyKey "tls.key") -}}
+{{- fail "cert-manager mode requires gateway.tls.certKey=tls.crt and privateKeyKey=tls.key; custom keys require an existingSecret" -}}
+{{- end -}}
+{{- if and .Values.gateway.tls.certManager.createIssuer (or (ne .Values.gateway.tls.certManager.issuerRef.kind "Issuer") (ne .Values.gateway.tls.certManager.issuerRef.group "cert-manager.io")) -}}
+{{- fail "createIssuer=true creates a cert-manager.io Issuer; set createIssuer=false for an external issuer" -}}
+{{- end -}}
+{{- end -}}
+
+{{- if .Values.seed.enabled -}}
+{{- if or (not .Values.gateway.enabled) .Values.bootstrap.enabled .Values.migration.enabled -}}
+{{- fail "seed.enabled requires the gateway running with migration.enabled=false and bootstrap.enabled=false; finish those phases first" -}}
+{{- end -}}
+{{- if not (semverCompare ">=1.29-0" .Capabilities.KubeVersion.Version) -}}
+{{- fail "seed.enabled requires Kubernetes >=1.29 with SidecarContainers enabled" -}}
+{{- end -}}
+{{- $_ := required "seed.artifactSecret is required" .Values.seed.artifactSecret -}}
+{{- $_ := required "seed.artifactKey is required" .Values.seed.artifactKey -}}
+{{- $_ := required "seed.deployAuth.existingSecret is required" .Values.seed.deployAuth.existingSecret -}}
+{{- $_ := required "seed.deployAuth.key is required" .Values.seed.deployAuth.key -}}
+{{- if or (lt (int .Values.seed.timeoutSeconds) 1) (le (int .Values.seed.activeDeadlineSeconds) (int .Values.seed.timeoutSeconds)) -}}
+{{- fail "seed timeoutSeconds must be positive and activeDeadlineSeconds must exceed it" -}}
+{{- end -}}
+{{- end -}}

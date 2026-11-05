@@ -1,0 +1,8 @@
+{{- if .Values.adapters.rundeck.enabled -}}
+{{- if not (hasPrefix "/var/lib/rundeck-adapter/" .Values.adapters.rundeck.config.session_directory) -}}
+{{- fail "adapters.rundeck.config.session_directory must be within /var/lib/rundeck-adapter/ (the session volume)" -}}
+{{- end -}}
+{{- if ne .Values.adapters.rundeck.config.management_address "0.0.0.0:8090" -}}
+{{- fail "adapters.rundeck.config.management_address must be 0.0.0.0:8090 to match its management Service" -}}
+{{- end -}}
+{{- end -}}
