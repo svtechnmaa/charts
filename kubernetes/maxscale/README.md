@@ -23,6 +23,8 @@ Service exposing one port per configured router.
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `replicaCount` | int | `2` | MaxScale pod replica count. |
+| `priorityClassName` | string | `""` | Pod `priorityClassName` (e.g. `system-cluster-critical`). Empty leaves it unset. |
+| `tolerations` | list | `[]` | Pod tolerations (e.g. to tolerate `node.kubernetes.io/disk-pressure`). |
 | `image.registry` | string | `ghcr.io` | Registry for the MaxScale image. |
 | `image.repository` | string | `svtechnmaa/svtech_maxscale` | MaxScale image repository. |
 | `image.tag` | string | `v1.0.10` | MaxScale image tag. `v1.0.10`+ is required for the `routers[*].servers` / `routers[*].params` fields below — older tags ignore those env vars but keep working via the legacy path. |
