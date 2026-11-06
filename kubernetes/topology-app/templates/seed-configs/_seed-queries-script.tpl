@@ -15,7 +15,7 @@ done
 get_datasourceID_fromGrafana() {
   # grafana_host="${INTERNAL_GRAFANA_HOST:-grafana}"
   # grafana_port="${INTERNAL_GRAFANA_PORT:-3000}"
-  grafana_url="${INTERNAL_GRAFANA_URL:-http://grafana:3000/grafana/}"
+  grafana_url="${INTERNAL_GRAFANA_URL:-{{ dig "datasources" "internal_grafana" "url" "http://grafana:3000/grafana/" .Values.config | trimSuffix "/" }}/}"
   grafana_user="${INTERNAL_GRAFANA_USER:-admin}"
   grafana_password="${INTERNAL_GRAFANA_PASSWORD:-admin}"
 

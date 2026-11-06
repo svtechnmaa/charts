@@ -5,11 +5,12 @@ metadata:
   name: {{ .Release.Name }}-ingress-frontend
   namespace: {{ .Release.Namespace }}
 spec:
-  type: {{ .Values.service.type }}
+  {{- $type := .Values.service.frontendType | default .Values.service.type }}
+  type: {{ $type }}
   selector:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/part-of: ingress-nginx
-  {{ if .Values.global.frontendVip }}
+  {{ if and (eq $type "LoadBalancer") .Values.global.frontendVip }}
   loadBalancerIP: {{ .Values.global.frontendVip }}
   {{ end }}
   ports:
