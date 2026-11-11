@@ -68,13 +68,9 @@ spec:
             - --entryPoints.websecure.address={{ .Values.args.entryPoints.websecure.address }}
             - --entryPoints.websecure.asDefault={{ .Values.args.entryPoints.websecure.asDefault }}
             - --entryPoints.traefik.address={{ .Values.args.entryPoints.traefik.address }}
-            - --entryPoints.web.transport.respondingTimeouts.readTimeout={{ .Values.args.readTimeout }}
-            - --entryPoints.websecure.transport.respondingTimeouts.readTimeout={{ .Values.args.readTimeout }}
-            {{- if not .Values.global.ci }}
             - --entrypoints.web.http.redirections.entryPoint.to=websecure
             - --entrypoints.web.http.redirections.entryPoint.scheme=https
             - --entrypoints.web.http.redirections.entrypoint.permanent=true
-            {{- end }}
           env:
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
