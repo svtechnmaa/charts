@@ -43,9 +43,12 @@ spec:
             - name: TZ
               value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
             {{- range $key, $value := .Values.env }}
+            {{- if not (and (dig "seaweedfs" "enabled" false ($.Values.global | default dict)) (has $key (list "S3_ACCESS_KEY" "S3_SECRET_KEY"))) }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- end }}
+            {{- include "netforge-be.seaweedfsS3Env" . | nindent 12 }}
           {{- if or .Values.netforgeAppEnv .Values.netforgeAppSecretEnv }}
           envFrom:
             {{- if .Values.netforgeAppEnv }}
