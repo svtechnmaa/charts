@@ -64,3 +64,23 @@ Call once from each resource that ranges over .Values.routers.
   {{- $_ := set $ports $portName .id -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "maxscale.authSecretName" -}}
+{{- if .Values.maxscaleConfig.auth.existingSecret -}}
+{{- tpl .Values.maxscaleConfig.auth.existingSecret . | required "maxscaleConfig.auth.existingSecret resolved empty" -}}
+{{- else -}}
+{{- printf "%s-auth" (include "common.names.fullname" . | trunc 58 | trimSuffix "-") -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "maxscale.authSecretKey" -}}
+{{- tpl .Values.maxscaleConfig.auth.existingSecretPasswordKey . | required "maxscaleConfig.auth.existingSecretPasswordKey is required" -}}
+{{- end -}}
+
+{{- define "maxscale.passwordEnv" -}}
+- name: {{ .env }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "maxscale.authSecretName" .context | quote }}
+      key: {{ include "maxscale.authSecretKey" .context | quote }}
+{{- end -}}

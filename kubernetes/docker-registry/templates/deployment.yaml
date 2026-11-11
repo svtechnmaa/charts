@@ -115,6 +115,10 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
+      {{- with .Values.registry.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
+
       {{- with .Values.registry.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

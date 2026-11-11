@@ -1,0 +1,7 @@
+{{/* Fail on retired credential paths rather than silently use another account. */}}
+{{- if hasKey .Values.maxscaleConfig "monitor_user" }}
+{{- fail "Move maxscaleConfig.monitor_user to maxscaleConfig.auth.username" }}
+{{- end }}
+{{- if hasKey .Values.maxscaleConfig "monitor_user_password" }}
+{{- fail "Move maxscaleConfig.monitor_user_password to maxscaleConfig.auth.password" }}
+{{- end }}

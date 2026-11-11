@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Chart.Name }}-config
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  esx.yml: |
+{{ include "vmware-exporter.esx.yml" . | b64enc | indent 4 }}

@@ -1,6 +1,10 @@
 global:
-  adminUser:
-  adminPassword:
+  # Auth precedence: nonempty authenUsers.grafana > legacy adminUser/adminPassword > grafanaConfig.auth.
+  # Remove legacy keys when migrating to local auth; stored Secrets take priority for passwords.
+  authenUsers:
+    grafana:
+      user: "" # Non-empty global input overrides grafanaConfig.auth.username
+      password: "" # Empty: generate and preserve a 32-character password.
 
   sharedVolume:
     enabled: false
@@ -8,6 +12,7 @@ global:
   frontendVip: ""
   mariadb-galera:
     enabled: true
+  enableHttps: true
 
 timezone: Asia/Ho_Chi_Minh
 
@@ -26,6 +31,8 @@ image:
   # debug: true
 
 renderer:
+  enabled: true
+  url: "http://renderer:8081/render" # May point to a shared/external renderer; empty omits the env.
   image:
     registry: ghcr.io
     repository: svtechnmaa/grafana-image-renderer
@@ -36,6 +43,15 @@ renderer:
     type: ClusterIP
 
 chrome:
+  enabled: true
+  url: "http://chrome:9222" # May point to shared/external Chrome; empty omits the env.
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
   image:
     registry: ghcr.io
     repository: svtechnmaa/headless-shell
@@ -177,15 +193,25 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 
 grafanaConfig:
-  mysqlHost: "mariadb"
-  mysqlPort: 3306
-  mysqlDB: grafana
-  mysqlUser: grafana
-  mysqlPassword: juniper@123
-  adminUser: admin
-  adminPassword: admin
+  database:
+    auth:
+      existingSecret: ""
+      existingSecretPasswordKey: DB_PASSWORD
+      username: grafana
+      password: "juniper@123"
+    mysqlHost: "mariadb"
+    mysqlPort: 3306
+    mysqlDB: grafana
+  auth:
+    username: ""
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
+  subPath: /grafana
+  env: []
 
 gdgConfig:
+  runInitDataJob: true
   contextName: main
   storageEngine: {}
 
