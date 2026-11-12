@@ -49,7 +49,15 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: GITSYNC_URL
-              value: {{ required "gitsync.url is required for the grafana-entities push" .Values.gitsync.url | quote }}
+              value: {{ required "gitsync.url is required for the grafana-entities source" .Values.gitsync.url | quote }}
+            - name: GITSYNC_REMOTE_BRANCH
+              value: {{ required "gitsync.remote_branch is required for the grafana-entities source checkout" .Values.gitsync.remote_branch | quote }}
+            - name: GITSYNC_FORCE_PUSH
+              value: {{ .Values.gitsync.forcePush | toString | quote }}
+            {{- if not (empty (default "" .Values.global.http_proxy)) }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.global.http_proxy | quote }}
+            {{- end }}
             - name: GIT_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -100,17 +108,130 @@ spec:
               chmod 700 "$askpass_file"
               export GIT_ASKPASS="$askpass_file"
 
-              until git ls-remote "$GITSYNC_URL" >/dev/null 2>&1; do
-                log "Waiting for Git repository ${GITSYNC_URL} to become available..."
-                sleep 5
-              done
-
               cd /tmp/grafana-entities
+
+              source_https_proxy="${HTTPS_PROXY:-}"
+
+              use_source_proxy() {
+                if [ -n "$source_https_proxy" ]; then
+                  export HTTPS_PROXY="$source_https_proxy"
+                else
+                  unset HTTPS_PROXY
+                fi
+              }
+
+              use_destination_proxy() {
+                case "$GITSYNC_URL" in
+                  *[Gg][Ii][Tt][Hh][Uu][Bb]*) use_source_proxy ;;
+                  *) unset HTTPS_PROXY ;;
+                esac
+              }
+
+              checkout_exact() {
+                target_ref="$1"
+                description="$2"
+
+                git checkout --detach --force "$target_ref"
+                git clean -fdx
+                log "Checked out ${description} at $(git rev-parse HEAD)"
+              }
+
+              classify_destination_ref() {
+                target_ref="$1"
+                target_sha="$2"
+
+                if [ -z "$target_sha" ]; then
+                  printf '%s\n' missing
+                  return
+                fi
+
+                if ! git fetch --quiet --no-tags "$GITSYNC_URL" \
+                     "+refs/heads/${target_ref}:refs/remotes/bootstrap-destination/${target_ref}"; then
+                  log "Failed to fetch destination ${target_ref} for promotion preflight" >&2
+                  return 1
+                fi
+                if [ "$target_sha" = "$selected_sha" ]; then
+                  printf '%s\n' equal
+                elif git merge-base --is-ancestor "$target_sha" "$selected_sha"; then
+                  printf '%s\n' behind
+                elif git merge-base --is-ancestor "$selected_sha" "$target_sha"; then
+                  printf '%s\n' ahead
+                else
+                  printf '%s\n' diverged
+                fi
+              }
+
+              require_force_permission() {
+                target_ref="$1"
+                target_sha="$2"
+                relation="$3"
+
+                case "$relation" in
+                  ahead|diverged)
+                    if [ "$GITSYNC_FORCE_PUSH" != "true" ]; then
+                      log "Destination ${target_ref} (${target_sha}) is ${relation} relative to selected ${GITSYNC_REMOTE_BRANCH} (${selected_sha})." >&2
+                      log "Refusing the non-fast-forward update because gitsync.forcePush=false." >&2
+                      log "To intentionally override destination ${target_ref}, rerun with gitsync.forcePush=true." >&2
+                      exit 1
+                    fi
+                    log "gitsync.forcePush=true: allowing ${relation} destination ${target_ref} (${target_sha}) to be replaced by ${selected_sha}"
+                    ;;
+                esac
+              }
+
+              if ! git check-ref-format "refs/heads/${GITSYNC_REMOTE_BRANCH}" >/dev/null 2>&1; then
+                log "Invalid gitsync.remote_branch: ${GITSYNC_REMOTE_BRANCH}" >&2
+                exit 1
+              fi
+              case "$GITSYNC_FORCE_PUSH" in
+                true|false) ;;
+                *)
+                  log "gitsync.forcePush must be true or false; got: ${GITSYNC_FORCE_PUSH}" >&2
+                  exit 1
+                  ;;
+              esac
+
+              # Discard build-time working-tree changes from the entities image.
+              image_sha="$(git rev-parse HEAD)"
+              git reset --hard "$image_sha"
+              git clean -fdx
+
+              # GitHub is an external, read-only source for this Job. Never
+              # seed, promote, or create upstream refs there. Grafana Git Sync
+              # remains responsible for its own configured repository writes.
+              case "$GITSYNC_URL" in
+                *[Gg][Ii][Tt][Hh][Uu][Bb]*)
+                  use_source_proxy
+                  log "Using GitHub source branch ${GITSYNC_REMOTE_BRANCH} (read-only)"
+                  if ! git ls-remote --exit-code --heads "$GITSYNC_URL" \
+                       "refs/heads/${GITSYNC_REMOTE_BRANCH}" >/dev/null 2>&1; then
+                    log "GitHub source branch is unreachable or missing: ${GITSYNC_REMOTE_BRANCH}" >&2
+                    exit 1
+                  fi
+                  git fetch --no-tags "$GITSYNC_URL" \
+                    "+refs/heads/${GITSYNC_REMOTE_BRANCH}:refs/remotes/bootstrap-source/selected"
+                  checkout_exact refs/remotes/bootstrap-source/selected \
+                    "GitHub source ${GITSYNC_REMOTE_BRANCH}"
+                  log "GitHub mode is read-only; skipping destination seed and promotion"
+                  log "Preparing Grafana entities for init datasources and library panels"
+                  cp -r /tmp/grafana-entities/* /opt/grafana-entities/
+                  exit 0
+                  ;;
+              esac
+
+              # The proxy is intended for the image's source remote. Internal
+              # destinations such as git-http must bypass it.
+              use_destination_proxy
+              if ! git ls-remote "$GITSYNC_URL" >/dev/null 2>&1; then
+                log "Git destination is not reachable: ${GITSYNC_URL}" >&2
+                exit 1
+              fi
 
               remote_refs="$(
                 git ls-remote --heads "$GITSYNC_URL" \
                   refs/heads/main \
-                  refs/heads/upstream
+                  refs/heads/upstream \
+                  "refs/heads/${GITSYNC_REMOTE_BRANCH}"
               )"
               main_sha="$(
                 printf '%s\n' "$remote_refs" |
@@ -120,28 +241,147 @@ spec:
                 printf '%s\n' "$remote_refs" |
                   awk '$2 == "refs/heads/upstream" { print $1; exit }'
               )"
+              selected_destination_sha="$(
+                printf '%s\n' "$remote_refs" |
+                  awk -v ref="refs/heads/${GITSYNC_REMOTE_BRANCH}" '$2 == ref { print $1; exit }'
+              )"
 
-              if [ -z "$main_sha" ] && [ -z "$upstream_sha" ]; then
-                log "Git repository is empty; seeding main and upstream"
-                if ! git push --atomic "$GITSYNC_URL" \
-                  HEAD:refs/heads/main \
-                  HEAD:refs/heads/upstream; then
-                  log "Failed to seed Grafana entities repository"
+              promote_main=true
+              selected_from_origin=false
+              if [ "$GITSYNC_REMOTE_BRANCH" = "main" ] && [ -n "$main_sha" ]; then
+                log "Using existing destination main ${main_sha}; the image snapshot will not overwrite it"
+                git fetch --no-tags "$GITSYNC_URL" \
+                  "+refs/heads/main:refs/remotes/bootstrap-destination/main"
+                checkout_exact refs/remotes/bootstrap-destination/main "destination main"
+                promote_main=false
+              elif [ "$GITSYNC_REMOTE_BRANCH" = "main" ]; then
+                log "Destination main does not exist; seeding it from image commit ${image_sha}"
+                checkout_exact "$image_sha" "image main"
+              elif [ -n "$selected_destination_sha" ]; then
+                log "Using destination branch ${GITSYNC_REMOTE_BRANCH} at ${selected_destination_sha}"
+                git fetch --no-tags "$GITSYNC_URL" \
+                  "+refs/heads/${GITSYNC_REMOTE_BRANCH}:refs/remotes/bootstrap-destination/selected"
+                checkout_exact refs/remotes/bootstrap-destination/selected \
+                  "destination ${GITSYNC_REMOTE_BRANCH}"
+              else
+                if git remote get-url origin >/dev/null 2>&1; then
+                  source_remote=origin
+                else
+                  source_remote="$(git remote | head -n 1)"
+                fi
+                if [ -z "$source_remote" ]; then
+                  log "No Git source remote exists in the grafana-entities image" >&2
                   exit 1
                 fi
-              elif [ -n "$main_sha" ] && [ -z "$upstream_sha" ]; then
-                log "main already exists; creating missing upstream from main"
-                git fetch --no-tags "$GITSYNC_URL" refs/heads/main
-                git push "$GITSYNC_URL" FETCH_HEAD:refs/heads/upstream
-              elif [ -z "$main_sha" ] && [ -n "$upstream_sha" ]; then
-                log "upstream already exists; creating missing main from upstream"
-                git fetch --no-tags "$GITSYNC_URL" refs/heads/upstream
-                git push "$GITSYNC_URL" FETCH_HEAD:refs/heads/main
-              else
-                log "main and upstream already exist; skipping repository seed"
+
+                use_source_proxy
+                log "Checking Git source remote ${source_remote}"
+                if ! git ls-remote "$source_remote" >/dev/null 2>&1; then
+                  log "Source remote is not reachable: ${source_remote}" >&2
+                  exit 1
+                fi
+                if ! git ls-remote --exit-code --heads "$source_remote" \
+                     "refs/heads/${GITSYNC_REMOTE_BRANCH}" >/dev/null 2>&1; then
+                  log "Source branch does not exist: ${GITSYNC_REMOTE_BRANCH}" >&2
+                  exit 1
+                fi
+
+                log "Fetching Grafana entities branch ${GITSYNC_REMOTE_BRANCH} from ${source_remote}"
+                git fetch --no-tags "$source_remote" \
+                  "+refs/heads/${GITSYNC_REMOTE_BRANCH}:refs/remotes/bootstrap-source/selected"
+                checkout_exact refs/remotes/bootstrap-source/selected \
+                  "source ${GITSYNC_REMOTE_BRANCH}"
+                selected_from_origin=true
               fi
 
-              log "Grafana entities repository is ready"
+              selected_sha="$(git rev-parse HEAD)"
+              use_destination_proxy
+
+              # Preflight every managed destination ref before publishing or
+              # promoting anything. This prevents a rejected promotion from
+              # leaving only some refs updated.
+              if [ "$promote_main" = true ]; then
+                main_relation="$(classify_destination_ref main "$main_sha")"
+                require_force_permission main "$main_sha" "$main_relation"
+              else
+                main_relation=equal
+              fi
+              upstream_relation="$(classify_destination_ref upstream "$upstream_sha")"
+              require_force_permission upstream "$upstream_sha" "$upstream_relation"
+
+              if [ "$selected_from_origin" = true ]; then
+                log "Publishing source branch ${GITSYNC_REMOTE_BRANCH} to the destination"
+                git push "$GITSYNC_URL" \
+                  "HEAD:refs/heads/${GITSYNC_REMOTE_BRANCH}"
+              fi
+
+              if [ "$promote_main" = true ]; then
+                case "$main_relation" in
+                  missing)
+                    log "Creating destination main at ${selected_sha}"
+                    git push "$GITSYNC_URL" HEAD:refs/heads/main
+                    ;;
+                  equal)
+                    log "Destination main already matches selected commit ${selected_sha}"
+                    ;;
+                  behind)
+                    log "Fast-forwarding destination main from ${main_sha} to ${selected_sha}"
+                    git push "$GITSYNC_URL" HEAD:refs/heads/main
+                    ;;
+                  ahead|diverged)
+                    log "Force-promoting ${GITSYNC_REMOTE_BRANCH} (${selected_sha}) over ${main_relation} destination main (${main_sha})"
+                    git push \
+                      --force-with-lease="refs/heads/main:${main_sha}" \
+                      "$GITSYNC_URL" \
+                      HEAD:refs/heads/main
+                    ;;
+                esac
+              fi
+
+              case "$upstream_relation" in
+                missing)
+                  log "Creating missing upstream at ${selected_sha}"
+                  git push "$GITSYNC_URL" HEAD:refs/heads/upstream
+                  ;;
+                equal)
+                  log "Upstream already matches selected commit ${selected_sha}"
+                  ;;
+                behind)
+                  log "Fast-forwarding upstream from ${upstream_sha} to ${selected_sha}"
+                  git push "$GITSYNC_URL" HEAD:refs/heads/upstream
+                  ;;
+                ahead|diverged)
+                  log "Force-synchronizing ${upstream_relation} upstream (${upstream_sha}) to selected commit (${selected_sha})"
+                  git push \
+                    --force-with-lease="refs/heads/upstream:${upstream_sha}" \
+                    "$GITSYNC_URL" \
+                    HEAD:refs/heads/upstream
+                  ;;
+              esac
+
+              verified_refs="$(
+                git ls-remote --heads "$GITSYNC_URL" \
+                  refs/heads/main \
+                  refs/heads/upstream
+              )"
+              actual_main_sha="$(
+                printf '%s\n' "$verified_refs" |
+                  awk '$2 == "refs/heads/main" { print $1; exit }'
+              )"
+              actual_upstream_sha="$(
+                printf '%s\n' "$verified_refs" |
+                  awk '$2 == "refs/heads/upstream" { print $1; exit }'
+              )"
+              if [ "$actual_main_sha" != "$selected_sha" ]; then
+                log "Destination main verification failed: expected ${selected_sha}, got ${actual_main_sha:-missing}" >&2
+                exit 1
+              fi
+              if [ "$actual_upstream_sha" != "$selected_sha" ]; then
+                log "Destination upstream verification failed: expected ${selected_sha}, got ${actual_upstream_sha:-missing}" >&2
+                exit 1
+              fi
+
+              log "Grafana entities main and upstream are ready at ${selected_sha}"
               log "Preparing Grafana entities for init datasources and library panels"
               cp -r /tmp/grafana-entities/* /opt/grafana-entities/
       containers:
