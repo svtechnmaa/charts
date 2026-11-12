@@ -79,6 +79,16 @@ apache:
   # git-receive-pack may advertise an empty repository using protocol v0.
   forceProtocolV2: false
 
+# Git configuration applied to every declared bare repository on pod startup.
+# Non-fast-forward updates are enabled because the Grafana bootstrap workflow
+# intentionally promotes gitsync.remote_branch to main with force-with-lease.
+# Ref deletion remains disabled.
+repositoryConfig:
+  uploadpack.allowFilter: true
+  receive.denyNonFastForwards: false
+  receive.denyDeletes: true
+  http.receivepack: true
+
 service:
   type: ClusterIP
   port: 8080
@@ -121,12 +131,29 @@ resources:
   limits: {}
   requests: {}
 
+# Import offline Git bundles from the repository PVC. Bundle files must use:
+#   <incomingRoot>/<repository>/<branch>/*.bundle
+# Branch names may contain '/', for example:
+#   /srv/git/bundle/grafana-entities.git/customer/test/update.bundle
+# Every inspected bundle is moved below processedRoot/applied, /skipped or
+# /failed while preserving its repository/branch-relative path. Retry a failed
+# bundle by moving it back to incomingRoot after correcting the cause.
+bundleSync:
+  enabled: true
+  incomingRoot: /srv/git/bundle
+  processedRoot: /srv/git/processed
+  intervalSeconds: 30
+  resources:
+    limits: {}
+    requests: {}
+  extraVolumeMounts: []
+
 affinity: {}
 tolerations: []
 
 # Repository storage can come from global.sharedPersistenceVolume or these
-# chart-local values. The init container creates missing bare repositories,
-# but repository content is seeded by a separate workflow.
+# chart-local values. The init container creates missing bare repositories;
+# initial content can come from the bundle sidecar or another bootstrap workflow.
 volumes:
   - name: config
     configMap:
