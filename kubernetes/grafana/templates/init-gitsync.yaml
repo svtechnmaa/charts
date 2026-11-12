@@ -7,8 +7,6 @@
               value: {{ .Values.gitsync.organizations | default list | toJson | quote }}
             - name: GITSYNC_DEFAULT_URL
               value: {{ default "" .Values.gitsync.url | quote }}
-            - name: GITSYNC_DEFAULT_BRANCH
-              value: {{ default "" .Values.gitsync.branch | quote }}
             - name: GITSYNC_DEFAULT_PATHS_JSON
               value: {{ .Values.gitsync.path | default list | toJson | quote }}
             - name: GITSYNC_TOKEN
@@ -207,7 +205,7 @@
               while IFS= read -r organization_config; do
                 org="$(jq -r '.org // empty' <<< "$organization_config")"
                 write="$(jq -r 'if has("write") then (.write | tostring) else "false" end' <<< "$organization_config")"
-                repository_branch="$(jq -r --arg default "$GITSYNC_DEFAULT_BRANCH" '.branch // $default' <<< "$organization_config")"
+                repository_branch="$(jq -r '.branch // empty' <<< "$organization_config")"
                 mapfile -t PATHS < <(
                   jq -r --argjson default "$GITSYNC_DEFAULT_PATHS_JSON" \
                     '(.path // .paths // $default)[]? // empty' <<< "$organization_config"
@@ -290,10 +288,22 @@
                           -n "$GITSYNC_SIGNER_NAME" && \
                           -n "$GITSYNC_SIGNER_EMAIL" ]]; then
                       signing_enabled=true
-                      signing_method=gpg
-                      if [[ "${GITSYNC_SIGNING_KEY^^}" == *SSH* ]]; then
-                        signing_method=ssh
-                      fi
+                      signing_key_header="${GITSYNC_SIGNING_KEY%%$'\n'*}"
+                      signing_key_header="${signing_key_header%$'\r'}"
+                      signing_key_prefix='-----BEGIN'
+                      signing_key_separator=' '
+                      case "$signing_key_header" in
+                        "${signing_key_prefix}${signing_key_separator}PGP PRIVATE KEY BLOCK-----")
+                          signing_method=gpg
+                          ;;
+                        "${signing_key_prefix}${signing_key_separator}OPENSSH PRIVATE KEY-----")
+                          signing_method=ssh
+                          ;;
+                        *)
+                          log "Unsupported commit signing key format for ${repository_name}: expected an ASCII-armored PGP private key or an OpenSSH private key" >&2
+                          exit 1
+                          ;;
+                      esac
                       signer_name_json="$(
                         jq -Rn --arg value "$GITSYNC_SIGNER_NAME" '$value'
                       )"

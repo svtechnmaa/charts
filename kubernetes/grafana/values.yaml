@@ -11,6 +11,9 @@ global:
     fg_token: ""
     signing_key: |    # SSH or GPG private key 
 
+  # Optional HTTPS proxy used by the entities init container in GitHub mode.
+  http_proxy: ""
+
   sharedVolume:
     enabled: false
   externalIP: "" # externalIP for CICD
@@ -223,7 +226,13 @@ grafanaConfig:
 
 gitsync:
   url: "http://git-http:8080/git/grafana-entities.git"
-  branch: "main"
+  # Desired source branch for all entities. GitHub is read-only to this init
+  # Job. For git-http, existing destination main wins when this is main; a
+  # non-main branch is promoted to destination main. Ahead or diverged main and
+  # upstream refs are protected unless forcePush is explicitly enabled.
+  # Git Sync branches remain explicit per organization below.
+  remote_branch: "main"
+  forcePush: false
   path: [nmaa, itim]
   organizations:
     - org: "Main"
@@ -232,7 +241,7 @@ gitsync:
       path: [nmaa, itim]
     - org: "Upstream"
       write: false
-      branch: "main"
+      branch: "upstream"
       path: [nmaa, itim]
 
   # Raw URL for one combined datasource file, or a GitHub Contents API URL
