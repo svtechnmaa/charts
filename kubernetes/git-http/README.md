@@ -12,9 +12,12 @@ This chart owns the Git server and bare repository infrastructure:
 - protect repository access with HTTP Basic Authentication;
 - create missing bare repositories listed in `repositories`;
 - apply the Git server settings;
-- normalize repository ownership for the non-root Apache container.
+- normalize repository ownership for the non-root Apache container;
+- periodically import offline Git bundles from the repository PVC.
 
-This chart does **not** seed repository content. Another dedicated bootstrap workflow is responsible for pushing the initial `main` and `upstream` branches after the Git server becomes available.
+The bundle sidecar only creates a missing branch or fast-forwards an existing
+branch. The Grafana bootstrap workflow remains responsible for creating its
+initial `main` and `upstream` branches when no imported bundle provides them.
 
 ## Repository initialization
 
@@ -33,16 +36,16 @@ On every pod start, the `init-repositories` container:
 1. creates each missing bare repository;
 2. validates that an existing path is a bare Git repository;
 3. configures:
-   - `uploadpack.allowFilter=true`;
-   - `receive.denyNonFastForwards=true`;
-   - `receive.denyDeletes=true`;
-   - `http.receivepack=true`;
+   - every key/value declared in `repositoryConfig`;
 4. changes repository ownership to the Apache runtime UID/GID;
 5. grants read/write access to the owner and group only.
 
 The init container runs as root with only the capabilities required to prepare
-the mounted storage. The Apache container continues to run as UID/GID `10001`.
-The relevant defaults are:
+the mounted storage. It assigns the runtime UID/GID read/write/traverse access
+to `apache.repositoryRoot` itself before preparing repositories and bundle
+directories. This also covers PVC roots initially owned by root with restrictive
+permissions. The Apache container and bundle sidecar continue to run as UID/GID
+`10001`. The relevant defaults are:
 
 ```yaml
 podSecurityContext:
@@ -60,6 +63,23 @@ initContainerSecurityContext:
     drop: [ALL]
     add: [CHOWN, DAC_OVERRIDE, FOWNER]
 ```
+
+The default receive policy allows intentional non-fast-forward updates while
+continuing to reject ref deletion:
+
+```yaml
+repositoryConfig:
+  uploadpack.allowFilter: true
+  receive.denyNonFastForwards: false
+  receive.denyDeletes: true
+  http.receivepack: true
+```
+
+Grafana uses this capability only when promoting a non-`main`
+`gitsync.remote_branch` to destination `main`, and protects the update with
+`--force-with-lease`. Set `receive.denyNonFastForwards: true` when no consumer
+requires that promotion behavior. Additional repository-local Git settings can
+be added to the same map without changing the Deployment template.
 
 ## Authentication
 
@@ -110,6 +130,73 @@ by the umbrella chart/platform storage templates or supplied separately.
 Clear or replace this selector when the storage is available on other nodes.
 With `ReadWriteOnce` storage, keep `replicaCount: 1` unless the selected storage
 supports concurrent writers safely.
+
+## Offline bundle synchronization
+
+The optional `bundle-sync` sidecar scans `bundleSync.incomingRoot` periodically:
+
+```yaml
+bundleSync:
+  enabled: true
+  incomingRoot: /srv/git/bundle
+  processedRoot: /srv/git/processed
+  intervalSeconds: 30
+```
+
+Place each bundle below its target repository and branch:
+
+```text
+/srv/git/bundle/<repository>/<branch>/*.bundle
+```
+
+Branch names containing `/` are represented by nested directories. For example,
+this imports `refs/heads/customer/test` into `grafana-entities.git`:
+
+```text
+/srv/git/bundle/grafana-entities.git/customer/test/20261110.bundle
+```
+
+Create the bundle with the same branch ref:
+
+```bash
+git bundle create 20261110.bundle refs/heads/customer/test
+```
+
+Copy a bundle under a temporary filename and rename it to the `.bundle` suffix
+only after the copy completes. This prevents the scanner from reading a partial
+file. Files and their parent directories must be readable and writable by the
+pod runtime UID/GID `10001:10001` so the non-root sidecar can archive them.
+
+For every valid bundle, the sidecar imports the named branch into a temporary
+repository and compares its commit with the bare repository:
+
+| Repository state | Action |
+| --- | --- |
+| Branch missing | Create the branch from the bundle. |
+| Repository behind bundle | Fast-forward the branch. |
+| Equal | Skip the push. |
+| Repository ahead of bundle | Log and skip the push. |
+| Histories diverged | Log and skip the push. |
+
+Every inspected bundle is moved below `processedRoot`, preserving the relative
+repository/branch path under an outcome directory:
+
+```text
+processed/
+├── applied/   # missing/behind pushed successfully
+├── skipped/   # equal/ahead/diverged
+└── failed/    # invalid path/ref/bundle/repository or failed push
+```
+
+After correcting the cause of a failure, move its `.bundle` file from
+`processed/failed` back to the matching path below `incomingRoot` to retry it.
+The sidecar never force-pushes or deletes a branch.
+
+Inspect the sidecar:
+
+```bash
+kubectl logs -n nmaa deployment/git-http -c bundle-sync
+```
 
 ## Git protocol negotiation
 

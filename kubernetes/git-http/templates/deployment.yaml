@@ -49,7 +49,7 @@ spec:
       tolerations:
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- end }}
-      {{- if .Values.repositories }}
+      {{- if or .Values.repositories .Values.bundleSync.enabled }}
       initContainers:
         - name: init-repositories
           image: {{ include "git-http.image" . }}
@@ -65,6 +65,12 @@ spec:
               value: {{ .Values.podSecurityContext.runAsUser | quote }}
             - name: GIT_RUNTIME_GID
               value: {{ .Values.podSecurityContext.runAsGroup | quote }}
+            {{- if .Values.bundleSync.enabled }}
+            - name: GIT_BUNDLE_INCOMING_ROOT
+              value: {{ required "bundleSync.incomingRoot is required when bundle sync is enabled" .Values.bundleSync.incomingRoot | quote }}
+            - name: GIT_BUNDLE_PROCESSED_ROOT
+              value: {{ required "bundleSync.processedRoot is required when bundle sync is enabled" .Values.bundleSync.processedRoot | quote }}
+            {{- end }}
           command:
             - /bin/sh
             - -ec
@@ -73,6 +79,16 @@ spec:
               set -eu
 
               mkdir -p "$GIT_REPOSITORY_ROOT"
+              chown "${GIT_RUNTIME_UID}:${GIT_RUNTIME_GID}" "$GIT_REPOSITORY_ROOT"
+              chmod u+rwx,g+rwx,o-rwx "$GIT_REPOSITORY_ROOT"
+
+              {{- if .Values.bundleSync.enabled }}
+              mkdir -p "$GIT_BUNDLE_INCOMING_ROOT" "$GIT_BUNDLE_PROCESSED_ROOT"
+              chown -R "${GIT_RUNTIME_UID}:${GIT_RUNTIME_GID}" \
+                "$GIT_BUNDLE_INCOMING_ROOT" "$GIT_BUNDLE_PROCESSED_ROOT"
+              chmod -R u+rwX,g+rwX,o-rwx \
+                "$GIT_BUNDLE_INCOMING_ROOT" "$GIT_BUNDLE_PROCESSED_ROOT"
+              {{- end }}
 
               printf '%s\n' "$GIT_REPOSITORIES" | while IFS= read -r REPO; do
                 [ -n "$REPO" ] || continue
@@ -100,10 +116,10 @@ spec:
                   echo "Initializing bare repository: $REPO_PATH"
                   git init --bare --initial-branch=main "$REPO_PATH"
                 fi
-                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config uploadpack.allowFilter true
-                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config receive.denyNonFastForwards true
-                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config receive.denyDeletes true
-                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config http.receivepack true
+                {{- range $key, $value := .Values.repositoryConfig }}
+                git -c safe.directory="$REPO_PATH" --git-dir="$REPO_PATH" config \
+                  {{ $key | quote }} {{ $value | toString | quote }}
+                {{- end }}
                 chown -R "${GIT_RUNTIME_UID}:${GIT_RUNTIME_GID}" "$REPO_PATH"
                 chmod -R u+rwX,g+rwX,o-rwx "$REPO_PATH"
               done
@@ -120,6 +136,11 @@ spec:
             # unshareVolume: VolumeMount defined in this chart's values.yaml
             {{- with .Values.volumeMounts }}
             {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+            {{- if .Values.bundleSync.enabled }}
+            {{- with .Values.bundleSync.extraVolumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
             {{- end }}
       {{- end }}
       containers:
@@ -165,6 +186,216 @@ spec:
             {{- with .Values.volumeMounts }}
             {{- tpl (toYaml .) $ | nindent 12 }}
             {{- end }}
+        {{- if .Values.bundleSync.enabled }}
+        - name: bundle-sync
+          image: {{ include "git-http.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          env:
+            - name: HOME
+              value: /tmp
+            - name: TZ
+              value: {{ include "common.timezone" (dict "timezone" .Values.timezone "global" .Values.global) }}
+            - name: GIT_REPOSITORY_ROOT
+              value: {{ .Values.apache.repositoryRoot | quote }}
+            - name: GIT_BUNDLE_INCOMING_ROOT
+              value: {{ required "bundleSync.incomingRoot is required when bundle sync is enabled" .Values.bundleSync.incomingRoot | quote }}
+            - name: GIT_BUNDLE_PROCESSED_ROOT
+              value: {{ required "bundleSync.processedRoot is required when bundle sync is enabled" .Values.bundleSync.processedRoot | quote }}
+            - name: GIT_BUNDLE_SYNC_INTERVAL_SECONDS
+              value: {{ .Values.bundleSync.intervalSeconds | quote }}
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              set -eu
+
+              log() {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+
+              archive_bundle() {
+                bundle_file="$1"
+                relative_path="$2"
+                outcome="$3"
+                destination="${GIT_BUNDLE_PROCESSED_ROOT%/}/${outcome}/${relative_path}"
+
+                mkdir -p "$(dirname "$destination")"
+                if [ -e "$destination" ]; then
+                  destination="${destination}.$(date '+%Y%m%d%H%M%S').$$"
+                fi
+                mv "$bundle_file" "$destination"
+                log "Archived ${outcome} bundle to ${destination}"
+              }
+
+              process_bundle() {
+                bundle_file="$1"
+                relative_path="${bundle_file#"${GIT_BUNDLE_INCOMING_ROOT%/}/"}"
+
+                case "$relative_path" in
+                  */*/*.bundle) ;;
+                  *)
+                    log "Ignoring bundle with invalid path; expected <repo>/<branch>/*.bundle: ${bundle_file}" >&2
+                    archive_bundle "$bundle_file" "$relative_path" failed
+                    return 0
+                    ;;
+                esac
+
+                repository="${relative_path%%/*}"
+                branch_and_file="${relative_path#*/}"
+                branch="${branch_and_file%/*}"
+                target_repository="${GIT_REPOSITORY_ROOT%/}/${repository}"
+
+                case "$repository" in
+                  ""|.|..|*/*)
+                    log "Invalid repository name derived from bundle path: ${repository}" >&2
+                    archive_bundle "$bundle_file" "$relative_path" failed
+                    return 0
+                    ;;
+                esac
+                if ! git check-ref-format "refs/heads/${branch}" >/dev/null 2>&1; then
+                  log "Invalid branch name derived from bundle path: ${branch}" >&2
+                  archive_bundle "$bundle_file" "$relative_path" failed
+                  return 0
+                fi
+                if [ -L "$target_repository" ] || [ ! -d "$target_repository" ] ||
+                   [ "$(git -c safe.directory="$target_repository" --git-dir="$target_repository" rev-parse --is-bare-repository 2>/dev/null || true)" != "true" ]; then
+                  log "Target is missing or is not a bare repository: ${target_repository}" >&2
+                  archive_bundle "$bundle_file" "$relative_path" failed
+                  return 0
+                fi
+
+                work_directory="$(mktemp -d /tmp/git-bundle-sync.XXXXXX)"
+                work_repository="${work_directory}/repository.git"
+                git init --bare --quiet "$work_repository"
+
+                bundle_ref="refs/heads/${branch}"
+                if ! GIT_ALTERNATE_OBJECT_DIRECTORIES="${target_repository}/objects" \
+                     git --git-dir="$work_repository" fetch --quiet --no-tags \
+                       "$bundle_file" "${bundle_ref}:refs/heads/incoming"; then
+                  log "Failed to import ${bundle_ref} from bundle; archiving it as failed: ${bundle_file}" >&2
+                  rm -rf "$work_directory"
+                  archive_bundle "$bundle_file" "$relative_path" failed
+                  return 0
+                fi
+
+                incoming_sha="$(
+                  GIT_ALTERNATE_OBJECT_DIRECTORIES="${target_repository}/objects" \
+                    git --git-dir="$work_repository" rev-parse --verify 'refs/heads/incoming^{commit}'
+                )"
+                target_sha="$(
+                  git -c safe.directory="$target_repository" --git-dir="$target_repository" \
+                    rev-parse --verify "${bundle_ref}^{commit}" 2>/dev/null || true
+                )"
+
+                action=skip
+                relation=missing
+                if [ -z "$target_sha" ]; then
+                  action=push
+                elif [ "$target_sha" = "$incoming_sha" ]; then
+                  relation=equal
+                elif GIT_ALTERNATE_OBJECT_DIRECTORIES="${target_repository}/objects" \
+                     git --git-dir="$work_repository" merge-base --is-ancestor \
+                       "$target_sha" "$incoming_sha"; then
+                  relation=behind
+                  action=push
+                elif GIT_ALTERNATE_OBJECT_DIRECTORIES="${target_repository}/objects" \
+                     git --git-dir="$work_repository" merge-base --is-ancestor \
+                       "$incoming_sha" "$target_sha"; then
+                  relation=ahead
+                else
+                  relation=diverged
+                fi
+
+                case "$relation" in
+                  missing)
+                    log "Branch ${repository}:${branch} does not exist; importing ${incoming_sha}"
+                    ;;
+                  behind)
+                    log "Branch ${repository}:${branch} is behind ${incoming_sha}; fast-forwarding from ${target_sha}"
+                    ;;
+                  equal)
+                    log "Branch ${repository}:${branch} already equals ${incoming_sha}; skipping push"
+                    ;;
+                  ahead)
+                    log "Branch ${repository}:${branch} is ahead of bundle ${incoming_sha} at ${target_sha}; skipping push" >&2
+                    ;;
+                  diverged)
+                    log "Branch ${repository}:${branch} diverged from bundle ${incoming_sha} at ${target_sha}; skipping push" >&2
+                    ;;
+                esac
+
+                if [ "$action" = push ]; then
+                  if ! GIT_ALTERNATE_OBJECT_DIRECTORIES="${target_repository}/objects" \
+                       git --git-dir="$work_repository" push --quiet "$target_repository" \
+                         "refs/heads/incoming:${bundle_ref}"; then
+                    log "Failed to push ${repository}:${branch}; archiving bundle as failed" >&2
+                    rm -rf "$work_directory"
+                    archive_bundle "$bundle_file" "$relative_path" failed
+                    return 0
+                  fi
+
+                  updated_sha="$(
+                    git -c safe.directory="$target_repository" --git-dir="$target_repository" \
+                      rev-parse --verify "${bundle_ref}^{commit}"
+                  )"
+                  if [ "$updated_sha" != "$incoming_sha" ]; then
+                    log "Post-push verification failed for ${repository}:${branch}; expected ${incoming_sha}, got ${updated_sha}" >&2
+                    rm -rf "$work_directory"
+                    archive_bundle "$bundle_file" "$relative_path" failed
+                    return 0
+                  fi
+                  log "Updated ${repository}:${branch} to ${updated_sha}"
+                fi
+
+                rm -rf "$work_directory"
+                if [ "$action" = push ]; then
+                  archive_bundle "$bundle_file" "$relative_path" applied
+                else
+                  archive_bundle "$bundle_file" "$relative_path" skipped
+                fi
+              }
+
+              case "$GIT_BUNDLE_SYNC_INTERVAL_SECONDS" in
+                ""|*[!0-9]*|0)
+                  log "bundleSync.intervalSeconds must be a positive integer" >&2
+                  exit 1
+                  ;;
+              esac
+              if [ "${GIT_BUNDLE_INCOMING_ROOT%/}" = "${GIT_BUNDLE_PROCESSED_ROOT%/}" ]; then
+                log "Bundle incoming and processed roots must differ" >&2
+                exit 1
+              fi
+
+              mkdir -p "$GIT_BUNDLE_INCOMING_ROOT" "$GIT_BUNDLE_PROCESSED_ROOT"
+              log "Watching ${GIT_BUNDLE_INCOMING_ROOT} for Git bundles every ${GIT_BUNDLE_SYNC_INTERVAL_SECONDS}s"
+
+              while true; do
+                find "$GIT_BUNDLE_INCOMING_ROOT" -type f -name '*.bundle' -print |
+                  while IFS= read -r bundle_file; do
+                    [ -n "$bundle_file" ] || continue
+                    process_bundle "$bundle_file"
+                  done
+                sleep "$GIT_BUNDLE_SYNC_INTERVAL_SECONDS"
+              done
+          resources:
+            {{- toYaml .Values.bundleSync.resources | nindent 12 }}
+          volumeMounts:
+            # shareVolume: VolumeMount defined in global values
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.bundleSync.extraVolumeMounts }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+            {{- end }}
+        {{- end }}
       volumes:
         # shareVolume defined in global values
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
