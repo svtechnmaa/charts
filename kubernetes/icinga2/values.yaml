@@ -86,6 +86,11 @@ master:
   replicaCount: 2
   updateStrategy: RollingUpdate
   podManagementPolicy: OrderedReady
+  ## A restarted follower answers on :5665 (Ready) before config sync from the leader has
+  ## finished (lab: 3 of 18 hosts after the first sync batch). Keep each pod Ready this long
+  ## before the rolling update restarts the next one, otherwise the leader can be stopped
+  ## while the follower still holds a partial config.
+  minReadySeconds: 60
   podAffinityPreset: ""
   podAntiAffinityPreset: soft
 
@@ -158,11 +163,15 @@ master:
     timeoutSeconds: 30
     successThreshold: 1
     failureThreshold: 6
+  ## Enabled so that the OrderedReady rolling update waits for icinga2 to answer on :5665 before
+  ## restarting the next master (the entrypoint now holds icinga2 until the election decides the
+  ## role), and so that the "icinga2" Service, used by master-1 to fetch its certificate, only
+  ## points at a master whose API is up.
   readinessProbe:
-    enabled: false
-    initialDelaySeconds: 60
-    periodSeconds: 45
-    timeoutSeconds: 30
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
     successThreshold: 1
     failureThreshold: 6
 
@@ -171,6 +180,32 @@ master:
 
   ## Custom Readiness probe
   customReadinessProbe: {}
+
+  ## Config-master election (files/scripts/election.py, ConfigMap "election")
+  election:
+    ## The entrypoint starts icinga2 only after election.py has decided the role.
+    ## Must cover INITIAL_DECISION_TIMEOUT (45s) or STARTUP_MAX_WAIT (300s, leader waiting for
+    ## zones.d content) plus one `icinga2 daemon --validate`. On timeout the container exits 1.
+    readyTimeoutSeconds: 600
+    ## Extra env for election.py, all optional (defaults in the script):
+    ## LEASE_DURATION 30, RENEW_DEADLINE 20, RETRY_PERIOD 5, FENCE_GRACE 30,
+    ## RECONCILE_INTERVAL 10, CONTENT_STABLE_SECONDS 15, STARTUP_MAX_WAIT 300,
+    ## DRIFT_CHECK_INTERVAL 60, RELOAD_VERIFY_TIMEOUT 180, FOLLOWER_SYNC_TIMEOUT 180,
+    ## VALIDATE_TIMEOUT 300, CONTENT_READY_MARKER "" (file written by the config pipeline)
+    ## election.py reloads icinga2 only on a role change (promote / demote). Config changes in
+    ## /opt/zones.d are loaded by the post-commit hook / reload-master (Rundeck, rebalance).
+    env: {}
+    ## Restart the icinga2 container when the election reconcile loop stops writing its
+    ## heartbeat. Used only when master.livenessProbe and master.customLivenessProbe are unset.
+    ## One reconcile pass may legitimately block for VALIDATE_TIMEOUT + RELOAD_VERIFY_TIMEOUT
+    ## (~480s), so keep maxHeartbeatAgeSeconds above that.
+    livenessProbe:
+      enabled: true
+      maxHeartbeatAgeSeconds: 900
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
 
   ## Container ports
   containerPorts:

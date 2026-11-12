@@ -17,6 +17,9 @@ spec:
   podManagementPolicy: {{ .Values.master.podManagementPolicy }}
   replicas: {{ include "common.replicas" ( dict "replicaCount" .Values.master.replicaCount "global" .Values.global ) }}
   revisionHistoryLimit: 10
+  {{- if .Values.master.minReadySeconds }}
+  minReadySeconds: {{ .Values.master.minReadySeconds }}
+  {{- end }}
   updateStrategy:
     type: {{ .Values.master.updateStrategy }}
     {{- if (eq "OnDelete" .Values.master.updateStrategy) }}
@@ -31,6 +34,9 @@ spec:
       labels:
         {{ include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: icinga2
+      annotations:
+        # roll the masters when election.py changes (a ConfigMap update alone does not)
+        checksum/election: {{ include (print $.Template.BasePath "/election-cm.yaml") . | sha256sum }}
     spec:
       serviceAccountName: icinga2-master
       {{- if .Values.master.affinity }}
@@ -253,9 +259,31 @@ spec:
 
             chmod 777 /opt/zones.d -R
 
-            # Start election client in background
+            # Start election client in background and wait until it has decided the role
+            # (leader: symlink zones.d + validated config; follower: no zones.d, no stale
+            # .authoritative markers). Starting icinga2 before that loads a config that the
+            # election would reload a few seconds later (empty zones.d -> empty Redis/Web).
+            ELECTION_DIR=$(dirname "$ELECTION_READY_FILE")
+            rm -rf "$ELECTION_DIR"
             log "Start election client in background"
             python3 /opt/election/election.py &
+            ELECTION_PID=$!
+            log "Waiting up to ${ELECTION_READY_TIMEOUT}s for the election to decide the role"
+            waited=0
+            until [[ -f "$ELECTION_READY_FILE" ]]; do
+              if ! kill -0 "$ELECTION_PID" 2>/dev/null; then
+                log "ERROR: election client exited before deciding the role, restarting container"
+                exit 1
+              fi
+              if (( waited >= ELECTION_READY_TIMEOUT )); then
+                log "ERROR: no role decided after ${waited}s (invalid config or API server unreachable?), restarting container"
+                kill "$ELECTION_PID" 2>/dev/null || true
+                exit 1
+              fi
+              sleep 2
+              waited=$((waited + 2))
+            done
+            log "Election decided: $(cat "$ELECTION_READY_FILE")"
 
             echo "Start Icinga2:"
             exec /tini -- icinga2 daemon
@@ -299,6 +327,18 @@ spec:
               value: /etc/icinga2/zones.d
             - name: API_URL
               value: https://localhost:5665
+            - name: ICINGA2_API_URL
+              value: https://localhost:5665
+            - name: ELECTION_READY_FILE
+              value: /tmp/icinga2-election/ready
+            - name: ELECTION_HEARTBEAT_FILE
+              value: /tmp/icinga2-election/heartbeat
+            - name: ELECTION_READY_TIMEOUT
+              value: {{ .Values.master.election.readyTimeoutSeconds | quote }}
+            {{- range $key, $value := .Values.master.election.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
             - name: TZ
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: ROLE
@@ -405,6 +445,32 @@ spec:
             failureThreshold: {{ .Values.master.livenessProbe.failureThreshold }}
           {{- else if .Values.master.customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.master.customLivenessProbe "context" $) | nindent 12 }}
+          {{- else if .Values.master.election.livenessProbe.enabled }}
+          # election.py runs in the background of this container: restart the container when
+          # its reconcile loop stops writing the heartbeat (dead or hung thread).
+          livenessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  [[ -f "$ELECTION_READY_FILE" ]] || exit 0   # still starting, entrypoint has its own timeout
+                  # election.py gone: fail at once. Otherwise this pod keeps its zones.d symlink
+                  # (nobody fences it) while the other master takes the lease. [p] avoids matching this script.
+                  if ! pgrep -f '[p]ython3 /opt/election/election.py' >/dev/null; then
+                    echo "election.py is not running"
+                    exit 1
+                  fi
+                  hb=$(cat "$ELECTION_HEARTBEAT_FILE" 2>/dev/null || echo 0)
+                  age=$(( $(date +%s) - ${hb%.*} ))
+                  if (( age > {{ .Values.master.election.livenessProbe.maxHeartbeatAgeSeconds }} )); then
+                    echo "election heartbeat is ${age}s old"
+                    exit 1
+                  fi
+            initialDelaySeconds: {{ .Values.master.election.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.master.election.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.master.election.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.master.election.livenessProbe.failureThreshold }}
           {{- end }}
 
           {{- if .Values.master.readinessProbe.enabled }}
