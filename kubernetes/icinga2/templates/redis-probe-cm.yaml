@@ -1,0 +1,11 @@
+{{- if and (eq .Values.architecture "distribute") .Values.master.redisProbe.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: icinga2-redis-probe
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: icinga2
+data:
+{{ ($.Files.Glob "files/scripts/redis-check.sh").AsConfig | indent 2 }}
+{{- end }}

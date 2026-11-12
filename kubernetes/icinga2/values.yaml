@@ -2,10 +2,11 @@ global:
   externalIP: "" # externalIP for CICD
   sharedVolume:
     enabled: true
-  redis:
-    enabled: true
-  icingadb:
-    enabled: true
+  ## redis and icingadb always run as containers in every master pod, next to icinga2.
+  ## global.redis.host / port only point icinga2, icingadb and icingaweb at another Redis.
+  redis: {}
+  #   host: localhost
+  #   port: 6379
   database:
     director:
       enabled: true
@@ -175,6 +176,28 @@ master:
     successThreshold: 1
     failureThreshold: 6
 
+  ## Check that icinga2 feeds the Redis of its own pod (files/scripts/redis-check.sh, ConfigMap
+  ## "icinga2-redis-probe", mounted at /probe). Icinga 2 dumps its config into Redis only when it
+  ## starts, so a Redis that lost its data stays without icinga:host (Web/Grafana: host states
+  ## without names) until icinga2 restarts.
+  ## - startupProbe (strict): icinga2 counts as started once icinga:host is non-empty and
+  ##   icinga:stats is fresh. Must cover election.readyTimeoutSeconds + the config dump.
+  ## - liveness: appended to the election liveness probe above (same timings). Restarts icinga2
+  ##   when icinga:host is empty or icinga:stats is older than maxHeartbeatAgeSeconds.
+  ##   A Redis that does not answer is ignored here (the redis container's probe handles it).
+  redisProbe:
+    enabled: true
+    maxHeartbeatAgeSeconds: 180
+    startupProbe:
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 90   # 15 minutes
+
+  ## PodDisruptionBudget: a node drain must not take both masters down at once
+  pdb:
+    enabled: true
+    maxUnavailable: 1
+
   ## Custom Liveness probe
   customLivenessProbe: {}
 
@@ -279,16 +302,30 @@ master:
     service:
       type: ClusterIP
       port: 6379
-    persistence:
-      enabled: false
-      storageClass: "redis"
-      accessModes:
-        - ReadWriteOnce
-      size: 1Gi
-      # mountPath: the destination inside the pod
-      mountPath: /data
-      # hostPath: mount a file or directory from the host node's filesystem into the pod
-      hostPath: /data/redis
+    ## AOF in an emptyDir at /data: the data survives a restart of the redis container (the
+    ## emptyDir lives as long as the pod). A new pod starts with an empty Redis, but icinga2
+    ## starts with it and dumps the config again.
+    appendonly: true
+    dataVolume:
+      ## Exceeding sizeLimit evicts the whole pod: keep it >= 4 x used_memory_peak
+      sizeLimit: 2Gi
+    ## e.g. "1536mb" (~75% of resources.limits.memory). Empty = no limit. Policy is noeviction:
+    ## Redis refuses writes when full instead of dropping icinga2 keys.
+    maxmemory: ""
+    extraArgs: []
+    resources: {}
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
 
   service:
     ## Service type

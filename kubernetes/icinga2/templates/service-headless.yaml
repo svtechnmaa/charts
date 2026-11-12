@@ -15,6 +15,10 @@ metadata:
 spec:
   type: ClusterIP
   clusterIP: None
+  ## Publish masters that are not Ready yet: the pod DNS names used as cluster endpoints and
+  ## the reload scripts (dig srv icinga2-headless) must still see a master whose probe fails,
+  ## otherwise exactly the pod that needs a restart-process is skipped.
+  publishNotReadyAddresses: true
   ports:
     - name: icinga2-api
       port: {{ .Values.master.service.port.icinga2Api }}

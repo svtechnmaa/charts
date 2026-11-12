@@ -1,4 +1,5 @@
 {{- if eq .Values.architecture "distribute" }}
+{{- $redisProbe := .Values.master.redisProbe.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -37,6 +38,7 @@ spec:
       annotations:
         # roll the masters when election.py changes (a ConfigMap update alone does not)
         checksum/election: {{ include (print $.Template.BasePath "/election-cm.yaml") . | sha256sum }}
+        checksum/redis-probe: {{ include (print $.Template.BasePath "/redis-probe-cm.yaml") . | sha256sum }}
     spec:
       serviceAccountName: icinga2-master
       {{- if .Values.master.affinity }}
@@ -166,13 +168,35 @@ spec:
             touch /usr/bin/reload-master
             chmod -R 775 /usr/bin/reload-master
             chown icinga:icinga /usr/bin/reload-master
+            # One master at a time, this pod last, check the HTTP code and wait until the new
+            # process answers before the next one (never both masters restarting together).
+            # icinga2-headless publishes not-ready pods, so a master whose probe fails is included.
             cat << EOF > /usr/bin/reload-master
+            #!/bin/bash
+            AUTH="$ICINGA2_API_USER:$ICINGA2_API_PASSWORD"
             echo 'Restarting master...'
-            MASTER_LIST=\$(dig srv +search +short icinga2-headless |awk '{print \$4}' | uniq | sed 's/.$//g')
-            for MASTER in \${MASTER_LIST}
-            do
-            url="https://\${MASTER}:5665/v1/actions/restart-process?pretty=1"
-            curl -k -s -S -i -u "$ICINGA2_API_USER:$ICINGA2_API_PASSWORD" -H 'Accept: application/json' -X POST "\$url"
+            SELF=\$(hostname)
+            MASTER_LIST=(\$(dig srv +search +short icinga2-headless | awk '{print \$4}' | sed 's/\.\$//' | sort -u))
+            ORDERED=()
+            for M in "\${MASTER_LIST[@]}"; do [[ "\$M" == "\$SELF".* ]] || ORDERED+=("\$M"); done
+            for M in "\${MASTER_LIST[@]}"; do [[ "\$M" == "\$SELF".* ]] && ORDERED+=("\$M"); done
+            [[ \${#ORDERED[@]} -gt 0 ]] || { echo "No master found in icinga2-headless"; exit 1; }
+            start_of() {
+              curl -k -s -m 10 -u "\$AUTH" "https://\$1:5665/v1/status/IcingaApplication" | grep -oE '"program_start":[0-9.]+' | cut -d: -f2
+            }
+            for M in "\${ORDERED[@]}"; do
+              before=\$(start_of "\$M")
+              code=\$(curl -k -s -m 60 -o /dev/null -w '%{http_code}' -u "\$AUTH" -H 'Accept: application/json' -X POST "https://\$M:5665/v1/actions/restart-process")
+              if [[ "\$code" != "200" ]]; then echo "Restart \$M failed: HTTP \$code"; exit 1; fi
+              if [[ "\$M" == "\$SELF".* ]]; then echo "Restarted \$M (this pod)"; break; fi
+              echo "Restarted \$M, waiting for the new process..."
+              ok=0
+              for i in \$(seq 1 60); do
+                sleep 5
+                now=\$(start_of "\$M")
+                if [[ -n "\$now" && "\$now" != "\$before" ]]; then ok=1; break; fi
+              done
+              [[ \$ok -eq 1 ]] || { echo "\$M did not come back within 5 minutes, stopping"; exit 1; }
             done
             EOF
 
@@ -335,6 +359,10 @@ spec:
               value: /tmp/icinga2-election/heartbeat
             - name: ELECTION_READY_TIMEOUT
               value: {{ .Values.master.election.readyTimeoutSeconds | quote }}
+            {{- if $redisProbe }}
+            - name: REDIS_CHECK_MAX_AGE_MS
+              value: {{ mul .Values.master.redisProbe.maxHeartbeatAgeSeconds 1000 | quote }}
+            {{- end }}
             {{- range $key, $value := .Values.master.election.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
@@ -414,15 +442,13 @@ spec:
             - name: RELAY_EMAIL
               value: {{ .Values.master.notifications.relay_email | quote }}
             {{- end }}
-            # Enable and config icingadb feature
-            {{- if .Values.global.icingadb.enabled }}
+            # icingadb feature: always on (redis and icingadb run in every master pod)
             - name: ICINGADB_ENABLE
-              value: {{ .Values.global.icingadb.enabled | quote }}
+              value: "true"
             - name: REDIS_HOST
               value: {{ .Values.global.redis.host | default "localhost" | quote }}
             - name: REDIS_PORT
               value: {{ .Values.global.redis.port | default "6379" | quote }}
-            {{- end }}
           ports:
             - name: icinga2-api
               containerPort: {{ .Values.master.containerPorts.icinga2Api }}
@@ -445,15 +471,17 @@ spec:
             failureThreshold: {{ .Values.master.livenessProbe.failureThreshold }}
           {{- else if .Values.master.customLivenessProbe }}
           livenessProbe: {{- include "common.tplvalues.render" (dict "value" .Values.master.customLivenessProbe "context" $) | nindent 12 }}
-          {{- else if .Values.master.election.livenessProbe.enabled }}
+          {{- else if or .Values.master.election.livenessProbe.enabled $redisProbe }}
           # election.py runs in the background of this container: restart the container when
           # its reconcile loop stops writing the heartbeat (dead or hung thread).
+          # Redis check: restart icinga2 when its local Redis lost the config (see redis-check.sh).
           livenessProbe:
             exec:
               command:
                 - bash
                 - -c
                 - |
+                  {{- if .Values.master.election.livenessProbe.enabled }}
                   [[ -f "$ELECTION_READY_FILE" ]] || exit 0   # still starting, entrypoint has its own timeout
                   # election.py gone: fail at once. Otherwise this pod keeps its zones.d symlink
                   # (nobody fences it) while the other master takes the lease. [p] avoids matching this script.
@@ -467,10 +495,26 @@ spec:
                     echo "election heartbeat is ${age}s old"
                     exit 1
                   fi
+                  {{- end }}
+                  {{- if $redisProbe }}
+                  exec /probe/redis-check.sh liveness
+                  {{- end }}
             initialDelaySeconds: {{ .Values.master.election.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.master.election.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.master.election.livenessProbe.timeoutSeconds }}
             failureThreshold: {{ .Values.master.election.livenessProbe.failureThreshold }}
+          {{- end }}
+
+          {{- if $redisProbe }}
+          # Started = election decided the role, icinga2 runs and has dumped its config into the
+          # local Redis. Liveness/readiness only start after this. Must cover
+          # election.readyTimeoutSeconds plus the icinga2 config dump.
+          startupProbe:
+            exec:
+              command: ["/probe/redis-check.sh", "strict"]
+            periodSeconds: {{ .Values.master.redisProbe.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.master.redisProbe.startupProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.master.redisProbe.startupProbe.failureThreshold }}
           {{- end }}
 
           {{- if .Values.master.readinessProbe.enabled }}
@@ -507,13 +551,39 @@ spec:
             {{- if .Values.master.volumeMounts }}
             {{- toYaml .Values.master.volumeMounts | nindent 12 }}
             {{- end }}
-        # redis container
-        {{- if .Values.global.redis.enabled }}
+            {{- if $redisProbe }}
+            - name: icinga2-redis-probe
+              mountPath: /probe
+              readOnly: true
+            {{- end }}
+        # redis container (always in the master pod, used by icinga2 and icingadb)
         - name: redis
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.redis.image "global" .Values.global) }}
           {{- if .Values.master.redis.image.pullPolicy }}
           imagePullPolicy: {{ .Values.master.redis.image.pullPolicy }}
           {{- end}}
+          # args only (no command): the image entrypoint chowns /data and drops to the redis user
+          args:
+            - redis-server
+            - --dir
+            - /data
+            {{- if .Values.master.redis.appendonly }}
+            # Keep the data across a restart of the redis container: icinga2 dumps its config
+            # into Redis only when icinga2 itself starts.
+            - --appendonly
+            - "yes"
+            - --appendfsync
+            - everysec
+            {{- end }}
+            {{- if .Values.master.redis.maxmemory }}
+            - --maxmemory
+            - {{ .Values.master.redis.maxmemory | quote }}
+            {{- end }}
+            - --maxmemory-policy
+            - noeviction
+            {{- range .Values.master.redis.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
           {{- range $key, $value := .Values.master.redis.containerPort }}
           ports:
           - name: {{ $key }}
@@ -525,9 +595,31 @@ spec:
           - name: {{ $key }}
             value: {{ $value | quote }}
           {{- end }}
-        {{- end }}
-        # icingadb container
-        {{- if .Values.global.icingadb.enabled }}
+          {{- if .Values.master.redis.readinessProbe.enabled }}
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "[ \"$(redis-cli ping)\" = PONG ]"]
+            initialDelaySeconds: {{ .Values.master.redis.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.master.redis.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.master.redis.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.master.redis.readinessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.master.redis.livenessProbe.enabled }}
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "[ \"$(redis-cli ping)\" = PONG ]"]
+            initialDelaySeconds: {{ .Values.master.redis.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.master.redis.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.master.redis.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.master.redis.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- if .Values.master.redis.resources }}
+          resources: {{- toYaml .Values.master.redis.resources | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+        # icingadb container (always in the master pod)
         - name: icingadb
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.master.icingadb.image "global" .Values.global) }}
           {{- if .Values.master.icingadb.pullPolicy }}
@@ -584,7 +676,6 @@ spec:
                   state: $RETENTION_OPTION_STATE
               EOF
               /entrypoint
-        {{- end }}
       {{- if .Values.init }}
       # init containers
       initContainers:
@@ -660,5 +751,18 @@ spec:
         # unshareVolume(volume): define in the chart's values.yaml
         {{- if .Values.master.volumes }}
         {{- toYaml .Values.master.volumes | nindent 8 }}
+        {{- end }}
+        # Lives as long as the pod: survives a restart of the redis container, and is emptied
+        # only together with an icinga2 restart (new pod), which dumps the config again.
+        - name: redis-data
+          emptyDir:
+            {{- if .Values.master.redis.dataVolume.sizeLimit }}
+            sizeLimit: {{ .Values.master.redis.dataVolume.sizeLimit }}
+            {{- end }}
+        {{- if $redisProbe }}
+        - name: icinga2-redis-probe
+          configMap:
+            name: icinga2-redis-probe
+            defaultMode: 0755
         {{- end }}
 {{- end }}
