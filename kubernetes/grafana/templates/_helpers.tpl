@@ -42,3 +42,23 @@ Build a stable environment variable name for datasource secure fields.
 {{- $field := regexReplaceAll "[^A-Z0-9_]" ((index . 1) | upper) "_" -}}
 {{- printf "GF_DS_%s_%s" $name $field -}}
 {{- end -}}
+{{/* Destination credentials belong to git-http when that server is selected. */}}
+{{- define "grafana.gitAuthSecretName" -}}
+{{- if contains "git-http" (lower (default "" .Values.gitsync.url)) -}}
+{{- required "gitsync.gitHttp.auth.existingSecret is required for git-http" .Values.gitsync.gitHttp.auth.existingSecret -}}
+{{- else -}}
+{{- include "grafana.managedAuthSecretName" . -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "grafana.gitAuthUsernameKey" -}}
+{{- if contains "git-http" (lower (default "" .Values.gitsync.url)) -}}
+{{- required "gitsync.gitHttp.auth.usernameKey is required" .Values.gitsync.gitHttp.auth.usernameKey -}}
+{{- else -}}signer_name{{- end -}}
+{{- end -}}
+
+{{- define "grafana.gitAuthPasswordKey" -}}
+{{- if contains "git-http" (lower (default "" .Values.gitsync.url)) -}}
+{{- required "gitsync.gitHttp.auth.passwordKey is required" .Values.gitsync.gitHttp.auth.passwordKey -}}
+{{- else -}}token{{- end -}}
+{{- end -}}

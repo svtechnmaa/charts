@@ -33,6 +33,7 @@ spec:
         {{- end }}
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/auth: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
         {{- end }}
@@ -49,8 +50,33 @@ spec:
       tolerations:
         {{- include "common.tplvalues.render" (dict "value" . "context" $) | nindent 8 }}
       {{- end }}
-      {{- if or .Values.repositories .Values.bundleSync.enabled }}
       initContainers:
+        - name: init-auth
+          image: {{ include "git-http.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command:
+            - /bin/sh
+            - -ec
+          args:
+            - |
+              set -eu
+              umask 077
+              username="$(cat /credentials/username)"
+              test -n "$username" && test -s /credentials/password
+              # Use the distro binary installed by apache2-utils. SHA-512
+              # crypt supports long tokens; bcrypt rejects inputs over 72 bytes.
+              /usr/bin/htpasswd -ci5 /auth/htpasswd "$username" < /credentials/password
+              /usr/bin/htpasswd -vi /auth/htpasswd "$username" < /credentials/password
+              chmod 400 /auth/htpasswd
+          volumeMounts:
+            - name: auth-credentials
+              mountPath: /credentials
+              readOnly: true
+            - name: auth
+              mountPath: /auth
+      {{- if or .Values.repositories .Values.bundleSync.enabled }}
         - name: init-repositories
           image: {{ include "git-http.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
@@ -397,6 +423,14 @@ spec:
             {{- end }}
         {{- end }}
       volumes:
+        - name: auth-credentials
+          secret:
+            secretName: {{ include "git-http.auth.secretName" . | quote }}
+            items:
+              - key: username
+                path: username
+              - key: password
+                path: password
         # shareVolume defined in global values
         {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
         {{- range .Values.global.sharedPersistenceVolume }}

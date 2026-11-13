@@ -5,14 +5,17 @@
 {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
-{{/* Resolve the HTTP Basic Auth username, falling back to the global admin user. */}}
+{{/* git-http owns the credential unless an external producer is selected. */}}
+{{- define "git-http.auth.secretName" -}}
+{{- default (printf "%s-auth" .Chart.Name) .Values.auth.existingSecret -}}
+{{- end -}}
+
 {{- define "git-http.auth.username" -}}
 {{- $username := .Values.global.github.user -}}
 {{- required "A Git HTTP username is required. Set global.github.user" $username -}}
 {{- end -}}
 
-{{/* Resolve the HTTP Basic Auth password, falling back to the global admin password. */}}
 {{- define "git-http.auth.password" -}}
-{{- $password := .Values.global.github.token -}}
-{{- required "A Git HTTP password is required. Set global.github.token" $password -}}
+{{- $password := .Values.global.github.fg_token -}}
+{{- required "A Git HTTP password is required. Set global.github.fg_token" $password -}}
 {{- end -}}
