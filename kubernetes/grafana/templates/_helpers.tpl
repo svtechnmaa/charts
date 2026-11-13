@@ -43,3 +43,16 @@
 {{- define "grafana.databaseSecretKey" -}}
 {{- tpl .Values.grafanaConfig.database.auth.existingSecretPasswordKey . | required "grafanaConfig.database.auth.existingSecretPasswordKey is required" -}}
 {{- end -}}
+
+{{/* Renderer token: Grafana 13+ rejects the default token whenever a renderer is configured. */}}
+{{- define "grafana.rendererTokenEnabled" -}}
+{{- if or .Values.renderer.enabled .Values.renderer.url -}}true{{- end -}}
+{{- end -}}
+
+{{- define "grafana.rendererTokenSecretName" -}}
+{{- if .Values.renderer.existingSecret -}}
+{{- tpl .Values.renderer.existingSecret . -}}
+{{- else -}}
+{{- printf "%s-renderer-token" (include "common.names.fullname" . | trunc 48 | trimSuffix "-") -}}
+{{- end -}}
+{{- end -}}

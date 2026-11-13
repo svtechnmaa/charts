@@ -121,6 +121,13 @@ spec:
             - name: GF_RENDERING_SERVER_URL
               value: {{ tpl . $ | quote }}
             {{- end }}
+            {{- if include "grafana.rendererTokenEnabled" . }}
+            - name: GF_RENDERING_RENDERER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.rendererTokenSecretName" . | quote }}
+                  key: {{ .Values.renderer.existingSecretKey | quote }}
+            {{- end }}
             {{- with .Values.chrome.url }}
             - name: GF_REPORTER_PLUGIN_REMOTE_CHROME_URL
               value: {{ tpl . $ | quote }}
@@ -176,6 +183,11 @@ spec:
             value: "15"
           - name: RENDERING_CLUSTERING_TIMEOUT
             value: "120"
+          - name: AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "grafana.rendererTokenSecretName" . | quote }}
+                key: {{ .Values.renderer.existingSecretKey | quote }}
           image: {{ include "common.images.image" ( dict "imageRoot" .Values.renderer.image "global" .Values.global) }}
           imagePullPolicy: {{ .Values.renderer.image.pullPolicy | quote }}
           name: renderer

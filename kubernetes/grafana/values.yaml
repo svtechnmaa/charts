@@ -41,6 +41,11 @@ renderer:
   service:
     port: 8081
     type: ClusterIP
+  # Shared secret between Grafana ([rendering] renderer_token) and the renderer (AUTH_TOKEN).
+  # Grafana 13+ refuses to start with the default token, so the chart always sets one.
+  authToken: "" # Empty: generate a random token once and keep it across upgrades.
+  existingSecret: "" # Use a pre-created Secret instead of the chart-managed <fullname>-renderer-token.
+  existingSecretKey: token # Key holding the token (in the existing or the managed Secret).
 
 chrome:
   enabled: true

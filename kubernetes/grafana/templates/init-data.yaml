@@ -123,6 +123,12 @@ spec:
               readOnly: true
               mountPath: /etc/gdg/importer.yml
               subPath: importer.yml
+            # gdg 0.9+ reads gdg.yml before importer.yml (and its package ships an
+            # example /etc/gdg/gdg.yml); gdg 0.7 reads only importer.yml. Mount both.
+            - name: {{ include "common.names.fullname" . }}-gdg-importer
+              readOnly: true
+              mountPath: /etc/gdg/gdg.yml
+              subPath: importer.yml
 
             {{- if .Values.gdgConfig.secureFiles }}
             {{- range $name, $config := .Values.gdgConfig.secureFiles }}
