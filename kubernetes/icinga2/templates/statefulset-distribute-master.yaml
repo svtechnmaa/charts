@@ -359,17 +359,24 @@ spec:
               value: https://localhost:5665
             - name: ICINGA2_API_URL
               value: https://localhost:5665
+            {{- /* Defaults only when master.election.env does not set the key: a duplicate env
+                   name breaks the strategic merge patch on helm upgrade. */}}
+            {{- $electionEnv := .Values.master.election.env | default dict }}
+            {{- if not (hasKey $electionEnv "ELECTION_READY_FILE") }}
             - name: ELECTION_READY_FILE
               value: /tmp/icinga2-election/ready
+            {{- end }}
+            {{- if not (hasKey $electionEnv "ELECTION_HEARTBEAT_FILE") }}
             - name: ELECTION_HEARTBEAT_FILE
               value: /tmp/icinga2-election/heartbeat
+            {{- end }}
             - name: ELECTION_READY_TIMEOUT
               value: {{ .Values.master.election.readyTimeoutSeconds | quote }}
             {{- if $redisProbe }}
             - name: REDIS_CHECK_MAX_AGE_MS
               value: {{ mul .Values.master.redisProbe.maxHeartbeatAgeSeconds 1000 | quote }}
             {{- end }}
-            {{- range $key, $value := .Values.master.election.env }}
+            {{- range $key, $value := $electionEnv }}
             - name: {{ $key }}
               value: {{ $value | quote }}
             {{- end }}
@@ -492,6 +499,7 @@ spec:
                   [[ -f "$ELECTION_READY_FILE" ]] || exit 0   # still starting, entrypoint has its own timeout
                   # election.py gone: fail at once. Otherwise this pod keeps its zones.d symlink
                   # (nobody fences it) while the other master takes the lease. [p] avoids matching this script.
+                  # Needs pgrep (procps) in the icinga2 image (svtech_icinga2 v1.2.5: procps-ng 4.0.4).
                   if ! pgrep -f '[p]ython3 /opt/election/election.py' >/dev/null; then
                     echo "election.py is not running"
                     exit 1

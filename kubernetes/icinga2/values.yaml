@@ -186,6 +186,10 @@ master:
   ## - liveness: appended to the election liveness probe above (same timings). Restarts icinga2
   ##   when icinga:host is empty or icinga:stats is older than maxHeartbeatAgeSeconds.
   ##   A Redis that does not answer is ignored here (the redis container's probe handles it).
+  ## - Both accept an empty icinga:host while the election READY file says leader-no-content
+  ##   (icinga2 runs without zones.d on purpose) or follower-no-content (zones.d blocked for
+  ##   every master, so the leader syncs nothing); a restart would not help. The heartbeat is
+  ##   still checked.
   redisProbe:
     enabled: true
     maxHeartbeatAgeSeconds: 180
@@ -216,6 +220,20 @@ master:
     ## RECONCILE_INTERVAL 10, CONTENT_STABLE_SECONDS 15, STARTUP_MAX_WAIT 300,
     ## DRIFT_CHECK_INTERVAL 60, RELOAD_VERIFY_TIMEOUT 180, FOLLOWER_SYNC_TIMEOUT 180,
     ## VALIDATE_TIMEOUT 300, CONTENT_READY_MARKER "" (file written by the config pipeline)
+    ## FENCE_GRACE: a leader whose renew keeps failing fences itself (drops zones.d) only after
+    ## LEASE_DURATION + FENCE_GRACE seconds without a confirmed renew. Trade-off: a leader cut off
+    ## from the API server (the other master still reaching it) can overlap with the new leader
+    ## for up to FENCE_GRACE seconds (split-brain on zones.d).
+    ## 0 = strict fencing, but a flaky API server then causes needless demote / promote reloads.
+    ## Syncthing conflict files (*.sync-conflict-*) in /opt/zones.d block every promote (icinga2
+    ## would load them as .conf: duplicate objects) and never disappear by themselves: delete them
+    ## by hand (election logs an ERROR with the paths). /opt/zones.d is shared, so both masters are
+    ## blocked. After STARTUP_MAX_WAIT the leader starts icinga2 without zones.d (READY =
+    ## leader-no-content) and syncs no config; a follower without old config (new pod) then has
+    ## 0 Hosts too (READY = follower-no-content). redisProbe accepts 0 Hosts in both cases
+    ## (heartbeat still checked). follower-no-content is used only while the running follower
+    ## process has never had a Host: a follower that already runs Hosts stays READY = follower,
+    ## so the probe still restarts icinga2 if Redis loses icinga:host.
     ## election.py reloads icinga2 only on a role change (promote / demote). Config changes in
     ## /opt/zones.d are loaded by the post-commit hook / reload-master (Rundeck, rebalance).
     env: {}

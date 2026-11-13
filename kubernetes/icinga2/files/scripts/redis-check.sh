@@ -28,7 +28,17 @@ hosts=$(sed -n '2p' <<<"$resp" | tr -d ':')
 last=$(grep -oE '^[0-9]{13}-[0-9]+$' <<<"$resp" | head -1 | cut -d- -f1)
 now=$(date +%s%3N)
 
-if [ "$hosts" -eq 0 ]; then echo "${HOSTKEY} empty in local Redis"; exit 1; fi
+# 0 Hosts is expected while the shared zones.d cannot be loaded (e.g. Syncthing conflict files):
+# the leader runs without zones.d (leader-no-content) and syncs nothing, so a follower without old
+# config (new pod) has 0 Hosts too (follower-no-content). Restarting icinga2 cannot fix it, it would
+# only loop. The election rewrites READY_FILE when it is fixed, so the check is back on then.
+if [ "$hosts" -eq 0 ]; then
+  read -r role _ 2>/dev/null < "${ELECTION_READY_FILE:-/tmp/icinga2-election/ready}"
+  case "$role" in
+    leader-no-content|follower-no-content) ;;
+    *) echo "${HOSTKEY} empty in local Redis"; exit 1 ;;
+  esac
+fi
 if [ -z "$last" ]; then echo "no icinga:stats heartbeat in local Redis"; exit 1; fi
 age=$((now - last))
 if [ "$age" -ge "$MAX_AGE_MS" ]; then echo "icinga:stats heartbeat stale ${age}ms"; exit 1; fi

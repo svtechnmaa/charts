@@ -24,7 +24,9 @@ Changes compared with the previous version:
      change) in /var/lib/icinga2/api/zones so that the node loads them and accepts the
      config sync from the leader.
   7. Write READY_FILE once the role is decided and the filesystem is prepared; the
-     entrypoint waits for this file before starting icinga2.
+     entrypoint waits for this file before starting icinga2. Rewritten after every verified
+     role change, so it always holds the current role (leader / follower / leader-no-content /
+     follower-no-content: zones.d blocked for every master, 0 hosts expected).
   8. Write HEARTBEAT_FILE on every reconcile pass, for the livenessProbe.
   9. Split-brain bound: when renewing fails, keep the role only for
      LEASE_DURATION + FENCE_GRACE seconds after the last confirmation of holding the lease.
@@ -233,6 +235,8 @@ class State:
         self.applied_hash = None        # zones.d content hash loaded by the process (leader)
         self.expected_hosts = None      # number of Hosts from the last validate
         self.ready_written = False
+        self.ready_role = None          # role last written to READY_FILE
+        self.follower_had_hosts = False # the running follower process has had Hosts (API count)
         self.follower_since = 0.0
         self.last_drift_check = 0.0
         self.content_hash = None
@@ -295,9 +299,16 @@ def write_small_file(path, text):
 
 
 def write_ready(role):
+    """First call: the entrypoint may start icinga2. Later calls (after every verified role
+    change, or when a follower sees the shared zones.d blocked / unblocked) keep READY_FILE
+    current: redis-check.sh accepts 0 Hosts only while it says leader-no-content or
+    follower-no-content."""
+    first = not STATE.ready_written
     write_small_file(READY_FILE, f"{role} {datetime.datetime.now(datetime.timezone.utc).isoformat()}\n")
     STATE.ready_written = True
-    log.info(f"READY_FILE written (role={role}) -> entrypoint may start icinga2")
+    STATE.ready_role = role
+    log.info(f"READY_FILE written (role={role})"
+             + (" -> entrypoint may start icinga2" if first else ""))
 
 
 # ---------------------------------------------------------------------------
@@ -367,7 +378,11 @@ def check_content():
         return False, None, f"marker {CONTENT_READY_MARKER} not present"
     files, problems = scan_content()
     if problems:
-        return False, None, "; ".join(problems[:3])
+        # Conflict files first: they never go away by themselves (the caller logs them as ERROR),
+        # temp files do.
+        problems.sort(key=lambda p: "conflict" not in p)
+        more = f" (+{len(problems) - 3} more)" if len(problems) > 3 else ""
+        return False, None, "; ".join(problems[:3]) + more
     if not files:
         return False, None, f"no *.conf files in {OPT_ZONES} (only Syncthing metadata / README?)"
     try:
@@ -381,6 +396,38 @@ def check_content():
     if now - STATE.content_hash_since < CONTENT_STABLE_SECONDS:
         return False, h, "waiting for content to settle"
     return True, h, f"{len(files)} .conf files"
+
+
+def content_blocked():
+    """True when the shared /opt/zones.d cannot be promoted for a long time: Syncthing conflict
+    files, no .conf file, or the CONTENT_READY_MARKER missing (temp files are transient and not
+    counted). The leader then ends up as leader-no-content and syncs no config, so a follower
+    that has none (new pod) stays at 0 Hosts as well: restarting it would not help."""
+    if CONTENT_READY_MARKER and not os.path.exists(CONTENT_READY_MARKER):
+        return True
+    files, problems = scan_content()
+    return not files or any(SYNC_CONFLICT.search(p) for p in problems)
+
+
+def follower_ready_role():
+    """follower-no-content only while this follower process has never run any Host: a conflict
+    file that appears after the leader loaded its config does not stop the config sync, and the
+    redis probe must keep restarting icinga2 when Redis loses icinga:host (the process still has
+    its Hosts then, so the flag stays set)."""
+    if STATE.follower_had_hosts:
+        return "follower"
+    return "follower-no-content" if content_blocked() else "follower"
+
+
+def note_follower_hosts():
+    """Set STATE.follower_had_hosts once the running follower process has Hosts (API count)."""
+    if STATE.follower_had_hosts or program_start() is None:
+        return
+    try:
+        if running_host_count() > 0:
+            STATE.follower_had_hosts = True
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -526,7 +573,15 @@ def reconcile_leader(now):
     # Promote: start as leader, follower -> leader, or completing leader-no-content.
     ready, h, reason = check_content()
     if not ready:
-        log_throttled("content", logging.WARNING, f"Leader, but content not ready: {reason}")
+        if "Syncthing conflict file" in reason:
+            # Never goes away by itself (unlike Syncthing temp files) and blocks every promote.
+            # /opt/zones.d is shared: the other master sees the same files.
+            log_throttled("conflict", logging.ERROR,
+                          f"Leader, but promote BLOCKED by Syncthing conflict files: {reason}. "
+                          f"Compare each *.sync-conflict-* file with its original, merge if needed, "
+                          f"then delete it by hand from {OPT_ZONES}", every=300)
+        else:
+            log_throttled("content", logging.WARNING, f"Leader, but content not ready: {reason}")
         if not STATE.ready_written and now - STATE.desired_since > STARTUP_MAX_WAIT:
             log.error("Content still not ready after STARTUP_MAX_WAIT; starting icinga2 "
                       "without zones.d, will reload once content is ready")
@@ -573,6 +628,7 @@ def reconcile_leader(now):
         STATE.applied_role, STATE.applied_hash, STATE.expected_hosts = "leader", h, expected
         STATE.last_drift_check = time.monotonic()
         note_success()
+        write_ready("leader")   # replaces leader-no-content / follower
         log.info(f"Leader reload verified: {msg}")
     else:
         note_failure(f"Leader reload NOT verified: {msg}")
@@ -618,7 +674,7 @@ def reconcile_follower(now):
     if not STATE.ready_written:
         STATE.applied_role, STATE.applied_hash, STATE.expected_hosts = "follower", None, None
         STATE.follower_since = now
-        write_ready("follower")
+        write_ready(follower_ready_role())
         return
 
     if transitioning or link_removed:
@@ -629,10 +685,22 @@ def reconcile_follower(now):
             STATE.applied_role, STATE.applied_hash, STATE.expected_hosts = "follower", None, None
             STATE.follower_since = STATE.last_drift_check = time.monotonic()
             note_success()
+            STATE.follower_had_hosts = False   # new process: count again
+            note_follower_hosts()
+            write_ready(follower_ready_role())
             log.info(f"Follower reload verified ({msg}); waiting for config sync from leader")
         else:
             note_failure(f"Follower reload NOT verified: {msg}")
         return
+
+    note_follower_hosts()
+    role = follower_ready_role()
+    if role != STATE.ready_role:
+        if role == "follower-no-content":
+            log.warning(f"{OPT_ZONES} is blocked for every master (Syncthing conflict files / no "
+                        "content) and this follower has no Hosts yet: the leader may be unable to "
+                        "load zones.d, 0 hosts are accepted by the redis probe until it is fixed")
+        write_ready(role)
 
     if markers:
         # No reload here to avoid a loop; usually Director / a config package deployed to the follower.
@@ -647,7 +715,14 @@ def reconcile_follower(now):
             count = running_host_count()
         except Exception:
             return
-        if count == 0:
+        if count == 0 and STATE.ready_role == "follower-no-content":
+            # Expected while the leader is leader-no-content, but zones.d may have been blocked
+            # only after the leader loaded its config: keep reminding, less often than the ERROR.
+            log_throttled("follower-empty", logging.WARNING,
+                          f"Follower still has 0 hosts; {OPT_ZONES} is blocked (Syncthing conflict "
+                          "files / no content). If the leader has hosts, check the cluster "
+                          "connection to the leader", every=900)
+        elif count == 0:
             log_throttled("follower-empty", logging.ERROR,
                           f"Follower still has 0 hosts after {FOLLOWER_SYNC_TIMEOUT}s - check the "
                           "cluster connection to the leader and 'Ignoring config update' in icinga2 log",
@@ -690,13 +765,25 @@ def on_started_leading():
     set_desired("leader")
 
 
+_LEASE_API = None
+
+
+def _lease_api():
+    """One CoordinationV1Api (one connection pool) reused by every reconcile pass. Created on
+    first use, i.e. after main() has set the default Configuration (retries = 0)."""
+    global _LEASE_API
+    if _LEASE_API is None:
+        _LEASE_API = client.CoordinationV1Api()
+    return _LEASE_API
+
+
 def lease_held_by_other():
     """True ONLY IF the Lease can be read and its holder is another pod with a valid lease.
     Lease unreadable (flaky API server) -> False: do not demote on a transient error."""
     try:
         # Short timeout: when etcd hangs (a GET lease took up to 25 s), do not wait; treat it as
         # "no other holder seen" -> keep the role, no reload.
-        lease = client.CoordinationV1Api().read_namespaced_lease(
+        lease = _lease_api().read_namespaced_lease(
             LEASE_NAME, NAMESPACE, _request_timeout=5)
     except Exception as e:
         log_throttled("lease-read", logging.WARNING, f"Cannot read lease: {e}", every=30)

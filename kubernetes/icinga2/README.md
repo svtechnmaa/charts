@@ -28,6 +28,26 @@
 ```
 
 
+## Upgrade notes
+
+### icinga2 > 1.8.24, icingaweb > 1.7.10: Redis / Icinga DB in the master pods
+
+- `global.redis.*` and `global.icingadb.enabled` are no longer read by `icinga2` and `icingaweb`:
+    - Every icinga2 master pod always runs its own `redis` and `icingadb` containers; icinga2 and
+      icingadb always use `localhost:6379` (Icinga DB HA: one Redis + one icingadb per master).
+    - icingaweb always uses `redis1` = Redis of master-0, `redis2` = Redis of master-1, through the
+      per-pod DNS of `icinga2-headless`.
+    - An environment that pointed icinga2 / icingaweb at an external Redis (`global.redis.host`),
+      or disabled Icinga DB (`global.icingadb.enabled: false`), is switched to the in-pod Redis
+      without warning on upgrade.
+- `redis.persistence` (hostPath `/data/redis`) is removed: Redis keeps an AOF in an emptyDir, so
+  its data survives a restart of the redis container but not a new pod (icinga2 dumps the config
+  into Redis again at start).
+- The icingaweb health-check CronJob (`cronjob.*` in icingaweb values) and its
+  ServiceAccount / Role (`pods/exec`) are removed; per-container probes replace it.
+- Not changed yet: the `post-commit` hook in `/opt/zones.d/.git` (Rundeck, rebalance) still restarts
+  all masters at the same time, and it is written only when `.git` does not exist yet.
+
 ## How to use
 
 - Clone this Container repo to /opt:
