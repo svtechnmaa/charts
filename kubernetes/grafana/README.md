@@ -80,6 +80,29 @@ chrome:
 Leaving the default URL while disabling the local component requires another
 service at that address. Beside that, `chrome.resources` configures the local Chrome container.
 
+## Renderer token
+
+Grafana 13+ refuses to start with the default `[rendering] renderer_token`. The
+chart sets `GF_RENDERING_RENDERER_TOKEN` on Grafana and `AUTH_TOKEN` on the
+renderer sidecar from one Secret key (`renderer.existingSecretKey`, default `token`).
+
+| Choice | Values |
+| --- | --- |
+| Auto-generate | Defaults. Creates `<fullname>-renderer-token`; a random 64-character token is kept on cluster-backed upgrades. |
+| Supply a token | `renderer.authToken`. |
+| Reference a Secret | `renderer.existingSecret` (same namespace); no Secret is created. |
+
+For an external renderer (`renderer.enabled: false` with a `renderer.url`), set
+`renderer.authToken` or `renderer.existingSecret` to the token that renderer uses.
+
+## GDG config mount
+
+The init Job mounts the same GDG config at both `/etc/gdg/importer.yml` and
+`/etc/gdg/gdg.yml`: gdg 0.9 reads `gdg.yml` first, gdg 0.7 reads only `importer.yml`.
+Caution: gdg 0.9 images ship an example `/etc/gdg/gdg.yml` pointing at
+staging.grafana.com, so running gdg by hand in the Grafana pod without the chart's
+config targets the wrong Grafana.
+
 ## Standalone values
 
 Save this as a private overlay and replace the DB Secret with your own:
