@@ -61,13 +61,27 @@ spec:
             - name: GIT_USERNAME
               valueFrom:
                 secretKeyRef:
+                  name: {{ include "grafana.gitAuthSecretName" . | quote }}
+                  key: {{ include "grafana.gitAuthUsernameKey" . | quote }}
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.gitAuthSecretName" . | quote }}
+                  key: {{ include "grafana.gitAuthPasswordKey" . | quote }}
+            {{- if contains "git-http" (lower (default "" .Values.gitsync.url)) }}
+            - name: GITHUB_SOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
                   name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: signer_name
-            - name: GIT_TOKEN
+                  optional: true
+            - name: GITHUB_SOURCE_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ include "grafana.managedAuthSecretName" . | quote }}
                   key: token
+                  optional: true
+            {{- end }}
             - name: GIT_TERMINAL_PROMPT
               value: "0"
           volumeMounts:
@@ -111,8 +125,20 @@ spec:
               cd /tmp/grafana-entities
 
               source_https_proxy="${HTTPS_PROXY:-}"
+              destination_username="$GIT_USERNAME"
+              destination_token="$GIT_TOKEN"
 
               use_source_proxy() {
+                case "$GITSYNC_URL" in
+                  *[Gg][Ii][Tt]-[Hh][Tt][Tt][Pp]*)
+                    export GIT_USERNAME="${GITHUB_SOURCE_USERNAME:-}"
+                    export GIT_TOKEN="${GITHUB_SOURCE_TOKEN:-}"
+                    ;;
+                  *)
+                    export GIT_USERNAME="$destination_username"
+                    export GIT_TOKEN="$destination_token"
+                    ;;
+                esac
                 if [ -n "$source_https_proxy" ]; then
                   export HTTPS_PROXY="$source_https_proxy"
                 else
@@ -121,6 +147,8 @@ spec:
               }
 
               use_destination_proxy() {
+                export GIT_USERNAME="$destination_username"
+                export GIT_TOKEN="$destination_token"
                 case "$GITSYNC_URL" in
                   *[Gg][Ii][Tt][Hh][Uu][Bb]*) use_source_proxy ;;
                   *) unset HTTPS_PROXY ;;

@@ -225,6 +225,12 @@ grafanaConfig:
   env: []
 
 gitsync:
+  # Reference the producer Secret; Grafana never copies git-http credentials. Use when gitsync.url ~ git-http.
+  gitHttp:
+    auth:
+      existingSecret: git-http-auth
+      usernameKey: username
+      passwordKey: password
   url: "http://git-http:8080/git/grafana-entities.git"
   # Desired source branch for all entities. GitHub is read-only to this init
   # Job. For git-http, existing destination main wins when this is main; a

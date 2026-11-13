@@ -27,6 +27,11 @@ image:
 
 imagePullSecrets: []
 
+# This chart is the sole producer. Existing nonempty managed keys are retained.
+# An external Secret must provide username/password in the same namespace.
+auth:
+  existingSecret: ""
+
 replicaCount: 1
 updateStrategy: Recreate
 
@@ -159,8 +164,7 @@ volumes:
     configMap:
       name: '{{ .Chart.Name }}-config'
   - name: auth
-    secret:
-      secretName: '{{ .Chart.Name }}-auth'
+    emptyDir: {}
 
 volumeMounts:
   - name: config

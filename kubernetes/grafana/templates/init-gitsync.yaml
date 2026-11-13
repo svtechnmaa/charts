@@ -18,14 +18,14 @@
             - name: GITSYNC_GIT_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
-                  key: signer_name
+                  name: {{ include "grafana.gitAuthSecretName" . | quote }}
+                  key: {{ include "grafana.gitAuthUsernameKey" . | quote }}
                   optional: true
             - name: GITSYNC_GIT_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
-                  key: token
+                  name: {{ include "grafana.gitAuthSecretName" . | quote }}
+                  key: {{ include "grafana.gitAuthPasswordKey" . | quote }}
                   optional: true
             - name: GITSYNC_REPOSITORY_NAME
               value: {{ printf "%s-gitsync" (include "common.names.name" .) | trunc 63 | trimSuffix "-" | quote }}
