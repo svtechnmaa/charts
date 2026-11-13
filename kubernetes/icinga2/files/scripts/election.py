@@ -160,10 +160,12 @@ class LeaseLock:
         if record.holder_identity != self.identity:
             return
         STATE.lease_confirmed_at = time.monotonic()   # before set_desired: reconcile must not fence again
-        if STATE.desired_role != "leader":
+        with STATE.lock:
+            need, was_fenced = STATE.desired_role != "leader", STATE.fenced
+        if need:
             # Usually a normal acquisition (startup, or a follower taking over): the lib calls
             # create/update before onstarted_leading. Only a fenced leader is unusual.
-            if STATE.fenced:
+            if was_fenced:
                 log.warning(f"Lease confirmed for {self.identity} after fencing -> leader again")
             set_desired("leader")
 
@@ -254,10 +256,12 @@ def log_throttled(key, level, msg, every=60):
         log.log(level, msg)
 
 
-def set_desired(role):
+def set_desired(role, fenced=False):
     with STATE.lock:
         if role == "leader":
             STATE.fenced = False
+        elif fenced:
+            STATE.fenced = True
         if STATE.desired_role != role:
             log.info(f"Desired role: {STATE.desired_role} -> {role}")
             STATE.desired_role = role
@@ -536,17 +540,20 @@ def reconcile_leader(now):
         with FS_LOCK:
             if STATE.desired_role != "leader":
                 return
-            ensure_symlink()
+            created = ensure_symlink()
     except Exception as e:
         note_failure(f"Cannot prepare symlink: {e}")
         return
 
     ok, expected, out = validate_config()
     if not ok:
-        # Promote path: the running process (if any) does not use zones.d yet, so drop the symlink
-        # even if an earlier pass created it (otherwise it would stay without a validated config).
-        with FS_LOCK:
-            remove_symlink()
+        # Drop the symlink only if no icinga2 process can have loaded it: created in this pass, or
+        # icinga2 not started yet (entrypoint waits for READY_FILE). After a reload that ran but was
+        # not verified (hosts missing, verify timeout), the running process already uses zones.d:
+        # removing the link then would make the next external restart load an empty zones.d.
+        if created or not STATE.ready_written:
+            with FS_LOCK:
+                remove_symlink()
         note_failure(f"Config validation FAILED (running process keeps old config):\n{out}")
         return
     log.info(f"Config validation OK (expected hosts={expected})")
@@ -720,8 +727,7 @@ def lease_unconfirmed_too_long():
 
 def demote_and_fence(reason):
     log.warning(f"=== {POD_NAME} stepping down: {reason} ===")
-    set_desired("follower")
-    STATE.fenced = True
+    set_desired("follower", fenced=True)   # role + flag under one lock: no race with _confirm
     # Fence at once, do not wait for the reconcile loop: never two nodes with zones.d.
     try:
         with FS_LOCK:
