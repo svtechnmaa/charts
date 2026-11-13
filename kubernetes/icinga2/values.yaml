@@ -2,11 +2,9 @@ global:
   externalIP: "" # externalIP for CICD
   sharedVolume:
     enabled: true
-  ## redis and icingadb always run as containers in every master pod, next to icinga2.
-  ## global.redis.host / port only point icinga2, icingadb and icingaweb at another Redis.
-  redis: {}
-  #   host: localhost
-  #   port: 6379
+  ## redis and icingadb always run as containers in every master pod, next to icinga2, and always
+  ## talk to localhost:6379 (Icinga DB HA: one Redis + one icingadb per master). global.redis.* is
+  ## not read by this chart (in the stack it describes the shared Redis of other applications).
   database:
     director:
       enabled: true
@@ -157,6 +155,9 @@ master:
     #   memory: 128Mi
 
 
+  ## Precedence of the icinga2 container liveness probe: livenessProbe.enabled (icinga2 daemon -C)
+  ## > customLivenessProbe > election.livenessProbe (+ redisProbe liveness check).
+  ## Enabling one of the first two DROPS the election heartbeat check and the redis-check liveness.
   livenessProbe:
     enabled: false
     initialDelaySeconds: 180

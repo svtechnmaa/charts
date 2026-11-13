@@ -184,9 +184,14 @@ spec:
             start_of() {
               curl -k -s -m 10 -u "\$AUTH" "https://\$1:5665/v1/status/IcingaApplication" | grep -oE '"program_start":[0-9.]+' | cut -d: -f2
             }
+            # A peer unreachable from the start (CrashLoop, Terminating, partitioned node: still
+            # listed because of publishNotReadyAddresses) is skipped so the others still reload;
+            # exit 1 at the end. A peer that accepted the restart but does not come back stops the run.
+            rc=0
             for M in "\${ORDERED[@]}"; do
               before=\$(start_of "\$M")
               code=\$(curl -k -s -m 60 -o /dev/null -w '%{http_code}' -u "\$AUTH" -H 'Accept: application/json' -X POST "https://\$M:5665/v1/actions/restart-process")
+              if [[ "\$code" == "000" && -z "\$before" ]]; then echo "Skip \$M: unreachable"; rc=1; continue; fi
               if [[ "\$code" != "200" ]]; then echo "Restart \$M failed: HTTP \$code"; exit 1; fi
               if [[ "\$M" == "\$SELF".* ]]; then echo "Restarted \$M (this pod)"; break; fi
               echo "Restarted \$M, waiting for the new process..."
@@ -198,6 +203,7 @@ spec:
               done
               [[ \$ok -eq 1 ]] || { echo "\$M did not come back within 5 minutes, stopping"; exit 1; }
             done
+            exit \$rc
             EOF
 
             # Add script to reload satellite
@@ -287,8 +293,8 @@ spec:
             # (leader: symlink zones.d + validated config; follower: no zones.d, no stale
             # .authoritative markers). Starting icinga2 before that loads a config that the
             # election would reload a few seconds later (empty zones.d -> empty Redis/Web).
-            ELECTION_DIR=$(dirname "$ELECTION_READY_FILE")
-            rm -rf "$ELECTION_DIR"
+            # Only the two files: the paths can be overridden through master.election.env.
+            rm -f "$ELECTION_READY_FILE" "$ELECTION_HEARTBEAT_FILE"
             log "Start election client in background"
             python3 /opt/election/election.py &
             ELECTION_PID=$!
@@ -442,13 +448,14 @@ spec:
             - name: RELAY_EMAIL
               value: {{ .Values.master.notifications.relay_email | quote }}
             {{- end }}
-            # icingadb feature: always on (redis and icingadb run in every master pod)
+            # icingadb feature: always on, writing to the redis container of this pod
+            # (global.redis.* is the stack's shared Redis, not used by icinga2)
             - name: ICINGADB_ENABLE
               value: "true"
             - name: REDIS_HOST
-              value: {{ .Values.global.redis.host | default "localhost" | quote }}
+              value: "localhost"
             - name: REDIS_PORT
-              value: {{ .Values.global.redis.port | default "6379" | quote }}
+              value: "6379"
           ports:
             - name: icinga2-api
               containerPort: {{ .Values.master.containerPorts.icinga2Api }}
@@ -574,6 +581,10 @@ spec:
             - "yes"
             - --appendfsync
             - everysec
+            # No RDB snapshots on top of AOF: they raise the peak usage of the emptyDir
+            # (sizeLimit) and an overrun evicts the whole pod.
+            - --save
+            - ""
             {{- end }}
             {{- if .Values.master.redis.maxmemory }}
             - --maxmemory
@@ -607,7 +618,8 @@ spec:
           {{- if .Values.master.redis.livenessProbe.enabled }}
           livenessProbe:
             exec:
-              command: ["sh", "-c", "[ \"$(redis-cli ping)\" = PONG ]"]
+              # LOADING: Redis is replaying the AOF after a restart, not hung (readiness stays strict)
+              command: ["sh", "-c", "redis-cli ping | grep -qE '^(PONG|LOADING)'"]
             initialDelaySeconds: {{ .Values.master.redis.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.master.redis.livenessProbe.periodSeconds }}
             timeoutSeconds: {{ .Values.master.redis.livenessProbe.timeoutSeconds }}

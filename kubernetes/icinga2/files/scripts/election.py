@@ -30,6 +30,9 @@ Changes compared with the previous version:
      LEASE_DURATION + FENCE_GRACE seconds after the last confirmation of holding the lease.
      Past that point without confirmation (API server gone) -> fencing, because another pod
      may have legitimately taken the lease since second LEASE_DURATION.
+ 10. Every Lease call has a client timeout (LEASE_API_TIMEOUT). If the API server confirms our
+     lease while we are fenced (a renew call hung past the fencing point), take the leader role
+     back: the lib keeps renewing and never calls onstarted_leading again.
 """
 import datetime
 import glob
@@ -94,7 +97,8 @@ class LeaseLock:
 
     def get(self, name, namespace):
         try:
-            lease = self.api_instance.read_namespaced_lease(name, namespace)
+            lease = self.api_instance.read_namespaced_lease(
+                name, namespace, _request_timeout=LEASE_API_TIMEOUT)
             self.lease_reference = lease
             spec = lease.spec
             if spec is None or spec.holder_identity is None:
@@ -108,6 +112,10 @@ class LeaseLock:
             return True, record
         except ApiException as e:
             return False, e
+        except Exception as e:
+            # Timeout / connection error (urllib3): the leaderelection lib only handles an
+            # ApiException with a JSON body here, anything else would crash its loop.
+            return False, _lock_error(e)
 
     def create(self, name, namespace, election_record):
         lease = client.V1Lease(
@@ -120,10 +128,11 @@ class LeaseLock:
             ),
         )
         try:
-            self.lease_reference = self.api_instance.create_namespaced_lease(namespace, lease)
+            self.lease_reference = self.api_instance.create_namespaced_lease(
+                namespace, lease, _request_timeout=LEASE_API_TIMEOUT)
             self._confirm(election_record)
             return True
-        except ApiException as e:
+        except Exception as e:
             log.info(f"Failed to create lock as {e}")
             return False
 
@@ -134,17 +143,36 @@ class LeaseLock:
             self.lease_reference.spec.acquire_time = _parse_time(updated_record.acquire_time)
             self.lease_reference.spec.renew_time = _parse_time(updated_record.renew_time)
             self.lease_reference = self.api_instance.replace_namespaced_lease(
-                name=name, namespace=namespace, body=self.lease_reference)
+                name=name, namespace=namespace, body=self.lease_reference,
+                _request_timeout=LEASE_API_TIMEOUT)
             self._confirm(updated_record)
             return True
-        except ApiException as e:
+        except Exception as e:
             log.info(f"Failed to update lock as {e}")
             return False
 
     def _confirm(self, record):
-        """Record when the API server confirmed that this pod holds the lease."""
-        if record.holder_identity == self.identity:
-            STATE.lease_confirmed_at = time.monotonic()
+        """Record when the API server confirmed that this pod holds the lease.
+
+        If we were fenced meanwhile (a renew call hung past LEASE_DURATION + FENCE_GRACE and then
+        succeeded), the lib keeps renewing without calling onstarted_leading again: take the
+        leader role back here, otherwise this pod holds the lease as a follower forever."""
+        if record.holder_identity != self.identity:
+            return
+        STATE.lease_confirmed_at = time.monotonic()   # before set_desired: reconcile must not fence again
+        if STATE.desired_role != "leader":
+            # Usually a normal acquisition (startup, or a follower taking over): the lib calls
+            # create/update before onstarted_leading. Only a fenced leader is unusual.
+            if STATE.fenced:
+                log.warning(f"Lease confirmed for {self.identity} after fencing -> leader again")
+            set_desired("leader")
+
+
+def _lock_error(e):
+    """ApiException shaped like an API server error (try_acquire_or_renew does json.loads(body))."""
+    err = ApiException(status=0, reason=f"{type(e).__name__}: {e}")
+    err.body = '{"code": 0}'
+    return err
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +203,10 @@ RETRY_PERIOD   = _env_int("RETRY_PERIOD", 5)
 # After LEASE_DURATION another pod may take the lease; FENCE_GRACE tolerates a flaky API server
 # (11/11 incident: lease re-acquired after 30.8 s) before fencing ourselves.
 FENCE_GRACE    = _env_int("FENCE_GRACE", 30)
+# Client timeout of every Lease call made by the election lib. The lib checks RENEW_DEADLINE only
+# between calls, so without it one hung call (etcd: a GET lease took up to 25 s) has no bound.
+# main() disables the urllib3 retries, otherwise one call may take (1 + 3 retries) x timeout.
+LEASE_API_TIMEOUT = _env_int("LEASE_API_TIMEOUT", 10)
 
 RECONCILE_INTERVAL       = _env_int("RECONCILE_INTERVAL", 10)
 CONTENT_STABLE_SECONDS   = _env_int("CONTENT_STABLE_SECONDS", 15)
@@ -206,6 +238,7 @@ class State:
         self.failures = 0
         self.next_attempt = 0.0
         self.lease_confirmed_at = 0.0   # last time the API server confirmed we hold the lease (monotonic)
+        self.fenced = False             # demoted by demote_and_fence, until we lead again
 
 
 STATE = State()
@@ -223,6 +256,8 @@ def log_throttled(key, level, msg, every=60):
 
 def set_desired(role):
     with STATE.lock:
+        if role == "leader":
+            STATE.fenced = False
         if STATE.desired_role != role:
             log.info(f"Desired role: {STATE.desired_role} -> {role}")
             STATE.desired_role = role
@@ -352,8 +387,13 @@ HOSTS_RE = re.compile(r"Instantiated (\d+) Hosts?\.")
 
 def validate_config():
     """Return (ok, expected_hosts, output_tail)."""
-    r = subprocess.run(["icinga2", "daemon", "--validate"],
-                       capture_output=True, text=True, timeout=VALIDATE_TIMEOUT)
+    try:
+        r = subprocess.run(["icinga2", "daemon", "--validate"],
+                           capture_output=True, text=True, timeout=VALIDATE_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return False, None, f"validate timed out after {VALIDATE_TIMEOUT}s"
+    except OSError as e:
+        return False, None, f"cannot run icinga2 daemon --validate: {e}"
     out = (r.stdout or "") + (r.stderr or "")
     if r.returncode != 0:
         return False, None, out[-4000:]
@@ -496,16 +536,17 @@ def reconcile_leader(now):
         with FS_LOCK:
             if STATE.desired_role != "leader":
                 return
-            created = ensure_symlink()
+            ensure_symlink()
     except Exception as e:
         note_failure(f"Cannot prepare symlink: {e}")
         return
 
     ok, expected, out = validate_config()
     if not ok:
-        if created:
-            with FS_LOCK:
-                remove_symlink()
+        # Promote path: the running process (if any) does not use zones.d yet, so drop the symlink
+        # even if an earlier pass created it (otherwise it would stay without a validated config).
+        with FS_LOCK:
+            remove_symlink()
         note_failure(f"Config validation FAILED (running process keeps old config):\n{out}")
         return
     log.info(f"Config validation OK (expected hosts={expected})")
@@ -680,6 +721,7 @@ def lease_unconfirmed_too_long():
 def demote_and_fence(reason):
     log.warning(f"=== {POD_NAME} stepping down: {reason} ===")
     set_desired("follower")
+    STATE.fenced = True
     # Fence at once, do not wait for the reconcile loop: never two nodes with zones.d.
     try:
         with FS_LOCK:
@@ -702,6 +744,11 @@ def on_stopped_leading():
 
 def main():
     config.load_incluster_config()
+    # No urllib3 retries (default 3): one Lease call must be bounded by its timeout
+    # (lab: 4 x 10 s read timeouts on one renew). The election loops retry every RETRY_PERIOD.
+    cfg = client.Configuration.get_default_copy()
+    cfg.retries = 0
+    client.Configuration.set_default(cfg)
     log.info(f"Election client starting on {POD_NAME}")
     threading.Thread(target=reconcile_loop, name="reconcile", daemon=True).start()
 

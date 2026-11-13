@@ -3,12 +3,6 @@
 global:
   sharedVolume:
     enabled: true
-  redis:
-    enabled: true
-    host:
-    port:
-  icingadb:
-    enabled: true
   sharedPersistenceVolume:
     - volumeName: icingaweb-volume
       pvcName: icingaweb-pvc
@@ -194,6 +188,7 @@ modules:
     enabled: false
   icingadb:
     enabled: true
+    ## Redis: always redis1 = icinga2 master-0, redis2 = master-1 (see _icingaweb-conf.tpl)
   incubator:
     enabled: true
   grafana:

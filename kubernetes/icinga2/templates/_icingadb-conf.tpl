@@ -1,9 +1,11 @@
 {{/*define ENV for icingadb configuration*/}}
 {{- define "icinga2-icingadb.conf" }}
+{{- /* Always the redis container of the same master pod (Icinga DB HA: one Redis + one icingadb
+     per icinga2 master). global.redis.* belongs to the stack's shared Redis, not to icinga2. */}}
 - name: ICINGADB_REDIS_HOST
-  value: {{ .Values.global.redis.host | default "localhost" | quote }}
+  value: "localhost"
 - name: ICINGADB_REDIS_PORT
-  value: {{ .Values.global.redis.port | default "6379" | quote }}
+  value: "6379"
 - name: ICINGADB_DATABASE_HOST
   value: {{ .Values.global.database.icingadb.host | default "mariadb" | quote }}
 - name: ICINGADB_DATABASE_PORT
