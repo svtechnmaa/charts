@@ -475,6 +475,75 @@
                 done < <(find "$source_dir" -type f -name '*.json' -size +0c -print0 | sort -z)
               }
 
+              delete_stale_library_panels() {
+                local source_dir="$1"
+                local org_id="$2"
+                local file response_file elements_file element_count total_count page per_page element uid encoded_uid
+
+                declare -A SOURCE_LIBRARY_UIDS=()
+                while IFS= read -r -d '' file; do
+                  uid="$(jq -r '.Entity.uid // empty' "$file")"
+                  if [[ -n "$uid" ]]; then
+                    SOURCE_LIBRARY_UIDS["$uid"]=1
+                  fi
+                done < <(find "$source_dir" -type f -name '*.json' -size +0c -print0 | sort -z)
+
+                DELETED_LIBRARY_PANELS=0
+                elements_file="$(mktemp /tmp/grafana-library-inventory.XXXXXX)"
+                page=1
+                per_page=1000
+                while :; do
+                  response_file="$(mktemp /tmp/grafana-library-list.XXXXXX)"
+                  api_request GET "/api/library-elements?kind=1&perPage=${per_page}&page=${page}" \
+                    "$org_id" "$response_file"
+                  if [[ "$HTTP_STATUS" != "200" ]]; then
+                    log_api_error "Failed to list library panels for stale-panel cleanup" "$response_file"
+                    rm -f "$response_file" "$elements_file"
+                    return 1
+                  fi
+
+                  if ! jq -e '(.result.elements | type) == "array"' "$response_file" >/dev/null; then
+                    log "Invalid library-panel inventory; refusing stale-panel deletion" >&2
+                    rm -f "$response_file" "$elements_file"
+                    return 1
+                  fi
+                  element_count="$(jq '.result.elements | length' "$response_file")"
+                  total_count="$(jq -r '.result.totalCount // .totalCount // 0' "$response_file")"
+                  jq -c '.result.elements[]' "$response_file" >> "$elements_file"
+                  rm -f "$response_file"
+
+                  if (( element_count == 0 || page * per_page >= total_count )); then
+                    break
+                  fi
+                  page=$((page + 1))
+                done
+
+                # Finish pagination before deleting: deleting while paging
+                # shifts the remaining elements and can skip stale panels.
+                  while IFS= read -r element; do
+                    uid="$(jq -r '.uid // empty' <<< "$element")"
+                    [[ -n "$uid" ]] || continue
+                    [[ -n "${SOURCE_LIBRARY_UIDS[$uid]:-}" ]] && continue
+
+                    encoded_uid="$(jq -rn --arg value "$uid" '$value | @uri')"
+                    response_file="$(mktemp /tmp/grafana-library-delete.XXXXXX)"
+                    api_request DELETE "/api/library-elements/${encoded_uid}" \
+                      "$org_id" "$response_file"
+                    if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "204" || "$HTTP_STATUS" == "404" ]]; then
+                      if [[ "$HTTP_STATUS" != "404" ]]; then
+                        DELETED_LIBRARY_PANELS=$((DELETED_LIBRARY_PANELS + 1))
+                        log "Deleted stale library panel ${uid}"
+                      fi
+                    else
+                      log_api_error "Failed to delete stale library panel ${uid}" "$response_file"
+                      rm -f "$response_file"
+                      return 1
+                    fi
+                    rm -f "$response_file"
+                  done < "$elements_file"
+                rm -f "$elements_file"
+              }
+
               wait_grafana
               TARGET_ORGS="$(
                 curl -fsS \
@@ -520,15 +589,17 @@
                 SOURCE_LIBRARY_DIR="/tmp/grafana-library/source-${configured_orgs}"
                 LIBRARY_PANEL_COUNT=0
                 merge_library_panels "$SOURCE_LIBRARY_DIR"
-                if (( LIBRARY_PANEL_COUNT == 0 )); then
-                  log "No library panels configured for ${org}; skipping synchronization"
-                  log_organization_end "$org" "skipped; no library panels"
-                  continue
+                if (( LIBRARY_PANEL_COUNT > 0 )); then
+                  log "Synchronizing library panels to ${org} (organization ID ${org_id})"
+                  sync_library_panels "$SOURCE_LIBRARY_DIR" "$org_id"
+                else
+                  CREATED_LIBRARY_PANELS=0
+                  UPDATED_LIBRARY_PANELS=0
+                  UNCHANGED_LIBRARY_PANELS=0
                 fi
-
-                log "Synchronizing library panels to ${org} (organization ID ${org_id})"
-                sync_library_panels "$SOURCE_LIBRARY_DIR" "$org_id"
-                log_organization_end "$org" "created=${CREATED_LIBRARY_PANELS}, updated=${UPDATED_LIBRARY_PANELS}, unchanged=${UNCHANGED_LIBRARY_PANELS}"
+                log "Checking for stale library panels in ${org}"
+                delete_stale_library_panels "$SOURCE_LIBRARY_DIR" "$org_id"
+                log_organization_end "$org" "created=${CREATED_LIBRARY_PANELS}, updated=${UPDATED_LIBRARY_PANELS}, unchanged=${UNCHANGED_LIBRARY_PANELS}, deleted=${DELETED_LIBRARY_PANELS}"
                 configured_orgs=$((configured_orgs + 1))
               done < <(jq -c '.[]' <<< "$GITSYNC_ORGANIZATIONS_JSON")
 
