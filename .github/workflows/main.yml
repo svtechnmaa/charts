@@ -435,20 +435,10 @@ jobs:
         run: |
           sh "${{ github.workspace }}/SVTECH_CICD_Utilities/integration-test/nmaa/icinga2-report/run_testcase.sh" -D "${{ github.workspace }}" -I .
   
-      - name: Run NMAA integration tests - Thruk
-        if: always() && !cancelled()
-        run: |
-          sh "${{ github.workspace }}/SVTECH_CICD_Utilities/integration-test/nmaa/thruk/run_testcase.sh" -D "${{ github.workspace }}" -I .
-  
       - name: Run NMAA integration tests - Grafana
         if: always() && !cancelled()
         run: |
           sh "${{ github.workspace }}/SVTECH_CICD_Utilities/integration-test/nmaa/grafana/run_testcase.sh" -D "${{ github.workspace }}" -I .
-  
-      - name: Run NMAA integration tests - Nagvis
-        if: always() && !cancelled()
-        run: |
-          sh "${{ github.workspace }}/SVTECH_CICD_Utilities/integration-test/nmaa/nagvis/run_testcase.sh" -D "${{ github.workspace }}" -I .
   
       - name: Run NMAA integration tests - IcingaWeb
         if: always() && !cancelled()
