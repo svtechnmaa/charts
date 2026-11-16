@@ -12,10 +12,6 @@ spec:
   {{ if .Values.global.frontendVip }}
   loadBalancerIP: {{ .Values.global.frontendVip }}
   {{ end }}
-  {{- if .Values.global.externalIP }}
-  externalIPs:
-    - {{ .Values.global.externalIP }}
-  {{- end }}
   ports:
     {{ range .Values.service.portFrontend }}
     - name: {{ .name }}
