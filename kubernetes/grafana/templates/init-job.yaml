@@ -46,7 +46,7 @@ spec:
           emptyDir: {}
       initContainers:
         - name: grafana-entities
-          image: {{ include "common.images.image" ( dict "imageRoot" .Values.grafana-entities.image "global" .Values.global ) }}
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.grafanaEntities.image "global" .Values.global ) }}
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           env:
             - name: GITSYNC_URL
