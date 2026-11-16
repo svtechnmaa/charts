@@ -1,3 +1,4 @@
+{{- if .Values.gitsync.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -45,8 +46,8 @@ spec:
           emptyDir: {}
       initContainers:
         - name: grafana-entities
-          image: duchieu2920/grafana-entities:v1.0.2
-          imagePullPolicy: IfNotPresent
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.grafana-entities.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           env:
             - name: GITSYNC_URL
               value: {{ required "gitsync.url is required for the grafana-entities source" .Values.gitsync.url | quote }}
@@ -416,3 +417,4 @@ spec:
 {{ include "grafana.initDatasources" . }}
 {{ include "grafana.libraryInitContainer" . }}
 {{ include "grafana.gitsyncProvisioning" . }}
+{{- end }}

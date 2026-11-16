@@ -32,11 +32,18 @@ init:
     pullPolicy: IfNotPresent
 
 image:
-  registry: docker.io
-  repository: duchieu2920
-  tag: svtech_grafana:v13.1.3-ubuntu
+  registry: ghcr.io
+  repository: svtechnmaa/svtech_grafana
+  tag: v1.3.2
   pullPolicy: IfNotPresent
   # debug: true
+
+grafana-entities:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/grafana_entities
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
 
 renderer:
   enabled: true
@@ -225,6 +232,7 @@ grafanaConfig:
   env: []
 
 gitsync:
+  enabled: true
   # Reference the producer Secret; Grafana never copies git-http credentials. Use when gitsync.url ~ git-http.
   gitHttp:
     auth:
