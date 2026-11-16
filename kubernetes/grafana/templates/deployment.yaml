@@ -113,7 +113,7 @@ spec:
             - name: GF_PROVISIONING_ALLOWED_GIT_URLS
               value: git-http:8080
             - name: GF_PROVISIONING_ALLOW_INSECURE
-              value: true
+              value: "true"
             - name: GF_SERVER_ROOT_URL
               value: {{ default (printf "%s://%s%s" (ternary "https" "http" (default false .Values.global.enableHttps)) .Values.global.frontendVip .Values.grafanaConfig.subPath) .Values.grafanaConfig.rootUrl | quote }}
             - name: GF_SERVER_SERVE_FROM_SUB_PATH
