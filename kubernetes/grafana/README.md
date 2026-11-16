@@ -103,6 +103,10 @@ Caution: gdg 0.9 images ship an example `/etc/gdg/gdg.yml` pointing at
 staging.grafana.com, so running gdg by hand in the Grafana pod without the chart's
 config targets the wrong Grafana.
 
+The init Job also wraps library element files in `{"Entity": ..., "NestedPath": ...}`
+before uploading when the image's gdg is 0.9 or newer. Files exported by gdg 0.7 are
+flat and make gdg 0.9 panic; with gdg 0.7 the files are left untouched.
+
 ## Standalone values
 
 Save this as a private overlay and replace the DB Secret with your own:
