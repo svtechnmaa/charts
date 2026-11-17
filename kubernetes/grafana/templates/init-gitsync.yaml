@@ -103,46 +103,17 @@
                   <<< "$TARGET_ORGS"
               }
 
-              ensure_org_id() {
+              require_existing_org_id() {
                 local org="$1"
-                local org_id create_payload create_response
+                local org_id
 
                 org_id="$(resolve_org_id "$org")"
                 if [[ -n "$org_id" ]]; then
                   printf '%s\n' "$org_id"
                   return 0
                 fi
-
-                log "Organization ${org} does not exist; creating it" >&2
-                create_payload="$(jq -n --arg name "$org" '{name: $name}')"
-                if create_response="$(
-                  curl -fsS \
-                    -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
-                    -H "Content-Type: application/json" \
-                    -X POST \
-                    -d "$create_payload" \
-                    "${GRAFANA_SERVER}/api/orgs"
-                )"; then
-                  org_id="$(jq -r '.orgId // .id // empty' <<< "$create_response")"
-                fi
-
-                # A concurrent initializer may have created the organization.
-                # Refresh the list before treating a failed create as fatal.
-                if [[ -z "$org_id" ]]; then
-                  TARGET_ORGS="$(
-                    curl -fsS \
-                      -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
-                      "${GRAFANA_SERVER}/api/orgs"
-                  )"
-                  org_id="$(resolve_org_id "$org")"
-                fi
-
-                if [[ -z "$org_id" ]]; then
-                  log "Failed to create or resolve Grafana organization: ${org}" >&2
-                  return 1
-                fi
-
-                printf '%s\n' "$org_id"
+                log "Organization ${org} was not created by grafana-organizations" >&2
+                return 1
               }
 
               repository_name_for_path() {
@@ -225,7 +196,7 @@
                   exit 1
                 fi
 
-                if ! org_id="$(ensure_org_id "$org")"; then
+                if ! org_id="$(require_existing_org_id "$org")"; then
                   exit 1
                 fi
                 log "Configuring Git Sync for org: ${org} (${org_id})"

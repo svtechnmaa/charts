@@ -413,6 +413,102 @@ spec:
               log "Grafana entities main and upstream are ready at ${selected_sha}"
               log "Preparing Grafana entities for init datasources and library panels"
               cp -r /tmp/grafana-entities/* /opt/grafana-entities/
+        - name: grafana-organizations
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: GITSYNC_ORGANIZATIONS_JSON
+              value: {{ .Values.gitsync.organizations | default list | toJson | quote }}
+            - name: GRAFANA_SERVER
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
+            - name: GRAFANA_USER
+              value: {{ include "grafana.adminUser" . | quote }}
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -Eeuo pipefail
+
+              log() {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+
+              wait_grafana() {
+                local timeout="${1:-300}"
+                until curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/health" >/dev/null; do
+                  timeout=$((timeout - 5))
+                  if [ "$timeout" -le 0 ]; then
+                    log "Timeout waiting for Grafana at ${GRAFANA_SERVER}" >&2
+                    exit 1
+                  fi
+                  log "Waiting for Grafana at ${GRAFANA_SERVER}..."
+                  sleep 5
+                done
+              }
+
+              resolve_org_id() {
+                local org="$1"
+                if [[ "${org,,}" == "main" || "${org,,}" == "default" ]]; then
+                  echo 1
+                  return 0
+                fi
+                jq -r --arg org "$org" \
+                  'first(.[] | select((.name | ascii_downcase) == ($org | ascii_downcase)) | .id) // empty' \
+                  <<< "$TARGET_ORGS"
+              }
+
+              wait_grafana
+              TARGET_ORGS="$(curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                "${GRAFANA_SERVER}/api/orgs")"
+
+              organization_count="$(jq 'length' <<< "$GITSYNC_ORGANIZATIONS_JSON")"
+              if (( organization_count == 0 )); then
+                log "gitsync.organizations must contain at least one organization" >&2
+                exit 1
+              fi
+
+              while IFS= read -r organization_config; do
+                org="$(jq -r '.org // empty' <<< "$organization_config")"
+                if [[ -z "$org" ]]; then
+                  log "Every gitsync.organizations entry requires org" >&2
+                  exit 1
+                fi
+
+                org_id="$(resolve_org_id "$org")"
+                if [[ -n "$org_id" ]]; then
+                  log "Organization ${org} already exists with ID ${org_id}"
+                  continue
+                fi
+
+                log "Creating Grafana organization ${org}"
+                payload="$(jq -cn --arg name "$org" '{name: $name}')"
+                if ! curl -fsS \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  -H 'Content-Type: application/json' \
+                  -X POST \
+                  -d "$payload" \
+                  "${GRAFANA_SERVER}/api/orgs" >/tmp/grafana-create-org.json; then
+                  log "Failed to create Grafana organization ${org}" >&2
+                  exit 1
+                fi
+
+                TARGET_ORGS="$(curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/orgs")"
+                org_id="$(resolve_org_id "$org")"
+                if [[ -z "$org_id" ]]; then
+                  log "Organization ${org} was not found after creation" >&2
+                  exit 1
+                fi
+                log "Organization ${org} is ready with ID ${org_id}"
+              done < <(jq -c '.[]' <<< "$GITSYNC_ORGANIZATIONS_JSON")
+
+              log "All Grafana organizations are ready"
       containers:
 {{ include "grafana.initDatasources" . }}
 {{ include "grafana.libraryInitContainer" . }}

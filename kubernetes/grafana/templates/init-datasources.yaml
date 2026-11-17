@@ -343,26 +343,62 @@
                 exit 1
               }
 
+              datasources_visible() {
+                local org_id expected_count expected_uids actual
+
+                for org_id in "${!CONFIGURED_ORG_IDS[@]}"; do
+                  expected_count="$(awk -v org="$org_id" \
+                    '$1 == "orgId:" && $2 == org { count++ } END { print count + 0 }' \
+                    "$RUNTIME_FILE")"
+                  expected_uids="$(awk -v org="$org_id" '
+                    /^  - name:/ { if (current_org == org && uid != "") print uid; current_org=""; uid="" }
+                    /^    orgId:/ { current_org=$2 }
+                    /^    uid:/ { uid=$2; gsub(/^\047|\047$/, "", uid); gsub(/^"|"$/, "", uid) }
+                    END { if (current_org == org && uid != "") print uid }
+                  ' "$RUNTIME_FILE" | jq -Rsc 'split("\n") | map(select(length > 0))')"
+
+                  if ! actual="$(curl --fail --silent --show-error \
+                    --user "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                    --header "X-Grafana-Org-Id: ${org_id}" \
+                    "${GRAFANA_SERVER}/api/datasources")"; then
+                    log "Cannot list datasources for orgId ${org_id}; retrying reload" >&2
+                    return 1
+                  fi
+                  if ! jq -e --argjson count "$expected_count" \
+                    --argjson expected "$expected_uids" '
+                    type == "array" and length >= $count and
+                    (. as $actual | all($expected[]; . as $uid | any($actual[]; .uid == $uid)))
+                  ' <<< "$actual" >/dev/null; then
+                    log "Grafana has not loaded all ${expected_count} datasources for orgId ${org_id}; retrying reload"
+                    return 1
+                  fi
+                  log "Verified ${expected_count} datasources for orgId ${org_id} via Grafana API"
+                done
+              }
+
               reload_datasources() {
-                local attempts="${1:-6}"
+                local attempts="${1:-12}"
                 local attempt
 
+                # ConfigMap projections are updated independently in the Job
+                # and Grafana Pods. A successful reload can read an older file.
                 for ((attempt = 1; attempt <= attempts; attempt++)); do
                   if curl --fail --silent --show-error \
                     --request POST \
                     --user "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
-                    "${GRAFANA_SERVER}/api/admin/provisioning/datasources/reload"; then
+                    "${GRAFANA_SERVER}/api/admin/provisioning/datasources/reload" >/dev/null && \
+                    datasources_visible; then
                     log "Reloaded Grafana datasource provisioning"
                     return 0
                   fi
 
                   if (( attempt < attempts )); then
-                    log "Datasource reload failed; retrying (${attempt}/${attempts})..." >&2
-                    sleep 5
+                    log "Datasource reload not yet reflected in Grafana; retrying (${attempt}/${attempts})..."
+                    sleep 15
                   fi
                 done
 
-                log "Failed to reload Grafana datasource provisioning" >&2
+                log "Failed to verify datasource provisioning after ${attempts} reload attempts" >&2
                 exit 1
               }
 
@@ -432,5 +468,5 @@
 
               publish_runtime_configmap
               wait_for_runtime_projection 180
-              reload_datasources 6
+              reload_datasources 12
 {{- end -}}

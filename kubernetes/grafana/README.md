@@ -113,9 +113,10 @@ JSON must contain `uid`, `name`, and `model`.
 4. `main` and `upstream` are created or fast-forwarded. If they are ahead or
    diverged, the Job stops when `forcePush=false`; force-with-lease is used only
    when it is explicitly enabled.
-5. Three containers run:
+5. The `grafana-organizations` initContainer creates or resolves all configured organizations.
+6. Three provisioning containers run:
    - `gitsync-init`: creates or updates Repository resources.
-   - `datasource-init`: combines datasources, updates the ConfigMap, and reloads Grafana.
+   - `datasource-init`: combines datasources, updates the ConfigMap, and retries Grafana reload until the expected datasources are visible through the API. ConfigMap projection into the Job and Grafana Pods can finish at different times.
    - `library-init`: creates, updates, skips, and deletes library panels based on source files.
 
 ## Deploy and verify
