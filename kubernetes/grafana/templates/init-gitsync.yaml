@@ -155,6 +155,7 @@
               mkdir -p "$WORKDIR"
 
               configured_repositories=0
+              declare -A REPOSITORY_PATH_BY_NAME=()
               organization_count="$(jq 'length' <<< "$GITSYNC_ORGANIZATIONS_JSON")"
               if (( organization_count == 0 )); then
                 log "gitsync.organizations must contain at least one organization" >&2
@@ -201,6 +202,20 @@
                 fi
                 log "Configuring Git Sync for org: ${org} (${org_id})"
                 export GRAFANA_ORG_ID="$org_id"
+
+                # Validate every path before creating any repository for this org.
+                for raw_path in "${PATHS[@]}"; do
+                  repository_path="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$raw_path")"
+                  [[ -n "$repository_path" ]] || continue
+                  repository_name="$(repository_name_for_path "$repository_path")"
+                  repository_key="${org_id}/${repository_name}"
+                  if [[ -n "${REPOSITORY_PATH_BY_NAME[$repository_key]:-}" &&
+                        "${REPOSITORY_PATH_BY_NAME[$repository_key]}" != "$repository_path" ]]; then
+                    log "Repository name collision: ${repository_path} and ${REPOSITORY_PATH_BY_NAME[$repository_key]} both map to ${repository_name}" >&2
+                    exit 1
+                  fi
+                  REPOSITORY_PATH_BY_NAME[$repository_key]="$repository_path"
+                done
 
                 for raw_path in "${PATHS[@]}"; do
                   repository_path="$(sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$raw_path")"

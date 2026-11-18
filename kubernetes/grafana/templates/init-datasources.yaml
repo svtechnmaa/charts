@@ -344,7 +344,7 @@
               }
 
               datasources_visible() {
-                local org_id expected_count expected_uids actual
+                local org_id expected_count expected_uids actual response status verified=0
 
                 for org_id in "${!CONFIGURED_ORG_IDS[@]}"; do
                   expected_count="$(awk -v org="$org_id" \
@@ -357,11 +357,21 @@
                     END { if (current_org == org && uid != "") print uid }
                   ' "$RUNTIME_FILE" | jq -Rsc 'split("\n") | map(select(length > 0))')"
 
-                  if ! actual="$(curl --fail --silent --show-error \
+                  if ! response="$(curl --silent --show-error --write-out '\n%{http_code}' \
                     --user "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
                     --header "X-Grafana-Org-Id: ${org_id}" \
                     "${GRAFANA_SERVER}/api/datasources")"; then
                     log "Cannot list datasources for orgId ${org_id}; retrying reload" >&2
+                    return 1
+                  fi
+                  status="${response##*$'\n'}"
+                  actual="${response%$'\n'*}"
+                  if [[ "$status" == "403" ]]; then
+                    log "Cannot verify orgId ${org_id}: Grafana user lacks datasources:read in this org; checking other orgs" >&2
+                    continue
+                  fi
+                  if [[ "$status" != "200" ]]; then
+                    log "Cannot list datasources for orgId ${org_id} (HTTP ${status}); retrying reload" >&2
                     return 1
                   fi
                   if ! jq -e --argjson count "$expected_count" \
@@ -373,7 +383,12 @@
                     return 1
                   fi
                   log "Verified ${expected_count} datasources for orgId ${org_id} via Grafana API"
+                  verified=$((verified + 1))
                 done
+                if (( verified == 0 )); then
+                  log "Cannot verify any datasource org with the configured Grafana user" >&2
+                  return 1
+                fi
               }
 
               reload_datasources() {
@@ -386,6 +401,7 @@
                   if curl --fail --silent --show-error \
                     --request POST \
                     --user "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                    --header "X-Grafana-Org-Id: 1" \
                     "${GRAFANA_SERVER}/api/admin/provisioning/datasources/reload" >/dev/null && \
                     datasources_visible; then
                     log "Reloaded Grafana datasource provisioning"

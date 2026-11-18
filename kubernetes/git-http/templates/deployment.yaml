@@ -250,7 +250,9 @@ spec:
 
                 mkdir -p "$(dirname "$destination")"
                 if [ -e "$destination" ]; then
-                  destination="${destination}.$(date '+%Y%m%d%H%M%S').$$"
+                  # Kubernetes reduces each $$ pair in container args before
+                  # the shell runs, so $$$$ is needed for a shell PID here.
+                  destination="${destination}.$(date '+%Y%m%d%H%M%S').$$$$"
                 fi
                 mv "$bundle_file" "$destination"
                 log "Archived ${outcome} bundle to ${destination}"
