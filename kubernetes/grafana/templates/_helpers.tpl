@@ -53,6 +53,6 @@
 {{- if .Values.renderer.existingSecret -}}
 {{- tpl .Values.renderer.existingSecret . -}}
 {{- else -}}
-{{- printf "%s-renderer-token" (include "common.names.fullname" . | trunc 48 | trimSuffix "-") -}}
+{{- include "grafana.managedAuthSecretName" . -}}
 {{- end -}}
 {{- end -}}

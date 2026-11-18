@@ -27,10 +27,6 @@ spec:
       labels:
         {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: grafana
-      {{- if and (include "grafana.rendererTokenEnabled" .) .Values.renderer.authToken (not .Values.renderer.existingSecret) }}
-      annotations:
-        checksum/renderer-token: {{ tpl (toString .Values.renderer.authToken) . | sha256sum | quote }}
-      {{- end }}
     spec:
       {{- if .Values.affinity }}
       affinity: {{- include "common.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}

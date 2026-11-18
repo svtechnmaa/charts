@@ -86,11 +86,19 @@ Grafana 13+ refuses to start with the default `[rendering] renderer_token`. The
 chart sets `GF_RENDERING_RENDERER_TOKEN` on Grafana and `AUTH_TOKEN` on the
 renderer sidecar from one Secret key (`renderer.existingSecretKey`, default `token`).
 
+By default the token is a key in the chart-managed `<fullname>-admin` Secret,
+next to the admin and database passwords. On first install the chart generates
+a 64-character token or uses `renderer.authToken`. Upgrades keep the stored
+value, so changing `renderer.authToken` later has no effect. To change the token,
+use `renderer.existingSecret`.
+
 | Choice | Values |
 | --- | --- |
-| Auto-generate | Defaults. Creates `<fullname>-renderer-token`; a random 64-character token is kept on cluster-backed upgrades. |
-| Supply a token | `renderer.authToken`. |
-| Reference a Secret | `renderer.existingSecret` (same namespace); no Secret is created. |
+| Auto-generate | Defaults. Stores a random 64-character token in `<fullname>-admin`. |
+| Supply a token | `renderer.authToken` on first install. |
+| Reference a Secret | `renderer.existingSecret` (same namespace). The managed token key is not created. |
+
+The token key must differ from the admin and database password keys.
 
 For an external renderer (`renderer.enabled: false` with a `renderer.url`), set
 `renderer.authToken` or `renderer.existingSecret` to the token that renderer uses.
