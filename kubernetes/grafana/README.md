@@ -44,39 +44,39 @@ the Grafana Secret. When the destination is git-http and the selected branch is
 missing, the init Job uses `token` to fetch the branch from GitHub and uses
 `git-http-auth` to push to the destination.
 
-## Values example
+## Admin password choices
 
-```yaml
-grafanaConfig:
-  auth:
-    username: admin
-    password: ""
-    existingSecret: ""
-    existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
-  database:
-    mysqlHost: mariadb
-    mysqlPort: 3306
-    mysqlDB: grafana
-    auth:
-      username: grafana
-      existingSecret: grafana-db-auth
-      existingSecretPasswordKey: password
+| Choice | `grafanaConfig.auth` |
+| --- | --- |
+| Auto-generate on first install | Empty `password` and `existingSecret`; creates `<fullname>-admin`. |
+| Supply initial password | Nonempty `password`, empty `existingSecret`. |
+| Reference a Secret | Nonempty `existingSecret`, with `existingSecretPasswordKey` matching its key. |
 
-gitsync:
-  url: "http://git-http:8080/git/grafana-entities.git"
-  remote_branch: main
-  forcePush: false
-  path: [nmaa, itim]
-  organizations:
-    - org: Main
-      write: true
-      branch: main
-      path: [nmaa, itim]
-    - org: Upstream
-      write: false
-      branch: upstream
-      path: [nmaa, itim]
-```
+External references take precedence over password input. Managed Secrets reuse
+stored passwords on cluster-backed upgrades, even when a new password is supplied.
+Offline `helm template` cannot look up that stored value. Secret references must
+exist in the same namespace. For an existing Grafana database, use its current
+admin password: startup settings do not rotate an account already stored in SQL.
+
+## Database credentials
+
+Use `grafanaConfig.database.auth.existingSecret` for a pre-created DB credential.
+Alternatively clear that reference and supply `database.auth.password` matching
+the existing DB user. This does not create the SQL account or schema, and does
+not provide the admin-password auto-generation workflow for database users.
+Without a DB Secret reference, the supplied password is stored as `DB_PASSWORD`
+(or `database.auth.existingSecretPasswordKey`) in the same chart-managed
+`<fullname>-admin` Secret as the admin credential. Pods always use `secretKeyRef`.
+An empty DB password without a Secret reference fails rendering. Existing stored
+DB passwords are reused; changing values alone does not rotate the DB account.
+
+If admin authentication uses an external Secret, the chart-managed Secret holds
+only the fallback DB password; the external admin Secret is not modified. If
+both credentials use external Secrets, no local auth Secret is created. Admin
+and DB keys must differ when both are stored in the managed Secret.
+
+The connection keys are under `grafanaConfig.database`, including `mysqlHost`,
+`mysqlPort`, and `mysqlDB`.
 
 ### Organization fields
 
@@ -119,6 +119,62 @@ JSON must contain `uid`, `name`, and `model`.
    - `datasource-init`: combines datasources, updates the ConfigMap, and retries Grafana reload until the expected datasources are visible through the API. ConfigMap projection into the Job and Grafana Pods can finish at different times.
    - `library-init`: creates, updates, skips, and deletes library panels based on source files.
 
+## Local and external rendering services
+
+`renderer.enabled` and `chrome.enabled` control deployment of local containers.
+Their `url` settings independently select the service used by Grafana. Set
+`enabled: false` and supply a reachable URL to use a shared/external service.
+To disable an integration entirely, also clear its URL:
+
+```yaml
+renderer:
+  enabled: false
+  url: ""
+chrome:
+  enabled: false
+  url: ""
+```
+
+Leaving the default URL while disabling the local component requires another
+service at that address. Beside that, `chrome.resources` configures the local Chrome container.
+
+## Standalone values
+
+Save this as a private overlay and replace the DB Secret with your own:
+
+```yaml
+grafanaConfig:
+  auth:
+    username: admin
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
+  database:
+    mysqlHost: mariadb
+    mysqlPort: 3306
+    mysqlDB: grafana
+    auth:
+      username: grafana
+      existingSecret: grafana-db-auth
+      existingSecretPasswordKey: password
+
+gitsync:
+  url: "http://git-http:8080/git/grafana-entities.git"
+  remote_branch: main
+  forcePush: false
+  path: [nmaa, itim]
+  organizations:
+    - org: Main
+      write: true
+      branch: main
+      path: [nmaa, itim]
+    - org: Upstream
+      write: false
+      branch: upstream
+      path: [nmaa, itim]
+```
+
+
 ## Deploy and verify
 
 Render before deployment:
@@ -127,7 +183,7 @@ Render before deployment:
 helm lint --strict . \
   --set global.authenUsers.grafana.user=thrukadmin
 
-helm template nmaa . \
+helm template grafana . \
   --set global.authenUsers.grafana.user=thrukadmin \
   --set gitsync.remote_branch=main
 ```
@@ -135,17 +191,17 @@ helm template nmaa . \
 Deploy:
 
 ```bash
-helm upgrade --install nmaa . -n nmaa --create-namespace \
+helm upgrade --install grafana . \
   -f values-private.yaml
 ```
 
 Verify:
 
 ```bash
-kubectl get pods,job -n nmaa
-kubectl logs -n nmaa job/grafana-init -c grafana-entities
-kubectl logs -n nmaa job/grafana-init -c datasource-init
-kubectl logs -n nmaa job/grafana-init -c library-init
+kubectl get pods,job
+kubectl logs job/grafana-init -c grafana-entities
+kubectl logs job/grafana-init -c datasource-init
+kubectl logs job/grafana-init -c library-init
 ```
 
 The init Job is a Helm `post-install`/`post-upgrade` hook with a 900-second
