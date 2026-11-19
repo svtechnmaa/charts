@@ -40,3 +40,19 @@
 {{- end -}}
 {{- printf "http://%s:%v" (include "netforge-be.conductorServiceName" .) (required "conductor.service.ports must include a port named api" $apiPort.port) -}}
 {{- end -}}
+
+{{/* Read the chart-managed SeaweedFS admin credentials at pod startup. */}}
+{{- define "netforge-be.seaweedfsS3Env" -}}
+{{- if dig "seaweedfs" "enabled" false (.Values.global | default dict) }}
+- name: S3_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: seaweedfs-s3-secret
+      key: admin_access_key_id
+- name: S3_SECRET_KEY
+  valueFrom:
+    secretKeyRef:
+      name: seaweedfs-s3-secret
+      key: admin_secret_access_key
+{{- end }}
+{{- end -}}

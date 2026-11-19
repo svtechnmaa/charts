@@ -8,6 +8,10 @@ metadata:
     {{- include "common.labels.standard" . | nindent 4 }}
 data:
   {{- range $key, $val := .Values.netforgeAppEnv }}
+  {{- if and (eq $key "S3_ENDPOINT_URL") (dig "seaweedfs" "enabled" false ($.Values.global | default dict)) }}
+  {{ $key }}: "http://seaweedfs-s3:8333"
+  {{- else }}
   {{ $key }}: {{ $val | quote }}
+  {{- end }}
   {{- end }}
 {{- end }}
