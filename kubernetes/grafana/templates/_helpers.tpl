@@ -50,9 +50,13 @@
 {{- end -}}
 
 {{- define "grafana.rendererTokenSecretName" -}}
-{{- if .Values.renderer.existingSecret -}}
-{{- tpl .Values.renderer.existingSecret . -}}
+{{- if .Values.renderer.auth.existingSecret -}}
+{{- tpl .Values.renderer.auth.existingSecret . | required "renderer.auth.existingSecret resolved empty" -}}
 {{- else -}}
 {{- include "grafana.managedAuthSecretName" . -}}
 {{- end -}}
+{{- end -}}
+
+{{- define "grafana.rendererTokenKey" -}}
+{{- tpl .Values.renderer.auth.existingSecretTokenKey . | required "renderer.auth.existingSecretTokenKey is required" -}}
 {{- end -}}

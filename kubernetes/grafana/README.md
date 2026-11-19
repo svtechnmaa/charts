@@ -31,8 +31,9 @@ DB passwords are reused; changing values alone does not rotate the DB account.
 
 If admin authentication uses an external Secret, the chart-managed Secret holds
 only the fallback DB password; the external admin Secret is not modified. If
-both credentials use external Secrets, no local auth Secret is created. Admin
-and DB keys must differ when both are stored in the managed Secret.
+both passwords are external, `<fullname>-admin` still holds the renderer token unless
+`renderer.auth.existingSecret` is set or rendering is off. Only then is no managed
+auth Secret created. Admin and DB keys must differ when both are stored in the managed Secret.
 
 The connection keys are under `grafanaConfig.database`, including `mysqlHost`,
 `mysqlPort`, and `mysqlDB`.
@@ -84,24 +85,29 @@ service at that address. Beside that, `chrome.resources` configures the local Ch
 
 Grafana 13+ refuses to start with the default `[rendering] renderer_token`. The
 chart sets `GF_RENDERING_RENDERER_TOKEN` on Grafana and `AUTH_TOKEN` on the
-renderer sidecar from one Secret key (`renderer.existingSecretKey`, default `token`).
+renderer sidecar. Both read one key, `renderer.auth.existingSecretTokenKey` (default `GF_RENDERING_RENDERER_TOKEN`).
 
-By default the token is a key in the chart-managed `<fullname>-admin` Secret,
-next to the admin and database passwords. On first install the chart generates
-a 64-character token or uses `renderer.authToken`. Upgrades keep the stored
-value, so changing `renderer.authToken` later has no effect. To change the token,
-use `renderer.existingSecret`.
+By default the key lives in `<fullname>-admin`, next to the admin and database
+passwords. On first install the chart uses `renderer.auth.token` or generates 64
+random characters. Upgrades keep the stored value, so changing `renderer.auth.token`
+later has no effect. To change the token on an existing release, use
+`renderer.auth.existingSecret`.
 
 | Choice | Values |
 | --- | --- |
 | Auto-generate | Defaults. Stores a random 64-character token in `<fullname>-admin`. |
-| Supply a token | `renderer.authToken` on first install. |
-| Reference a Secret | `renderer.existingSecret` (same namespace). The managed token key is not created. |
+| Supply a token on first install | `renderer.auth.token`. |
+| Reference a Secret | `renderer.auth.existingSecret` (same namespace). The managed token key is not created. |
 
-The token key must differ from the admin and database password keys.
+`renderer.auth.existingSecret` must name a Secret you manage, not `<fullname>-admin`.
+The render fails otherwise. The token key must differ from the admin and database
+password keys.
+
+Offline `helm template` (for example, GitOps tools) can't look up the stored token, so set `renderer.auth.token` or `renderer.auth.existingSecret` there. After editing the Secret named in `renderer.auth.existingSecret` in place, restart the Deployment so every container reads the new token.
 
 For an external renderer (`renderer.enabled: false` with a `renderer.url`), set
-`renderer.authToken` or `renderer.existingSecret` to the token that renderer uses.
+`renderer.auth.token` on first install, or `renderer.auth.existingSecret`, to the
+token that renderer uses. For an existing release, use `renderer.auth.existingSecret`.
 
 ## GDG config mount
 
