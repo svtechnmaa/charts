@@ -161,11 +161,3 @@ datasources: |-
     port: 3306
     username: rundeck_option_api
     password: juniper@123
-
-  - name: Nagvis
-    type: nagvis
-    host: icinga2
-    port: 6558
-    backend_name: NMS
-    backend_id: NMS
-    backend_type: mklivestatus

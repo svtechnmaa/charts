@@ -257,10 +257,6 @@ gdgConfig:
           - field: type
             regex: elasticsearch
         secureData: elasticsearch.json
-      - rules:
-          - field: name
-            regex: thruk
-        secureData: thruk.json
 
   # Global settings
   global:
@@ -288,6 +284,3 @@ gdgConfig:
     elasticsearch:
       user: elastic_user
       basicAuthPassword: elastic_password
-    thruk:
-      user: thruk_user
-      basicAuthPassword: thruk_password
