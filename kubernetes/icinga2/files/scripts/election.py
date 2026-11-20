@@ -1,40 +1,17 @@
 #!/usr/bin/env python3
 """
-Icinga2 config-master leader election + reconcile loop.
+Icinga2 config-master election: only the pod holding the Kubernetes Lease has the
+/etc/icinga2/zones.d -> /opt/zones.d symlink (the shared config); the other master runs the config
+synced from it.
 
-Changes compared with the previous version:
-  1. The leader election callbacks only record the "desired role". When renewing the lease
-     fails, demote ONLY if another pod is seen holding the lease (a short API server error
-     no longer causes an empty reload); on demote the symlink is removed at once (fencing).
-     Symlink / validate / reload are done by one reconcile thread, with retry + backoff,
-     so transient errors are no longer swallowed.
-  2. Stricter check of /opt/zones.d content: there must be real .conf files (Syncthing's
-     .stfolder/.stignore/.stversions do not count), no Syncthing temp / conflict files,
-     and the content hash must stay stable for CONTENT_STABLE_SECONDS.
-  3. The election reloads ONLY on a role change: promote (to leader: create the symlink,
-     validate, reload) and demote (to follower: remove the symlink, reload). Once leader,
-     zones.d content changes are NOT loaded by the election: the post-commit hook (Rundeck,
-     rebalance) and reload-master still restart icinga2 as before. A missing symlink is only
-     recreated, without a reload.
-  4. Every election reload is verified: program_start must change and the running process
-     must have >= the number of Hosts reported by `icinga2 daemon --validate`.
-  5. Leader running with 0 Hosts (the symptom of the 11/11 incident) -> periodic ERROR log,
-     no reload.
-  6. On becoming follower: remove the .authoritative markers (and .timestamp on a role
-     change) in /var/lib/icinga2/api/zones so that the node loads them and accepts the
-     config sync from the leader.
-  7. Write READY_FILE once the role is decided and the filesystem is prepared; the
-     entrypoint waits for this file before starting icinga2. Rewritten after every verified
-     role change, so it always holds the current role (leader / follower / leader-no-content /
-     follower-no-content: zones.d blocked for every master, 0 hosts expected).
-  8. Write HEARTBEAT_FILE on every reconcile pass, for the livenessProbe.
-  9. Split-brain bound: when renewing fails, keep the role only for
-     LEASE_DURATION + FENCE_GRACE seconds after the last confirmation of holding the lease.
-     Past that point without confirmation (API server gone) -> fencing, because another pod
-     may have legitimately taken the lease since second LEASE_DURATION.
- 10. Every Lease call has a client timeout (LEASE_API_TIMEOUT). If the API server confirms our
-     lease while we are fenced (a renew call hung past the fencing point), take the leader role
-     back: the lib keeps renewing and never calls onstarted_leading again.
+- Election thread (kubernetes leaderelection lib): holding the lease -> desired role "leader";
+  lib gave up renewing -> "follower" and the symlink is removed at once.
+- Fence watchdog: a leader whose lease has not been confirmed for FENCE_AFTER seconds (< LEASE_DURATION,
+  i.e. before the other pod may take the lease) removes the symlink, whatever the other threads do.
+- Reconcile thread: applies the desired role. Promote = symlink + validate + reload, demote = remove
+  symlink + reload; both reloads verified. No reload otherwise (post-commit hook / reload-master).
+- READY_FILE: the entrypoint starts icinga2 once it exists; it holds the role (leader / follower, or
+  *-no-content while zones.d is blocked, read by redis-check.sh). HEARTBEAT_FILE: liveness.
 """
 import datetime
 import glob
@@ -62,26 +39,17 @@ log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Lease lock (unchanged from the previous version)
+# Lease lock
 # ---------------------------------------------------------------------------
 def _parse_time(value):
     """Parse the str(datetime) timestamps the leaderelection lib hands us
     back into an aware UTC datetime (API server rejects naive isoformat)."""
     if value is None or value == "None":
         return None
-    if isinstance(value, datetime.datetime):
-        dt = value
-    else:
-        dt = None
-        for fmt in ("%Y-%m-%d %H:%M:%S.%f%z", "%Y-%m-%d %H:%M:%S%z",
-                    "%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
-            try:
-                dt = datetime.datetime.strptime(value, fmt)
-                break
-            except ValueError:
-                continue
-        if dt is None:
-            return None
+    try:
+        dt = value if isinstance(value, datetime.datetime) else datetime.datetime.fromisoformat(value)
+    except ValueError:
+        return None
     if dt.tzinfo is None:
         dt = dt.astimezone()
     return dt.astimezone(datetime.timezone.utc)
@@ -120,6 +88,7 @@ class LeaseLock:
             return False, _lock_error(e)
 
     def create(self, name, namespace, election_record):
+        started = time.monotonic()
         lease = client.V1Lease(
             metadata=client.V1ObjectMeta(name=name, namespace=namespace),
             spec=client.V1LeaseSpec(
@@ -132,13 +101,14 @@ class LeaseLock:
         try:
             self.lease_reference = self.api_instance.create_namespaced_lease(
                 namespace, lease, _request_timeout=LEASE_API_TIMEOUT)
-            self._confirm(election_record)
+            self._confirm(election_record, started)
             return True
         except Exception as e:
             log.info(f"Failed to create lock as {e}")
             return False
 
     def update(self, name, namespace, updated_record):
+        started = time.monotonic()
         try:
             self.lease_reference.spec.holder_identity = updated_record.holder_identity
             self.lease_reference.spec.lease_duration_seconds = int(float(updated_record.lease_duration))
@@ -147,29 +117,22 @@ class LeaseLock:
             self.lease_reference = self.api_instance.replace_namespaced_lease(
                 name=name, namespace=namespace, body=self.lease_reference,
                 _request_timeout=LEASE_API_TIMEOUT)
-            self._confirm(updated_record)
+            self._confirm(updated_record, started)
             return True
         except Exception as e:
             log.info(f"Failed to update lock as {e}")
             return False
 
-    def _confirm(self, record):
-        """Record when the API server confirmed that this pod holds the lease.
+    def _confirm(self, record, started):
+        """The API server stored our record: we hold the lease. `started` (taken before the call)
+        is a safe lower bound of the renew time the other pod counts LEASE_DURATION from.
 
-        If we were fenced meanwhile (a renew call hung past LEASE_DURATION + FENCE_GRACE and then
-        succeeded), the lib keeps renewing without calling onstarted_leading again: take the
-        leader role back here, otherwise this pod holds the lease as a follower forever."""
+        Also takes the leader role back after fencing: when a renew hung past FENCE_AFTER and then
+        succeeded, the lib keeps renewing without calling onstarted_leading again."""
         if record.holder_identity != self.identity:
             return
-        STATE.lease_confirmed_at = time.monotonic()   # before set_desired: reconcile must not fence again
-        with STATE.lock:
-            need, was_fenced = STATE.desired_role != "leader", STATE.fenced
-        if need:
-            # Usually a normal acquisition (startup, or a follower taking over): the lib calls
-            # create/update before onstarted_leading. Only a fenced leader is unusual.
-            if was_fenced:
-                log.warning(f"Lease confirmed for {self.identity} after fencing -> leader again")
-            set_desired("leader")
+        STATE.lease_confirmed_at = started   # before set_desired: the watchdog must not fence again
+        set_desired("leader")
 
 
 def _lock_error(e):
@@ -204,9 +167,9 @@ CONTENT_READY_MARKER = os.environ.get("CONTENT_READY_MARKER", "")
 LEASE_DURATION = _env_int("LEASE_DURATION", 30)
 RENEW_DEADLINE = _env_int("RENEW_DEADLINE", 20)
 RETRY_PERIOD   = _env_int("RETRY_PERIOD", 5)
-# After LEASE_DURATION another pod may take the lease; FENCE_GRACE tolerates a flaky API server
-# (11/11 incident: lease re-acquired after 30.8 s) before fencing ourselves.
-FENCE_GRACE    = _env_int("FENCE_GRACE", 30)
+# The other pod may take the lease LEASE_DURATION after our last renew: drop zones.d before that.
+# A flaky API server then costs a demote + promote reload; that is the price of one config master.
+FENCE_AFTER    = _env_int("FENCE_AFTER", LEASE_DURATION - RETRY_PERIOD)
 # Client timeout of every Lease call made by the election lib. The lib checks RENEW_DEADLINE only
 # between calls, so without it one hung call (etcd: a GET lease took up to 25 s) has no bound.
 # main() disables the urllib3 retries, otherwise one call may take (1 + 3 retries) x timeout.
@@ -216,9 +179,7 @@ RECONCILE_INTERVAL       = _env_int("RECONCILE_INTERVAL", 10)
 CONTENT_STABLE_SECONDS   = _env_int("CONTENT_STABLE_SECONDS", 15)
 INITIAL_DECISION_TIMEOUT = _env_int("INITIAL_DECISION_TIMEOUT", LEASE_DURATION + 3 * RETRY_PERIOD)
 STARTUP_MAX_WAIT         = _env_int("STARTUP_MAX_WAIT", 300)
-DRIFT_CHECK_INTERVAL     = _env_int("DRIFT_CHECK_INTERVAL", 60)
 RELOAD_VERIFY_TIMEOUT    = _env_int("RELOAD_VERIFY_TIMEOUT", 180)
-FOLLOWER_SYNC_TIMEOUT    = _env_int("FOLLOWER_SYNC_TIMEOUT", 180)
 VALIDATE_TIMEOUT         = _env_int("VALIDATE_TIMEOUT", 300)
 
 
@@ -232,19 +193,13 @@ class State:
         self.desired_role = None        # None | "leader" | "follower"
         self.desired_since = time.monotonic()
         self.applied_role = None        # role loaded by the running icinga2 process
-        self.applied_hash = None        # zones.d content hash loaded by the process (leader)
-        self.expected_hosts = None      # number of Hosts from the last validate
         self.ready_written = False
         self.ready_role = None          # role last written to READY_FILE
-        self.follower_had_hosts = False # the running follower process has had Hosts (API count)
-        self.follower_since = 0.0
-        self.last_drift_check = 0.0
         self.content_hash = None
         self.content_hash_since = 0.0
         self.failures = 0
         self.next_attempt = 0.0
-        self.lease_confirmed_at = 0.0   # last time the API server confirmed we hold the lease (monotonic)
-        self.fenced = False             # demoted by demote_and_fence, until we lead again
+        self.lease_confirmed_at = 0.0   # start of the last call that confirmed our lease (monotonic)
 
 
 STATE = State()
@@ -260,12 +215,8 @@ def log_throttled(key, level, msg, every=60):
         log.log(level, msg)
 
 
-def set_desired(role, fenced=False):
+def set_desired(role):
     with STATE.lock:
-        if role == "leader":
-            STATE.fenced = False
-        elif fenced:
-            STATE.fenced = True
         if STATE.desired_role != role:
             log.info(f"Desired role: {STATE.desired_role} -> {role}")
             STATE.desired_role = role
@@ -299,10 +250,9 @@ def write_small_file(path, text):
 
 
 def write_ready(role):
-    """First call: the entrypoint may start icinga2. Later calls (after every verified role
-    change, or when a follower sees the shared zones.d blocked / unblocked) keep READY_FILE
-    current: redis-check.sh accepts 0 Hosts only while it says leader-no-content or
-    follower-no-content."""
+    """First call: the entrypoint may start icinga2. Later calls (verified role change, follower
+    seeing zones.d blocked / unblocked) keep the role current for redis-check.sh, which accepts
+    0 Hosts only while it says leader-no-content or follower-no-content."""
     first = not STATE.ready_written
     write_small_file(READY_FILE, f"{role} {datetime.datetime.now(datetime.timezone.utc).isoformat()}\n")
     STATE.ready_written = True
@@ -410,24 +360,9 @@ def content_blocked():
 
 
 def follower_ready_role():
-    """follower-no-content only while this follower process has never run any Host: a conflict
-    file that appears after the leader loaded its config does not stop the config sync, and the
-    redis probe must keep restarting icinga2 when Redis loses icinga:host (the process still has
-    its Hosts then, so the flag stays set)."""
-    if STATE.follower_had_hosts:
-        return "follower"
+    """follower-no-content while zones.d is blocked: the leader may then run without it and sync
+    nothing, so 0 Hosts on this follower is expected and restarting icinga2 would not help."""
     return "follower-no-content" if content_blocked() else "follower"
-
-
-def note_follower_hosts():
-    """Set STATE.follower_had_hosts once the running follower process has Hosts (API count)."""
-    if STATE.follower_had_hosts or program_start() is None:
-        return
-    try:
-        if running_host_count() > 0:
-            STATE.follower_had_hosts = True
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -559,19 +494,12 @@ def clear_authority_markers(include_timestamp):
 # Reconcile
 # ---------------------------------------------------------------------------
 def reconcile_leader(now):
-    # "Keeping the role" after a failed renew: if another pod has taken the lease, step down.
-    if lease_held_by_other():
-        demote_and_fence("another pod holds the lease (detected by reconcile)")
-        return
-    if lease_unconfirmed_too_long():
-        return
+    if STATE.applied_role == "leader" and symlink_ok():
+        return   # promote done: no reload (config changes: post-commit hook / reload-master)
 
-    if STATE.applied_role == "leader":
-        maintain_leader(now)   # promote done: no reload
-        return
-
-    # Promote: start as leader, follower -> leader, or completing leader-no-content.
-    ready, h, reason = check_content()
+    # Promote: start as leader, follower -> leader, completing leader-no-content, or a leader whose
+    # symlink went missing (fenced then re-confirmed: icinga2 may have restarted without zones.d).
+    ready, _, reason = check_content()
     if not ready:
         if "Syncthing conflict file" in reason:
             # Never goes away by itself (unlike Syncthing temp files) and blocks every promote.
@@ -602,65 +530,39 @@ def reconcile_leader(now):
 
     ok, expected, out = validate_config()
     if not ok:
-        # Drop the symlink only if no icinga2 process can have loaded it: created in this pass, or
-        # icinga2 not started yet (entrypoint waits for READY_FILE). After a reload that ran but was
-        # not verified (hosts missing, verify timeout), the running process already uses zones.d:
-        # removing the link then would make the next external restart load an empty zones.d.
-        if created or not STATE.ready_written:
+        # Drop the symlink only if no icinga2 process can have loaded it: icinga2 not started yet
+        # (entrypoint waits for READY_FILE), or created in this pass on a non-leader. After a reload
+        # that ran but was not verified, or on a leader that had zones.d, the running process may use
+        # zones.d: removing the link would make the next external restart load an empty zones.d.
+        if not STATE.ready_written or (created and STATE.applied_role != "leader"):
             with FS_LOCK:
                 remove_symlink()
         note_failure(f"Config validation FAILED (running process keeps old config):\n{out}")
         return
     log.info(f"Config validation OK (expected hosts={expected})")
 
-    if STATE.desired_role != "leader":
-        return  # lease lost during validate; on_stopped_leading already fenced
-
-    if not STATE.ready_written:
-        # icinga2 not started yet (entrypoint waits for READY_FILE) -> it will load exactly this config
-        STATE.applied_role, STATE.applied_hash, STATE.expected_hosts = "leader", h, expected
-        note_success()
-        write_ready("leader")
-        return
+    with FS_LOCK:
+        if STATE.desired_role != "leader" or not symlink_ok():
+            # Fenced during validate (symlink removed), maybe re-confirmed since: never reload or
+            # start icinga2 without zones.d as leader. The next pass demotes or promotes again.
+            log.warning("Lease lost during validate: promote dropped")
+            return
+        if not STATE.ready_written:
+            # icinga2 not started yet (entrypoint waits for READY_FILE): it loads exactly this
+            # config. Under FS_LOCK so that a fence cannot remove the symlink before READY.
+            STATE.applied_role = "leader"
+            note_success()
+            write_ready("leader")
+            return
 
     ok, msg = reload_and_verify(expected)
     if ok:
-        STATE.applied_role, STATE.applied_hash, STATE.expected_hosts = "leader", h, expected
-        STATE.last_drift_check = time.monotonic()
+        STATE.applied_role = "leader"
         note_success()
         write_ready("leader")   # replaces leader-no-content / follower
         log.info(f"Leader reload verified: {msg}")
     else:
         note_failure(f"Leader reload NOT verified: {msg}")
-
-
-def maintain_leader(now):
-    """Leader role already loaded. No reload: config changes restart icinga2 through the
-    post-commit hook / reload-master (Rundeck, rebalance). Only keep the symlink and warn."""
-    if not symlink_ok():
-        try:
-            with FS_LOCK:
-                if STATE.desired_role != "leader":
-                    return
-                ensure_symlink()
-            log.warning("zones.d symlink was missing or wrong on the leader: recreated, "
-                        "icinga2 NOT reloaded (the next post-commit / reload-master loads it)")
-        except Exception as e:
-            log_throttled("symlink", logging.ERROR, f"Cannot recreate symlink: {e}")
-    if now - STATE.last_drift_check < DRIFT_CHECK_INTERVAL:
-        return
-    STATE.last_drift_check = now
-    if program_start() is None:
-        return  # icinga2 is restarting (e.g. post-commit hook)
-    try:
-        count = running_host_count()
-    except Exception as e:
-        log_throttled("hosts-err", logging.WARNING, f"Cannot count running hosts: {e}")
-        return
-    if count == 0:
-        log_throttled("leader-empty", logging.ERROR,
-                      "Leader icinga2 runs with 0 hosts; election does not reload outside "
-                      "promote/demote - check zones.d and run reload-master", every=300)
 
 
 def reconcile_follower(now):
@@ -672,8 +574,7 @@ def reconcile_follower(now):
         markers = clear_authority_markers(include_timestamp=transitioning)
 
     if not STATE.ready_written:
-        STATE.applied_role, STATE.applied_hash, STATE.expected_hosts = "follower", None, None
-        STATE.follower_since = now
+        STATE.applied_role = "follower"
         write_ready(follower_ready_role())
         return
 
@@ -682,24 +583,20 @@ def reconcile_follower(now):
             return
         ok, msg = reload_and_verify(None)
         if ok:
-            STATE.applied_role, STATE.applied_hash, STATE.expected_hosts = "follower", None, None
-            STATE.follower_since = STATE.last_drift_check = time.monotonic()
+            STATE.applied_role = "follower"
             note_success()
-            STATE.follower_had_hosts = False   # new process: count again
-            note_follower_hosts()
             write_ready(follower_ready_role())
             log.info(f"Follower reload verified ({msg}); waiting for config sync from leader")
         else:
             note_failure(f"Follower reload NOT verified: {msg}")
         return
 
-    note_follower_hosts()
     role = follower_ready_role()
     if role != STATE.ready_role:
         if role == "follower-no-content":
             log.warning(f"{OPT_ZONES} is blocked for every master (Syncthing conflict files / no "
-                        "content) and this follower has no Hosts yet: the leader may be unable to "
-                        "load zones.d, 0 hosts are accepted by the redis probe until it is fixed")
+                        "content): the leader may be unable to load zones.d, 0 hosts are accepted "
+                        "by the redis probe until it is fixed")
         write_ready(role)
 
     if markers:
@@ -707,26 +604,6 @@ def reconcile_follower(now):
         log_throttled("markers", logging.ERROR,
                       "Follower got .authoritative markers again - is something deploying "
                       "config packages (e.g. Director) to this node?")
-
-    if (now - STATE.follower_since > FOLLOWER_SYNC_TIMEOUT
-            and now - STATE.last_drift_check >= DRIFT_CHECK_INTERVAL):
-        STATE.last_drift_check = now
-        try:
-            count = running_host_count()
-        except Exception:
-            return
-        if count == 0 and STATE.ready_role == "follower-no-content":
-            # Expected while the leader is leader-no-content, but zones.d may have been blocked
-            # only after the leader loaded its config: keep reminding, less often than the ERROR.
-            log_throttled("follower-empty", logging.WARNING,
-                          f"Follower still has 0 hosts; {OPT_ZONES} is blocked (Syncthing conflict "
-                          "files / no content). If the leader has hosts, check the cluster "
-                          "connection to the leader", every=900)
-        elif count == 0:
-            log_throttled("follower-empty", logging.ERROR,
-                          f"Follower still has 0 hosts after {FOLLOWER_SYNC_TIMEOUT}s - check the "
-                          "cluster connection to the leader and 'Ignoring config update' in icinga2 log",
-                          every=300)
 
 
 def reconcile_once():
@@ -761,60 +638,14 @@ def reconcile_loop():
 # Election callbacks
 # ---------------------------------------------------------------------------
 def on_started_leading():
+    # Log only: _confirm already set the role, and the lib runs this on a thread that could start
+    # after a quick on_stopped_leading (it must not make us leader without the lease).
     log.info(f"=== Acquired lease: {POD_NAME} is leader ===")
-    set_desired("leader")
-
-
-_LEASE_API = None
-
-
-def _lease_api():
-    """One CoordinationV1Api (one connection pool) reused by every reconcile pass. Created on
-    first use, i.e. after main() has set the default Configuration (retries = 0)."""
-    global _LEASE_API
-    if _LEASE_API is None:
-        _LEASE_API = client.CoordinationV1Api()
-    return _LEASE_API
-
-
-def lease_held_by_other():
-    """True ONLY IF the Lease can be read and its holder is another pod with a valid lease.
-    Lease unreadable (flaky API server) -> False: do not demote on a transient error."""
-    try:
-        # Short timeout: when etcd hangs (a GET lease took up to 25 s), do not wait; treat it as
-        # "no other holder seen" -> keep the role, no reload.
-        lease = _lease_api().read_namespaced_lease(
-            LEASE_NAME, NAMESPACE, _request_timeout=5)
-    except Exception as e:
-        log_throttled("lease-read", logging.WARNING, f"Cannot read lease: {e}", every=30)
-        return False
-    spec = lease.spec
-    if spec is None or not spec.holder_identity or spec.holder_identity == POD_NAME:
-        return False
-    renew = _parse_time(spec.renew_time)
-    if renew is None:
-        return True
-    duration = spec.lease_duration_seconds or LEASE_DURATION
-    age = (datetime.datetime.now(datetime.timezone.utc) - renew).total_seconds()
-    return age < duration
-
-
-def lease_unconfirmed_too_long():
-    """Fence when the lease has not been confirmed for LEASE_DURATION + FENCE_GRACE.
-    Return True if we just demoted."""
-    if STATE.lease_confirmed_at <= 0:
-        return False
-    age = time.monotonic() - STATE.lease_confirmed_at
-    if age <= LEASE_DURATION + FENCE_GRACE:
-        return False
-    demote_and_fence(f"lease not confirmed for {age:.0f}s (> {LEASE_DURATION}+{FENCE_GRACE}s); "
-                     "another pod may legitimately hold it")
-    return True
 
 
 def demote_and_fence(reason):
     log.warning(f"=== {POD_NAME} stepping down: {reason} ===")
-    set_desired("follower", fenced=True)   # role + flag under one lock: no race with _confirm
+    set_desired("follower")
     # Fence at once, do not wait for the reconcile loop: never two nodes with zones.d.
     try:
         with FS_LOCK:
@@ -824,15 +655,29 @@ def demote_and_fence(reason):
 
 
 def on_stopped_leading():
-    # A failed renew (usually a flaky API server) does NOT mean another pod became leader.
-    # Demote only when another pod clearly holds the lease; otherwise keep the config-master role
-    # and let the election loop re-acquire the lease. Reconcile keeps checking the holder every pass.
-    if lease_held_by_other():
-        demote_and_fence("lease is now held by another pod")
-    elif not lease_unconfirmed_too_long():
-        log.warning("Lease renew failed but no other holder observed -> keep config-master role, "
-                    f"re-acquiring (no reload); fencing after {LEASE_DURATION + FENCE_GRACE}s "
-                    "without confirmation")
+    demote_and_fence("lease renew failed (another pod may take it)")
+
+
+def fence_due():
+    """Leader whose lease has not been confirmed for FENCE_AFTER seconds -> fence. True if fenced."""
+    if STATE.desired_role != "leader" or STATE.lease_confirmed_at <= 0:
+        return False
+    age = time.monotonic() - STATE.lease_confirmed_at
+    if age <= FENCE_AFTER:
+        return False
+    demote_and_fence(f"lease not confirmed for {age:.0f}s (> FENCE_AFTER {FENCE_AFTER}s)")
+    return True
+
+
+def fence_watchdog():
+    """Own thread: the election lib may block for RENEW_DEADLINE + 2 x LEASE_API_TIMEOUT before it
+    gives up, the reconcile thread for minutes (validate / reload)."""
+    while True:
+        try:
+            fence_due()
+        except Exception:
+            log.exception("Fence check failed")
+        time.sleep(1)
 
 
 def main():
@@ -843,6 +688,10 @@ def main():
     cfg.retries = 0
     client.Configuration.set_default(cfg)
     log.info(f"Election client starting on {POD_NAME}")
+    if FENCE_AFTER >= LEASE_DURATION:
+        log.warning(f"FENCE_AFTER {FENCE_AFTER}s >= LEASE_DURATION {LEASE_DURATION}s: both masters "
+                    "may have zones.d while the leader cannot reach the API server")
+    threading.Thread(target=fence_watchdog, name="fence", daemon=True).start()
     threading.Thread(target=reconcile_loop, name="reconcile", daemon=True).start()
 
     lock = LeaseLock(LEASE_NAME, NAMESPACE, POD_NAME)
@@ -860,7 +709,7 @@ def main():
         except Exception:
             log.exception("Leader election loop crashed")
             if STATE.desired_role == "leader":
-                on_stopped_leading()
+                demote_and_fence("election loop crashed")
             time.sleep(RETRY_PERIOD)
 
 

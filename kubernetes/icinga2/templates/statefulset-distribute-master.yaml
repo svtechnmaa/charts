@@ -315,6 +315,19 @@ spec:
             done
             log "Election decided: $(cat "$ELECTION_READY_FILE")"
 
+            # election.py is the only one fencing this pod: if it dies, drop zones.d and stop the
+            # container at once (the other master takes the lease after LEASE_DURATION, a liveness
+            # probe would need 60-90s). The subshell survives the exec below; this shell's PID is
+            # then tini, which forwards SIGTERM to icinga2. $BASHPID, not the double-dollar PID
+            # variable: Kubernetes turns a double dollar in `command` into a single one.
+            # Its command line contains "python3 /opt/election/election.py": stop election.py by
+            # exact match (pkill -x -f), a plain `pkill -f election.py` kills this watcher too.
+            MAIN_PID=$BASHPID
+            ( while kill -0 "$ELECTION_PID" 2>/dev/null; do sleep 2; done
+              log "ERROR: election client exited: removing the zones.d symlink, stopping icinga2"
+              [[ -L "$ETC_ZONES_DIR" ]] && rm -f "$ETC_ZONES_DIR"
+              kill -TERM "$MAIN_PID" ) &
+
             echo "Start Icinga2:"
             exec /tini -- icinga2 daemon
           lifecycle:
@@ -477,6 +490,9 @@ spec:
                 - bash
                 - -ec
                 - |
+                  {{- if .Values.master.election.livenessProbe.enabled }}
+                  {{- include "icinga2.master.electionLivenessCheck" . | nindent 18 }}
+                  {{- end }}
                   icinga2 daemon -C
             initialDelaySeconds: {{ .Values.master.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.master.livenessProbe.periodSeconds }}
@@ -496,20 +512,7 @@ spec:
                 - -c
                 - |
                   {{- if .Values.master.election.livenessProbe.enabled }}
-                  [[ -f "$ELECTION_READY_FILE" ]] || exit 0   # still starting, entrypoint has its own timeout
-                  # election.py gone: fail at once. Otherwise this pod keeps its zones.d symlink
-                  # (nobody fences it) while the other master takes the lease. [p] avoids matching this script.
-                  # Needs pgrep (procps) in the icinga2 image (svtech_icinga2 v1.2.5: procps-ng 4.0.4).
-                  if ! pgrep -f '[p]ython3 /opt/election/election.py' >/dev/null; then
-                    echo "election.py is not running"
-                    exit 1
-                  fi
-                  hb=$(cat "$ELECTION_HEARTBEAT_FILE" 2>/dev/null || echo 0)
-                  age=$(( $(date +%s) - ${hb%.*} ))
-                  if (( age > {{ .Values.master.election.livenessProbe.maxHeartbeatAgeSeconds }} )); then
-                    echo "election heartbeat is ${age}s old"
-                    exit 1
-                  fi
+                  {{- include "icinga2.master.electionLivenessCheck" . | nindent 18 }}
                   {{- end }}
                   {{- if $redisProbe }}
                   exec /probe/redis-check.sh liveness

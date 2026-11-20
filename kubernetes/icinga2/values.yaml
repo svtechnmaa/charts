@@ -157,7 +157,9 @@ master:
 
   ## Precedence of the icinga2 container liveness probe: livenessProbe.enabled (icinga2 daemon -C)
   ## > customLivenessProbe > election.livenessProbe (+ redisProbe liveness check).
-  ## Enabling one of the first two DROPS the election heartbeat check and the redis-check liveness.
+  ## livenessProbe.enabled keeps the election heartbeat check (election.livenessProbe.enabled) but
+  ## drops the redis-check liveness. customLivenessProbe DROPS both (a hung election reconcile loop
+  ## is then not restarted). A dead election.py always stops the container (entrypoint watcher).
   livenessProbe:
     enabled: false
     initialDelaySeconds: 180
@@ -216,31 +218,31 @@ master:
     ## zones.d content) plus one `icinga2 daemon --validate`. On timeout the container exits 1.
     readyTimeoutSeconds: 600
     ## Extra env for election.py, all optional (defaults in the script):
-    ## LEASE_DURATION 30, RENEW_DEADLINE 20, RETRY_PERIOD 5, FENCE_GRACE 30,
-    ## RECONCILE_INTERVAL 10, CONTENT_STABLE_SECONDS 15, STARTUP_MAX_WAIT 300,
-    ## DRIFT_CHECK_INTERVAL 60, RELOAD_VERIFY_TIMEOUT 180, FOLLOWER_SYNC_TIMEOUT 180,
-    ## VALIDATE_TIMEOUT 300, CONTENT_READY_MARKER "" (file written by the config pipeline)
-    ## FENCE_GRACE: a leader whose renew keeps failing fences itself (drops zones.d) only after
-    ## LEASE_DURATION + FENCE_GRACE seconds without a confirmed renew. Trade-off: a leader cut off
-    ## from the API server (the other master still reaching it) can overlap with the new leader
-    ## for up to FENCE_GRACE seconds (split-brain on zones.d).
-    ## 0 = strict fencing, but a flaky API server then causes needless demote / promote reloads.
+    ## LEASE_DURATION 30, RENEW_DEADLINE 20, RETRY_PERIOD 5, FENCE_AFTER 25 (LEASE_DURATION -
+    ## RETRY_PERIOD), RECONCILE_INTERVAL 10, CONTENT_STABLE_SECONDS 15, STARTUP_MAX_WAIT 300,
+    ## RELOAD_VERIFY_TIMEOUT 180, VALIDATE_TIMEOUT 300, LEASE_API_TIMEOUT 10,
+    ## CONTENT_READY_MARKER "" (file written by the config pipeline)
+    ## Only the lease holder has /etc/icinga2/zones.d. A leader whose lease has not been confirmed
+    ## for FENCE_AFTER seconds drops zones.d (symlink removed, demote reload) before the other
+    ## master may take the lease (LEASE_DURATION). Cost: an API server unreachable from the leader
+    ## for longer than that means a demote reload, then a promote reload once the lease is back
+    ## (the leader runs without zones.d meanwhile). FENCE_AFTER >= LEASE_DURATION lets both
+    ## masters have zones.d during that window (logged as WARNING at startup).
     ## Syncthing conflict files (*.sync-conflict-*) in /opt/zones.d block every promote (icinga2
     ## would load them as .conf: duplicate objects) and never disappear by themselves: delete them
     ## by hand (election logs an ERROR with the paths). /opt/zones.d is shared, so both masters are
     ## blocked. After STARTUP_MAX_WAIT the leader starts icinga2 without zones.d (READY =
     ## leader-no-content) and syncs no config; a follower without old config (new pod) then has
-    ## 0 Hosts too (READY = follower-no-content). redisProbe accepts 0 Hosts in both cases
-    ## (heartbeat still checked). follower-no-content is used only while the running follower
-    ## process has never had a Host: a follower that already runs Hosts stays READY = follower,
-    ## so the probe still restarts icinga2 if Redis loses icinga:host.
+    ## 0 Hosts too (READY = follower-no-content, set while zones.d is blocked). redisProbe accepts
+    ## 0 Hosts in both cases (heartbeat still checked), so while the conflict files are there a
+    ## Redis that loses icinga:host is not repaired by a restart on the follower.
     ## election.py reloads icinga2 only on a role change (promote / demote). Config changes in
     ## /opt/zones.d are loaded by the post-commit hook / reload-master (Rundeck, rebalance).
     env: {}
-    ## Restart the icinga2 container when the election reconcile loop stops writing its
-    ## heartbeat. Used only when master.livenessProbe and master.customLivenessProbe are unset.
+    ## Restart the icinga2 container when the election reconcile loop (hung) stops writing its
+    ## heartbeat. Also part of master.livenessProbe; not used with master.customLivenessProbe.
     ## One reconcile pass may legitimately block for VALIDATE_TIMEOUT + RELOAD_VERIFY_TIMEOUT
-    ## (~480s), so keep maxHeartbeatAgeSeconds above that.
+    ## (~480s), so keep maxHeartbeatAgeSeconds above that (fencing runs on its own thread).
     livenessProbe:
       enabled: true
       maxHeartbeatAgeSeconds: 900
