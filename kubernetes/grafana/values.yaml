@@ -32,9 +32,9 @@ init:
     pullPolicy: IfNotPresent
 
 image:
-  registry: ghcr.io
-  repository: svtechnmaa/svtech_grafana
-  tag: v1.3.2
+  registry: docker.io
+  repository: duchieu2920/svtech_grafana
+  tag: v13.3.1
   pullPolicy: IfNotPresent
   # debug: true
 
@@ -42,7 +42,7 @@ grafanaEntities:
   image:
     registry: ghcr.io
     repository: svtechnmaa/grafana-entities
-    tag: v1.0.0
+    tag: v1.0.2
     pullPolicy: IfNotPresent
 
 renderer:
@@ -116,18 +116,9 @@ nodeSelector: {}
 ## Tolerations for pod assignment
 tolerations: []
 
-## Extra volumes to add to the deployment
-volumes:
-  - name: datasource-runtime
-    configMap:
-      name: '{{ include "common.names.fullname" . }}-datasources'
-      optional: true
-
-## Extra volume mounts to add to the container
-volumeMounts:
-  - name: datasource-runtime
-    mountPath: /etc/grafana/provisioning/datasources
-    readOnly: true
+## Extra volumes and mounts for the Grafana deployment.
+volumes: []
+volumeMounts: []
 securityContext:
   enabled: false
   fsGroup: 0
@@ -233,38 +224,36 @@ grafanaConfig:
 
 gitsync:
   enabled: true
-  # Reference the producer Secret; Grafana never copies git-http credentials. Use when gitsync.url ~ git-http.
-  gitHttp:
+  mode: git # git or github
+  # Reference the git-http producer Secret; Grafana never copies its credentials.
+  git:
     auth:
       existingSecret: git-http-auth
       usernameKey: username
       passwordKey: password
-  url: "http://git-http:8080/git/grafana-entities.git"
-  # Desired source branch for all entities. GitHub is read-only to this init
-  # Job. For git-http, existing destination main wins when this is main; a
-  # non-main branch is promoted to destination main. Ahead or diverged main and
-  # upstream refs are protected unless forcePush is explicitly enabled.
-  # Git Sync branches remain explicit per organization below.
-  remote_branch: "main"
-  forcePush: false
-  path: [nmaa, itim]
-  organizations:
-    - org: "Main"
-      write: true
-      branch: "main"
-      path: [nmaa, itim]
-    - org: "Upstream"
-      write: false
-      branch: "upstream"
-      path: [nmaa, itim]
+    url: "http://git-http:8080/git/grafana-entities.git"
+    organizations:
+      - org: "Main"
+        write: true
+        branch: "main"
+        path: [nmaa, itim]
 
-  # Raw URL for one combined datasource file, or a GitHub Contents API URL
-  # for a directory whose files each contain one datasource list item.
-  # secure credential for connections(grafana datasource)
+
+  github:
+    url: "https://github.com/svtechnmaa/grafana-entities"
+    organizations:
+      - org: "Main"
+        write: true
+        branch: "main"
+        path: [nmaa, itim]
+
+  # Shared initial datasource credentials. Existing datasources are not updated.
   secureFiles:
     icingadb:
       user: icingadb_user
       password: icingadb_password
+    influxdb-flux:
+        token: influxdb_user:influxdb_password
     influxdb:
         user: influxdb_user
         password: influxdb_password

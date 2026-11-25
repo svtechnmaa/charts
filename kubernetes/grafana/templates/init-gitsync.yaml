@@ -4,11 +4,13 @@
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           env:
             - name: GITSYNC_ORGANIZATIONS_JSON
-              value: {{ .Values.gitsync.organizations | default list | toJson | quote }}
+              value: {{ include "grafana.gitsyncOrganizationsJson" . | quote }}
             - name: GITSYNC_DEFAULT_URL
-              value: {{ default "" .Values.gitsync.url | quote }}
+              value: {{ include "grafana.gitsyncUrl" . | quote }}
             - name: GITSYNC_DEFAULT_PATHS_JSON
-              value: {{ .Values.gitsync.path | default list | toJson | quote }}
+              value: "[]"
+            - name: GITSYNC_MODE
+              value: {{ include "grafana.gitsyncMode" . | quote }}
             - name: GITSYNC_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -158,16 +160,16 @@
               declare -A REPOSITORY_PATH_BY_NAME=()
               organization_count="$(jq 'length' <<< "$GITSYNC_ORGANIZATIONS_JSON")"
               if (( organization_count == 0 )); then
-                log "gitsync.organizations must contain at least one organization" >&2
+                log "The active gitsync mode needs at least one organization" >&2
                 exit 1
               fi
 
               repository_url="$GITSYNC_DEFAULT_URL"
               if [[ -z "$repository_url" ]]; then
-                log "gitsync.url is required" >&2
+                log "The active gitsync mode requires a repository URL" >&2
                 exit 1
               fi
-              if [[ "${repository_url,,}" == *github* ]]; then
+              if [[ "$GITSYNC_MODE" == github ]]; then
                 repository_type=github
               else
                 repository_type=git

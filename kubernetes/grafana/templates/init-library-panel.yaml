@@ -4,9 +4,9 @@
           imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
           env:
             - name: GITSYNC_ORGANIZATIONS_JSON
-              value: {{ .Values.gitsync.organizations | default list | toJson | quote }}
+              value: {{ include "grafana.gitsyncOrganizationsJson" . | quote }}
             - name: GITSYNC_DEFAULT_PATHS_JSON
-              value: {{ .Values.gitsync.path | default list | toJson | quote }}
+              value: "[]"
             - name: GRAFANA_SERVER
               value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
             - name: GRAFANA_USER
@@ -62,7 +62,7 @@
                 local path="$1"
 
                 if [[ -z "$path" || "$path" == /* || "/$path/" == *"/../"* ]]; then
-                  log "Invalid gitsync.path entry: ${path}" >&2
+                  log "Invalid organization path: ${path}" >&2
                   return 1
                 fi
               }
@@ -307,7 +307,7 @@
                   [[ -n "$repository_path" ]] || continue
                   validate_repository_path "$repository_path"
 
-                  source="/opt/grafana/grafana-entities/${repository_path}/libraryelements"
+                  source="/opt/grafana/grafana-entities/org-${configured_orgs}/${repository_path}/libraryelements"
                   if [[ ! -d "$source" ]]; then
                     log "Library-panel directory not found; skipping ${repository_path}: ${source}"
                     continue
@@ -347,7 +347,7 @@
                 done
 
                 if (( count == 0 )); then
-                  log "No library-panel JSON files found below the configured gitsync.path entries; nothing to upload"
+                  log "No library-panel JSON files found below the organization's configured paths; nothing to upload"
                 else
                   log "Prepared ${count} unique library-panel files"
                 fi
@@ -584,6 +584,10 @@
                   exit 1
                 fi
                 CONFIGURED_ORG_NAMES[$org_key]="$org"
+                if [[ ! -d "/opt/grafana/grafana-entities/org-${configured_orgs}" ]]; then
+                  log "Missing entities snapshot for ${org} at org-${configured_orgs}" >&2
+                  exit 1
+                fi
                 log_organization_start "$org" "$org_id" "${REPOSITORY_PATHS[@]}"
 
                 SOURCE_LIBRARY_DIR="/tmp/grafana-library/source-${configured_orgs}"

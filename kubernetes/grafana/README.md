@@ -1,227 +1,111 @@
 # Grafana Helm chart
 
-This chart deploys Grafana with Git Sync, datasource provisioning, and library
-panel initialization.
+This chart deploys Grafana and initializes organization-specific dashboards,
+datasources, and library panels from `grafana-entities`.
 
-## Components
+## Configuration
 
-| Component | Source | Synchronization |
-| --- | --- | --- |
-| Dashboards/folders | `<path>/dashboards` | Grafana Git Sync |
-| Datasources | `<path>/datasources/*.yaml` | ConfigMap + Grafana reload API |
-| Library panels | `<path>/libraryelements/**/*.json` | Grafana Library Element API |
+| Key | Purpose |
+| --- | --- |
+| `gitsync.enabled` | Enables the Grafana init Job. |
+| `gitsync.mode` | `git` uses git-http; `github` reads GitHub directly. |
+| `gitsync.git.url` | Destination Git URL in `git` mode. |
+| `gitsync.git.auth` | Existing git-http Secret and its username/password keys. |
+| `gitsync.github.url` | GitHub source URL; also used when a branch is missing on git-http. |
+| `gitsync.<mode>.organizations[]` | `org`, `branch`, `path[]`, and optional `write`. |
+| `gitsync.secureFiles` | Shared initial datasource credentials, keyed by datasource name. |
+| `grafanaEntities.image` | Entities image; must contain `git` and `yq` v4. |
+| `grafanaConfig.auth` | Grafana admin username/password or existing Secret. |
+| `grafanaConfig.database` | MariaDB/MySQL connection and credentials. |
+| `global.github.fg_token` | GitHub source access and GitHub-mode Git Sync token. |
 
-## Main configuration
-
-| Key | Required | Purpose |
-| --- | --- | --- |
-| `grafanaConfig.auth` | Yes | Grafana username/password or external Secret |
-| `grafanaConfig.database` | Yes | MariaDB/MySQL connection |
-| `gitsync.url` | Yes | GitHub or git-http repository |
-| `gitsync.remote_branch` | Yes | Branch used for datasource/library initialization and promotion |
-| `gitsync.path` | Yes | Default entity paths |
-| `gitsync.organizations` | Yes | Organization, write access, branch, and paths |
-| `gitsync.forcePush` | No | Allows replacing `main/upstream` when ahead/diverged; default `false` |
-| `global.github.user` | For GitHub | Git username |
-| `global.github.fg_token` | For GitHub source access | Fine-grained token; `token` is always created in the Grafana Secret |
-
-## Git credentials
-
-When `gitsync.url` points to git-http, Grafana references the Secret owned by
-git-http:
+Example:
 
 ```yaml
 gitsync:
-  gitHttp:
+  enabled: true
+  mode: git
+  git:
+    url: http://git-http:8080/git/grafana-entities.git
     auth:
       existingSecret: git-http-auth
       usernameKey: username
       passwordKey: password
+    organizations:
+      - org: Main
+        branch: main
+        path: [nmaa, itim]
+        write: true
+  github:
+    url: https://github.com/example/grafana-entities.git
+    organizations: []
+  secureFiles:
+    audit-config:
+      user: example-user
+      password: example-password
 ```
 
-When `gitsync.url` points to GitHub, Grafana uses `token` and `signer_name` from
-the Grafana Secret. When the destination is git-http and the selected branch is
-missing, the init Job uses `token` to fetch the branch from GitHub and uses
-`git-http-auth` to push to the destination.
+Keep credential values in a private values overlay. The chart renders
+`secureFiles` into a Kubernetes Secret, and only `datasource-init` imports its
+keys through `envFrom`. A Job rendered alone without `secureFiles` can still
+consume an existing datasource Secret; if the Secret is absent, the Job starts
+without credential variables. A full Helm upgrade without `secureFiles` removes
+the chart-managed Secret. Datasource YAML may use
+`$__env{GF_DS_AUDIT_CONFIG_PASSWORD}`. The Job
+resolves the placeholder before calling Grafana's API. Missing credential
+variables produce an unauthenticated datasource and a warning; a plugin that
+requires credentials may still reject it.
 
-## Admin password choices
+## Init flow
 
-| Choice | `grafanaConfig.auth` |
-| --- | --- |
-| Auto-generate on first install | Empty `password` and `existingSecret`; creates `<fullname>-admin`. |
-| Supply initial password | Nonempty `password`, empty `existingSecret`. |
-| Reference a Secret | Nonempty `existingSecret`, with `existingSecretPasswordKey` matching its key. |
+1. In `git` mode, missing git-http `main` is seeded once from the entities image.
+   Existing `main` is retained. A missing organization branch is fetched from
+   GitHub and pushed to git-http under the same name. A branch missing from both
+   sources fails the Job. GitHub mode fetches each branch directly and never
+   pushes to git-http. No branch is promoted to `main` or `upstream`.
+2. The entities initContainer exports the selected commit for each organization
+   into a separate directory on a shared `emptyDir` volume, then converts its
+   datasource YAML files to JSON with `yq` for the API worker.
+3. The organizations initContainer ensures each Grafana organization exists.
+4. Three Job containers run concurrently. `gitsync-init` configures dashboard
+   Git Sync for `<path>/dashboards`; `datasource-init` creates missing
+   datasources from `<path>/datasources/*.yaml` via Grafana API; `library-init`
+   reconciles `<path>/libraryelements/**/*.json` through Grafana API.
 
-External references take precedence over password input. Managed Secrets reuse
-stored passwords on cluster-backed upgrades, even when a new password is supplied.
-Offline `helm template` cannot look up that stored value. Secret references must
-exist in the same namespace. For an existing Grafana database, use its current
-admin password: startup settings do not rotate an account already stored in SQL.
+Datasource files contain a YAML list with one or more entries. The Job selects
+existing datasources by UID or name and never updates them, so UI edits and
+credentials remain intact on reruns. Credential changes in `secureFiles` apply
+only to newly created datasources in a new Job Pod. Multiple new organizations
+share the same `secureFiles` values; credentials can then be edited separately
+in Grafana. The Job creates the first datasource declared with `isDefault: true`
+before the others so Grafana does not select a different initial default. If
+multiple files declare defaults, later ones are created as non-default and the
+Job logs this choice. If a different default already exists, the Job leaves it
+unchanged and logs the conflict. Without an explicit default, Grafana may
+select the first datasource created in a new organization. After processing
+each organization, the Job reads Grafana's API and logs its actual default.
 
-## Database credentials
+## Upgrade notes
 
-Use `grafanaConfig.database.auth.existingSecret` for a pre-created DB credential.
-Alternatively clear that reference and supply `database.auth.password` matching
-the existing DB user. This does not create the SQL account or schema, and does
-not provide the admin-password auto-generation workflow for database users.
-Without a DB Secret reference, the supplied password is stored as `DB_PASSWORD`
-(or `database.auth.existingSecretPasswordKey`) in the same chart-managed
-`<fullname>-admin` Secret as the admin credential. Pods always use `secretKeyRef`.
-An empty DB password without a Secret reference fails rendering. Existing stored
-DB passwords are reused; changing values alone does not rotate the DB account.
+- The previous datasource Job published a ConfigMap containing `prune: true`.
+  Inventory provisioned datasources and plan their migration before upgrading
+  an existing Grafana installation to API-managed datasources. Removing that
+  provisioning file can delete those datasources.
+- The current `gitsync-init` skips Repository resources that already exist.
+  Changing an existing organization's branch or mode requires updating that
+  Repository separately until reconciliation is added.
+- Grafana no longer mounts a datasource ConfigMap. New organizations can be
+  initialized without a Grafana Deployment rollout when no other Deployment
+  fields change.
+- `helm template | kubectl apply` updates the datasource Secret but does not
+  rerun an existing Job. Apply the Secret first, then recreate only the Job.
 
-If admin authentication uses an external Secret, the chart-managed Secret holds
-only the fallback DB password; the external admin Secret is not modified. If
-both credentials use external Secrets, no local auth Secret is created. Admin
-and DB keys must differ when both are stored in the managed Secret.
-
-The connection keys are under `grafanaConfig.database`, including `mysqlHost`,
-`mysqlPort`, and `mysqlDB`.
-
-### Organization fields
-
-| Field | Default | Purpose |
-| --- | --- | --- |
-| `org` | None | Grafana organization name; lookup is case-insensitive |
-| `write` | `false` | Enable the dashboard write workflow |
-| `branch` | None | Git Sync branch for the organization |
-| `path` | `gitsync.path` | Stack directories assigned to the organization |
-
-## Repository layout
-
-```text
-grafana-entities/
-├── nmaa/
-│   ├── dashboards/
-│   ├── datasources/
-│   └── libraryelements/
-└── itim/
-    ├── dashboards/
-    ├── datasources/
-    └── libraryelements/
-```
-
-Datasource files must start with one or more `- name:` list items. Library panel
-JSON must contain `uid`, `name`, and `model`.
-
-## Deployment flow
-
-1. The `grafana-entities` init container checks out `gitsync.remote_branch`.
-2. GitHub mode fetches the branch read-only.
-3. git-http mode prefers the destination branch; a missing branch can be fetched
-   from the image source remote.
-4. `main` and `upstream` are created or fast-forwarded. If they are ahead or
-   diverged, the Job stops when `forcePush=false`; force-with-lease is used only
-   when it is explicitly enabled.
-5. The `grafana-organizations` initContainer creates or resolves all configured organizations.
-6. Three provisioning containers run:
-   - `gitsync-init`: creates or updates Repository resources.
-   - `datasource-init`: combines datasources, updates the ConfigMap, and retries Grafana reload until the expected datasources are visible through the API. ConfigMap projection into the Job and Grafana Pods can finish at different times.
-   - `library-init`: creates, updates, skips, and deletes library panels based on source files.
-
-## Local and external rendering services
-
-`renderer.enabled` and `chrome.enabled` control deployment of local containers.
-Their `url` settings independently select the service used by Grafana. Set
-`enabled: false` and supply a reachable URL to use a shared/external service.
-To disable an integration entirely, also clear its URL:
-
-```yaml
-renderer:
-  enabled: false
-  url: ""
-chrome:
-  enabled: false
-  url: ""
-```
-
-Leaving the default URL while disabling the local component requires another
-service at that address. Beside that, `chrome.resources` configures the local Chrome container.
-
-## Standalone values
-
-Save this as a private overlay and replace the DB Secret with your own:
-
-```yaml
-grafanaConfig:
-  auth:
-    username: admin
-    password: ""
-    existingSecret: ""
-    existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
-  database:
-    mysqlHost: mariadb
-    mysqlPort: 3306
-    mysqlDB: grafana
-    auth:
-      username: grafana
-      existingSecret: grafana-db-auth
-      existingSecretPasswordKey: password
-
-gitsync:
-  url: "http://git-http:8080/git/grafana-entities.git"
-  remote_branch: main
-  forcePush: false
-  path: [nmaa, itim]
-  organizations:
-    - org: Main
-      write: true
-      branch: main
-      path: [nmaa, itim]
-    - org: Upstream
-      write: false
-      branch: upstream
-      path: [nmaa, itim]
-```
-
-
-## Deploy and verify
-
-Render before deployment:
+## Verify
 
 ```bash
-helm lint --strict . \
-  --set global.authenUsers.grafana.user=thrukadmin
-
-helm template grafana . \
-  --set global.authenUsers.grafana.user=thrukadmin \
-  --set gitsync.remote_branch=main
-```
-
-Deploy:
-
-```bash
-helm upgrade --install grafana . \
-  -f values-private.yaml
-```
-
-Verify:
-
-```bash
-kubectl get pods,job
+helm lint --strict . --set global.authenUsers.grafana.user=example-admin
+helm template nmaa . --set global.authenUsers.grafana.user=example-admin
 kubectl logs job/grafana-init -c grafana-entities
 kubectl logs job/grafana-init -c datasource-init
 kubectl logs job/grafana-init -c library-init
 ```
-
-The init Job is a Helm `post-install`/`post-upgrade` hook with a 900-second
-active deadline.
-
-## Promotion policy
-
-| Selected branch relation | `forcePush=false` | `forcePush=true` |
-| --- | --- | --- |
-| Missing | Create branch | Create branch |
-| Equal | Skip | Skip |
-| Behind | Fast-forward | Fast-forward |
-| Ahead | Stop the Job | Force-with-lease |
-| Diverged | Stop the Job | Force-with-lease |
-
-## Operational notes
-
-- Existing Grafana Repository resources are skipped by `gitsync-init`; changing
-  branch, path, or credentials requires updating the resource in Grafana.
-- `forcePush=true` can remove commits that exist only on `main` or `upstream`;
-  export or reconcile them first.
-- `gitsync.path` and `organizations[].path` must be YAML lists, not comma-separated strings.
-- Do not commit tokens, passwords, or private signing keys to values files.
