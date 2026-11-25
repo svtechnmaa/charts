@@ -401,10 +401,25 @@ master:
 
 satellite:
   replicaCount: 3
-  ## Zone membership watcher (sidecar). Members of a zone = the satellite pods that exist (the
-  ## satellite headless service publishes not-ready pods), reachable or not, so that the two
+  ## Satellite headless service (icinga2-satellite-headless).
+  ##  - publishNotReadyAddresses: true keeps satellites that are not Ready (restarting,
+  ##    crashlooping, on a dead node) in DNS. The zone watcher then lists a peer as soon as its pod
+  ##    exists, also at startup, and icinga2-rebalance does not move hosts while a satellite
+  ##    restarts. REQUIRES the rebalance image with the satellite health check
+  ##    (rebalance.satelliteHealth): an older image takes the satellite list from DNS only, so it
+  ##    adds a new satellite before it runs and keeps the hosts of a zone whose satellites are all
+  ##    broken, and those hosts are not checked.
+  ##  - false (default, safe with any rebalance image): only Ready satellites are in DNS. A peer
+  ##    that restarts leaves DNS but the zone watcher keeps it for removeAfterSeconds, so no reload;
+  ##    a peer that is not Ready when a satellite starts is added by the watcher once Ready (one
+  ##    guarded reload). Rebalance moves hosts away from a satellite that is not Ready (old
+  ##    behaviour).
+  headlessService:
+    publishNotReadyAddresses: false
+  ## Zone membership watcher (sidecar). Members of a zone = the satellite pods present in DNS of
+  ## the headless service (see headlessService), reachable or not, so that the two
   ## satellites of a zone always list each other (otherwise both check every host of the zone).
-  ## A new member is added at once; a member whose pod is gone for removeAfterSeconds (scale down)
+  ## A new member is added at once; a member missing from DNS for removeAfterSeconds (scale down)
   ## is removed. icinga2 is reloaded only when neither this satellite nor a master started less
   ## than reloadQuietSeconds ago (a master may be syncing config to it: an external restart during
   ## that copy leaves api/zones half-copied).
@@ -441,10 +456,10 @@ satellite:
 rebalance:
   workloadType: Deployment
   replicaCount: 1
-  ## Which satellites icinga2-rebalance puts into the zone config. The satellite headless service
-  ## publishes not-ready pods, so DNS lists a crashlooping satellite too; rebalance filters it with
-  ## a TCP health check on the satellite API port (needs the rebalance image with this logic, an
-  ## older image ignores these values and uses DNS only):
+  ## Which satellites icinga2-rebalance puts into the zone config. With
+  ## satellite.headlessService.publishNotReadyAddresses DNS lists a crashlooping satellite too;
+  ## rebalance filters it with a TCP health check on the satellite API port (needs the rebalance
+  ## image with this logic, an older image ignores these values and uses DNS only):
   ##  - zoneDeadAfterSeconds: a zone without any healthy satellite for this long is removed and its
   ##    hosts move to the other zones (a single-satellite zone, odd replica count, or both
   ##    satellites of a zone broken). A broken satellite whose zone peer is healthy is kept:

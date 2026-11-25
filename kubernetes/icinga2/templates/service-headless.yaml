@@ -49,13 +49,9 @@ metadata:
 spec:
   type: ClusterIP
   clusterIP: None
-  ## Publish satellites that are not Ready: membership follows the pods, not their readiness.
-  ## The zone watcher (sidecar) keeps a restarting peer in its zone (no reload, no duplicate
-  ## checks) and icinga2-rebalance does not move hosts between zones while a satellite restarts.
-  ## DNS therefore also lists a crashlooping satellite: icinga2-rebalance health-checks every
-  ## satellite and moves the hosts of a zone left without a healthy one
-  ## (rebalance.satelliteHealth). The rebalance image must contain that logic.
-  publishNotReadyAddresses: true
+  ## satellite.headlessService.publishNotReadyAddresses (default false), see values.yaml. Enable it
+  ## only with a rebalance image that health-checks satellites (rebalance.satelliteHealth).
+  publishNotReadyAddresses: {{ dig "headlessService" "publishNotReadyAddresses" false .Values.satellite }}
   ports:
     - name: icinga2-api
       port: {{ .Values.master.service.port.icinga2Api }}

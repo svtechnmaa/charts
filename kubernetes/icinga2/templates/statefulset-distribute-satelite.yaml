@@ -140,7 +140,9 @@ spec:
             EOF
 
             # Create new satellite zone file: this pod plus every other member pod of the zone that
-            # exists (DNS of the headless service publishes not-ready pods), reachable or not.
+            # is in DNS of the headless service, reachable or not (with
+            # satellite.headlessService.publishNotReadyAddresses every existing pod, otherwise only
+            # Ready ones; the sidecar adds a peer that becomes Ready later).
             # Both satellites of a zone must always list each other: a satellite without the
             # Endpoint of its peer does not accept it as zone member, both then check every host of
             # the zone and send duplicate results to the masters. A member that is down is fine:
@@ -332,14 +334,16 @@ spec:
             log "Icinga2 is ready, start sidecar container"
 
             # Zone membership watcher. Members of this pod's zone = the pods <base>-2k and
-            # <base>-2k+1 that EXIST (DNS of the headless service, which publishes not-ready pods),
-            # not the ones answering on :5665:
+            # <base>-2k+1 present in DNS of the headless service (every existing pod with
+            # satellite.headlessService.publishNotReadyAddresses, otherwise Ready ones), not the
+            # ones answering on :5665:
             # - both satellites of a zone must list each other, otherwise neither accepts the other
             #   as zone member and both check every host (duplicate results in the database);
             # - a member that is down or restarting stays listed: Icinga2 HA gives all its checks
             #   to the connected one, nothing to reload;
             # - a new member is added at once; a member is removed only once its pod is gone for
-            #   ZONE_MEMBER_REMOVE_AFTER seconds (scale down), not while it restarts.
+            #   ZONE_MEMBER_REMOVE_AFTER seconds (scale down), not while it restarts (a restart
+            #   that leaves DNS, publishNotReadyAddresses false, is shorter than that).
             # Reload guard: never restart icinga2 while a master may be syncing config to it (this
             # pod or a master started less than RELOAD_QUIET_SECONDS ago). An external restart
             # during that copy leaves api/zones half-copied and Icinga2 never repairs it.
