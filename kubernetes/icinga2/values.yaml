@@ -51,21 +51,13 @@ image:
   tag: v1.2.5
   pullPolicy: IfNotPresent
 
-
-cronjob:
-  image:
-    registry: ghcr.io
-    repository: svtechnmaa/svtech_debuger
-    tag: v1.0.3
-    pullPolicy: IfNotPresent
-
 clusterDomain: cluster.local
 commonAnnotations:
   helm.sh/hook-weight: "0"
 commonLabels: {}
 
 ## Secret holding credentials used by icinga2 (readiness probes, reload
-## scripts, cronjob) to authenticate against the icinga2 API.
+## scripts) to authenticate against the icinga2 API.
 ## If disabled, a Secret named "<chart-name>-secret" with keys
 ## icinga2-admin-user / icinga2-admin-password must already exist.
 secrets:

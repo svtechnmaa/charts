@@ -45,8 +45,40 @@
   into Redis again at start).
 - The icingaweb health-check CronJob (`cronjob.*` in icingaweb values) and its
   ServiceAccount / Role (`pods/exec`) are removed; per-container probes replace it.
-- Not changed yet: the `post-commit` hook in `/opt/zones.d/.git` (Rundeck, rebalance) still restarts
-  all masters at the same time, and it is written only when `.git` does not exist yet.
+- icingaweb writes its env into `redis.ini` only on the first install (the ini files live on a
+  shared volume). On a running cluster, set `redis1` / `redis2` in `redis.ini` by hand.
+
+### icinga2 > 1.8.24: config reload and satellite zones
+
+Why: an Icinga2 node that is restarted from outside while it copies a config sync into
+`/var/lib/icinga2/api/zones` keeps a half-copied zone. Icinga2 copies `.timestamp` before the
+`.conf` files, so every later sync of that zone is skipped and the node misses hosts until its
+`api/zones` is removed. Only the config master (Lease holder) restarts because of a config change;
+the other nodes restart themselves after they received the sync.
+
+- The `post-commit` hook of `/opt/zones.d/.git` (Rundeck, Ansible, icinga2-rebalance) no longer
+  restarts the masters. It writes `/opt/zones.d/.reload-request` (`<epoch> <commit> <host>`); the
+  config master waits until that commit reached its node (Syncthing), validates, restarts itself,
+  verifies the running hosts and writes `/opt/zones.d/.reload-result`
+  (`<commit> ok|validate-failed|reload-failed <time> <pod> <detail>`). Tools that need the result
+  read that file. See `master.election` in values.yaml.
+- Every master start rewrites the hook (only when its content differs) and adds `.reload-request*`
+  and `.reload-result*` to `/opt/zones.d/.gitignore`, so a running cluster gets the new hook with
+  the rollout of the master StatefulSet.
+- Removed: the `auto-reload-satellite` CronJob and the `cronjob.*` values. It restarted every
+  satellite from outside once a week.
+- Do not restart a follower master or a satellite from outside (`restart-process`,
+  `reload-satellite`) right after a config change; it reloads by itself once the sync is copied.
+- Satellites: a sidecar keeps the two satellites of a zone listed in each other's zone config
+  (`satellite.zoneWatcher`). It adds a peer at once, removes a peer only when it is missing from
+  DNS for `removeAfterSeconds`, and reloads icinga2 only when neither the satellite nor a master
+  started less than `reloadQuietSeconds` ago.
+- `satellite.headlessService.publishNotReadyAddresses` (default `false`): `true` keeps restarting
+  or crashlooping satellites in the DNS of `icinga2-satellite-headless`, so neither the zone
+  watcher nor icinga2-rebalance reacts to a satellite restart. Enable it only with an icinga2 image
+  whose icinga2-rebalance health-checks the satellites (`rebalance.satelliteHealth`, env
+  `REBALANCE_*`); an older icinga2-rebalance reads the satellites from DNS only and would keep the
+  hosts of a zone whose satellites are all broken.
 
 ## How to use
 
