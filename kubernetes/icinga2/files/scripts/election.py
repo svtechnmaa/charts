@@ -9,7 +9,13 @@ synced from it.
 - Fence watchdog: a leader whose lease has not been confirmed for FENCE_AFTER seconds (< LEASE_DURATION,
   i.e. before the other pod may take the lease) removes the symlink, whatever the other threads do.
 - Reconcile thread: applies the desired role. Promote = symlink + validate + reload, demote = remove
-  symlink + reload; both reloads verified. No reload otherwise (post-commit hook / reload-master).
+  symlink + reload; both reloads verified.
+- Reload on request (leader only): the post-commit hook (Rundeck, rebalance) only writes
+  RELOAD_REQUEST_FILE ("<epoch> <commit> <host>") into the shared /opt/zones.d. The leader reloads
+  once that commit and its files reached this node (Syncthing), the content is stable and valid,
+  and writes RELOAD_RESULT_FILE. The follower and the satellites are never restarted from outside
+  for a config change: they get it through the Icinga2 config sync and restart themselves once the
+  copy is complete (an external restart during that copy leaves api/zones half-copied).
 - READY_FILE: the entrypoint starts icinga2 once it exists; it holds the role (leader / follower, or
   *-no-content while zones.d is blocked, read by redis-check.sh). HEARTBEAT_FILE: liveness.
 """
@@ -182,6 +188,16 @@ STARTUP_MAX_WAIT         = _env_int("STARTUP_MAX_WAIT", 300)
 RELOAD_VERIFY_TIMEOUT    = _env_int("RELOAD_VERIFY_TIMEOUT", 180)
 VALIDATE_TIMEOUT         = _env_int("VALIDATE_TIMEOUT", 300)
 
+# Reload on request (written by the post-commit hook, see the module docstring)
+RELOAD_REQUEST_FILE = os.environ.get("RELOAD_REQUEST_FILE", os.path.join(OPT_ZONES, ".reload-request"))
+RELOAD_RESULT_FILE  = os.environ.get("RELOAD_RESULT_FILE", os.path.join(OPT_ZONES, ".reload-result"))
+# How long to wait for the requested commit and its files to reach this node before reloading
+# whatever is on disk (logged as ERROR).
+RELOAD_SYNC_TIMEOUT = _env_int("RELOAD_SYNC_TIMEOUT", 300)
+# Unverified reloads of one request before giving up on it (result "reload-failed").
+RELOAD_MAX_FAILURES = _env_int("RELOAD_MAX_FAILURES", 3)
+GIT_TIMEOUT         = _env_int("GIT_TIMEOUT", 60)
+
 
 # ---------------------------------------------------------------------------
 # Shared state
@@ -200,6 +216,10 @@ class State:
         self.failures = 0
         self.next_attempt = 0.0
         self.lease_confirmed_at = 0.0   # start of the last call that confirmed our lease (monotonic)
+        self.handled_request = None     # content of RELOAD_REQUEST_FILE already loaded by icinga2
+        self.pending_request = None     # request being processed
+        self.pending_since = 0.0
+        self.request_failures = 0
 
 
 STATE = State()
@@ -495,7 +515,8 @@ def clear_authority_markers(include_timestamp):
 # ---------------------------------------------------------------------------
 def reconcile_leader(now):
     if STATE.applied_role == "leader" and symlink_ok():
-        return   # promote done: no reload (config changes: post-commit hook / reload-master)
+        handle_reload_request(now)   # promote done: reload only when the post-commit hook asks
+        return
 
     # Promote: start as leader, follower -> leader, completing leader-no-content, or a leader whose
     # symlink went missing (fenced then re-confirmed: icinga2 may have restarted without zones.d).
@@ -553,6 +574,7 @@ def reconcile_leader(now):
             STATE.applied_role = "leader"
             note_success()
             write_ready("leader")
+            mark_requests_loaded()
             return
 
     ok, msg = reload_and_verify(expected)
@@ -560,9 +582,134 @@ def reconcile_leader(now):
         STATE.applied_role = "leader"
         note_success()
         write_ready("leader")   # replaces leader-no-content / follower
+        mark_requests_loaded()
         log.info(f"Leader reload verified: {msg}")
     else:
         note_failure(f"Leader reload NOT verified: {msg}")
+
+
+# ---------------------------------------------------------------------------
+# Reload on request (leader only)
+# ---------------------------------------------------------------------------
+def read_request():
+    """Content of RELOAD_REQUEST_FILE ("<epoch> <commit> <host>"), or None."""
+    try:
+        with open(RELOAD_REQUEST_FILE) as f:
+            return f.read().strip() or None
+    except OSError:
+        return None
+
+
+def mark_requests_loaded():
+    """A promote loads the whole zones.d: every request written so far is done."""
+    STATE.handled_request = read_request()
+    STATE.pending_request = None
+    STATE.request_failures = 0
+
+
+def write_result(req, status, detail):
+    commit = (req.split() + ["", ""])[1]
+    line = (f"{commit} {status} {datetime.datetime.now(datetime.timezone.utc).isoformat()} "
+            f"{POD_NAME} {' '.join(str(detail).split())[:500]}\n")
+    try:
+        write_small_file(RELOAD_RESULT_FILE, line)
+    except OSError as e:
+        log.warning(f"Cannot write {RELOAD_RESULT_FILE}: {e}")
+
+
+def _git(*args):
+    """Read-only git in OPT_ZONES. GIT_OPTIONAL_LOCKS=0: never rewrite .git/index, which Syncthing
+    shares between the nodes (a write would race with the other nodes: sync-conflict files).
+    safe.directory: the repo belongs to another uid and ~/.gitconfig does not survive a restart."""
+    try:
+        r = subprocess.run(["git", "-c", "safe.directory=*", "-C", OPT_ZONES, *args],
+                           capture_output=True, text=True, timeout=GIT_TIMEOUT,
+                           env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return 1, str(e)
+    return r.returncode, (r.stdout if r.returncode == 0 else r.stderr).strip()
+
+
+def zones_synced(commit):
+    """(True, why) once the requested commit and the .conf files it changed are on this node:
+    Syncthing may deliver the request file, .git and the config files in any order.
+
+    Only the files of that commit are compared, not the whole tree: master_zones.conf is rewritten
+    by the master pods themselves (start / preStop, the lines come back in another order) and
+    config-ui commits single paths, so other tracked files may differ from HEAD for a long time
+    and must not hold the reload for RELOAD_SYNC_TIMEOUT."""
+    if not commit or commit == "unknown":
+        return True, "no commit in the request"
+    rc, head = _git("rev-parse", "HEAD")
+    if rc != 0:
+        return False, f"git rev-parse failed: {head}"
+    if head != commit:
+        return False, f"HEAD {head[:12]} is not the requested commit {commit[:12]} yet"
+    rc, files = _git("diff-tree", "--no-commit-id", "--name-only", "-r", "--root", commit)
+    if rc != 0:
+        return False, f"git diff-tree failed: {files}"
+    paths = [p for p in files.splitlines() if p.endswith(".conf")]
+    if not paths:
+        return True, "commit changes no .conf file"
+    rc, out = _git("status", "--porcelain", "--untracked-files=no", "--", *paths)
+    if rc != 0:
+        return False, f"git status failed: {out}"
+    if out:
+        return False, f"files of the commit not on this node yet: {out.splitlines()[:3]}"
+    return True, f"commit and its {len(paths)} .conf file(s) present"
+
+
+def handle_reload_request(now):
+    req = read_request()
+    if req is None or req == STATE.handled_request:
+        return
+    if req != STATE.pending_request:
+        log.info(f"Reload requested: {req}")
+        STATE.pending_request, STATE.pending_since, STATE.request_failures = req, now, 0
+    if now < STATE.next_attempt:
+        return
+
+    commit = (req.split() + ["", ""])[1]
+    synced, why = zones_synced(commit)
+    if not synced:
+        if now - STATE.pending_since < RELOAD_SYNC_TIMEOUT:
+            log_throttled("request-sync", logging.INFO, f"Reload request waits for Syncthing: {why}", every=30)
+            return
+        log_throttled("request-sync-timeout", logging.ERROR,
+                      f"Requested config not on this node after {RELOAD_SYNC_TIMEOUT}s ({why}); "
+                      "reloading what is on disk", every=300)
+
+    ready, _, reason = check_content()
+    if not ready:
+        level = logging.ERROR if "Syncthing conflict file" in reason else logging.INFO
+        log_throttled("request-content", level, f"Reload request waits for zones.d content: {reason}", every=60)
+        return
+
+    ok, expected, out = validate_config()
+    if not ok:
+        # The running process keeps the last valid config; a new commit (new request) retries.
+        log.error(f"Requested reload: config validation FAILED, icinga2 NOT reloaded:\n{out}")
+        STATE.handled_request, STATE.pending_request = req, None
+        write_result(req, "validate-failed", out.strip().splitlines()[-1] if out.strip() else "")
+        return
+
+    with FS_LOCK:
+        if STATE.desired_role != "leader" or not symlink_ok():
+            log.warning("Lease lost during validate: requested reload dropped")
+            return
+    ok, msg = reload_and_verify(expected)
+    if ok:
+        note_success()
+        STATE.handled_request, STATE.pending_request = req, None
+        write_result(req, "ok", msg)
+        log.info(f"Requested reload verified: {msg}")
+        return
+    STATE.request_failures += 1
+    note_failure(f"Requested reload NOT verified: {msg}")
+    if STATE.request_failures >= RELOAD_MAX_FAILURES:
+        log.error(f"Giving up on reload request {req} after {STATE.request_failures} attempts")
+        STATE.handled_request, STATE.pending_request = req, None
+        write_result(req, "reload-failed", msg)
 
 
 def reconcile_follower(now):

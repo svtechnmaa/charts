@@ -106,6 +106,18 @@ spec:
           env:
             - name: TZ
               value: {{ $timezone | quote }}
+            {{- with .Values.rebalance.satelliteHealth }}
+            - name: REBALANCE_ZONE_DEAD_AFTER
+              value: {{ .zoneDeadAfterSeconds | default 120 | quote }}
+            - name: REBALANCE_SATELLITE_ABSENT_AFTER
+              value: {{ .absentAfterSeconds | default 300 | quote }}
+            - name: REBALANCE_SATELLITE_JOIN_AFTER
+              value: {{ .joinAfterSeconds | default 60 | quote }}
+            - name: REBALANCE_HEALTH_PORT
+              value: {{ .port | default 5665 | quote }}
+            - name: REBALANCE_HEALTH_TIMEOUT
+              value: {{ .timeoutSeconds | default 3 | quote }}
+            {{- end }}
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}

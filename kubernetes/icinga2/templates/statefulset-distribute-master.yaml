@@ -242,18 +242,39 @@ spec:
               git config --global user.email icinga@localhost && \
               git config --global safe.directory '*' && \
               git add -A && git commit -m "init config"
-              # Add curl into post-commit
-              log "Add post-commit script to reload icinga2 config and restart icinga2 process"
-              cat << EOF > /opt/zones.d/.git/hooks/post-commit
-            echo 'post-commit'
-            MASTER_LIST=\$(dig srv +search +short icinga2-headless |awk '{print \$4}' | uniq | sed 's/.$//g')
-            for MASTER in \${MASTER_LIST}
-            do
-            master_index=\$(echo "\$MASTER" | cut -d'.' -f1  | awk -F'-' '{print \$NF}')
-            url="https://$RELEASE_NAME-icinga2-master-\${master_index}.icinga2-headless.$NAMESPACE:5665/v1/actions/restart-process?pretty=1"
-            curl -k -s -S -i -u "$ICINGA2_API_USER:$ICINGA2_API_PASSWORD" -H 'Accept: application/json' -X POST "\$url"
-            done
+            fi
+
+            # post-commit hook (git commit by Rundeck / rebalance, or run directly by rebalance):
+            # only write a reload request. election.py on the config master reloads icinga2 once
+            # the commit and its files reached its node (/opt/zones.d is synced by Syncthing).
+            # Restarting every master from here restarted the follower while the leader was
+            # syncing config to it: its api/zones ended up half-copied (Icinga2 copies the zone's
+            # .timestamp first, later syncs are then ignored). Rewritten on every start so that
+            # existing volumes get it too; .git is shared, write only when the content differs.
+            if [[ -d /opt/zones.d/.git ]]; then
+              HOOK=/opt/zones.d/.git/hooks/post-commit
+              mkdir -p /opt/zones.d/.git/hooks
+              cat << 'EOF' > /tmp/post-commit.new
+            #!/bin/bash
+            # Managed by the icinga2 chart (statefulset-distribute-master.yaml), rewritten on start.
+            # Does NOT restart icinga2: the config master's election.py reloads it (leader only).
+            REPO=$(cd "$(dirname "$0")/../.." && pwd)
+            COMMIT=$(git -c safe.directory='*' -C "$REPO" rev-parse HEAD 2>/dev/null || echo unknown)
+            TMP="$REPO/.reload-request.tmp.$BASHPID"
+            printf '%s %s %s\n' "$(date +%s)" "$COMMIT" "$(hostname)" > "$TMP" && mv -f "$TMP" "$REPO/.reload-request"
+            echo "post-commit: icinga2 reload requested for commit $COMMIT (done by the config master)"
             EOF
+              if ! cmp -s /tmp/post-commit.new "$HOOK"; then
+                log "Install post-commit hook (reload request for the config master)"
+                cp /tmp/post-commit.new "$HOOK"
+              fi
+              chmod 755 "$HOOK"
+              # Request / result files are not config: keep them out of git (else `git status`
+              # is never clean and every Rundeck run commits), but not out of Syncthing.
+              touch /opt/zones.d/.gitignore
+              for pattern in '.reload-request*' '.reload-result*'; do
+                grep -qxF "$pattern" /opt/zones.d/.gitignore || echo "$pattern" >> /opt/zones.d/.gitignore
+              done
             fi
 
             # Create host object for the endpoint
