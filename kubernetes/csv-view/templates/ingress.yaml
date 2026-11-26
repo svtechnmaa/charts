@@ -18,3 +18,10 @@ spec:
             name: {{ .Chart.Name }}
             port:
               number: {{ .Values.service.port }}
+      - path: /(static_csv/.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Chart.Name }}
+            port:
+              number: {{ .Values.service.port }}

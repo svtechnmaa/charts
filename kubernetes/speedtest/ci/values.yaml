@@ -1,0 +1,16 @@
+# Render/lint fixture only. External services are not provisioned by this file.
+global:
+  frontendVip: speedtest.example.invalid
+  speedtest:
+    runInitDataJob: true
+django:
+  auth:
+    username: ci-admin
+    password: ci-only-admin-password
+  superUserEmail: ci@example.invalid
+db:
+  auth:
+    password: ci-only-database-password
+mqtt:
+  auth:
+    password: ci-only-mqtt-password

@@ -1,0 +1,36 @@
+{{- if .Values.autoscaling.enabled }}
+{{- $workloadType := .Values.workloadType | default "Deployment" }}
+{{- if eq $workloadType "DaemonSet" }}
+{{- fail "autoscaling.enabled is not supported with workloadType DaemonSet (a DaemonSet runs one pod per node and cannot be scaled by an HPA)" }}
+{{- end }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "common.names.fullname" . }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: {{ $workloadType }}
+    name: {{ include "common.names.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

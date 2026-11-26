@@ -1,6 +1,10 @@
 global:
-  adminUser:
-  adminPassword:
+  # Auth precedence: nonempty authenUsers.grafana > legacy adminUser/adminPassword > grafanaConfig.auth.
+  # Remove legacy keys when migrating to local auth; stored Secrets take priority for passwords.
+  authenUsers:
+    grafana:
+      user: "" # Non-empty global input overrides grafanaConfig.auth.username
+      password: "" # Empty: generate and preserve a 32-character password.
 
   sharedVolume:
     enabled: false
@@ -8,6 +12,7 @@ global:
   frontendVip: ""
   mariadb-galera:
     enabled: true
+  enableHttps: true
 
 timezone: Asia/Ho_Chi_Minh
 
@@ -26,6 +31,8 @@ image:
   # debug: true
 
 renderer:
+  enabled: true
+  url: "http://renderer:8081/render" # May point to a shared/external renderer; empty omits the env.
   image:
     registry: ghcr.io
     repository: svtechnmaa/grafana-image-renderer
@@ -34,8 +41,24 @@ renderer:
   service:
     port: 8081
     type: ClusterIP
+  # Shared secret between Grafana ([rendering] renderer_token) and the renderer (AUTH_TOKEN).
+  # Grafana 13+ refuses to start with the default token, so the chart always sets one.
+  # By default the token is stored as a key in the chart-managed <fullname>-admin Secret.
+  auth:
+    token: "" # First install only. Empty: generate 64 random characters. Upgrades keep the stored value.
+    existingSecret: "" # Secret you manage yourself (same namespace). Must not be the chart-managed <fullname>-admin.
+    existingSecretTokenKey: GF_RENDERING_RENDERER_TOKEN # Key holding the token, in the managed or the existing Secret.
 
 chrome:
+  enabled: true
+  url: "http://chrome:9222" # May point to shared/external Chrome; empty omits the env.
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
   image:
     registry: ghcr.io
     repository: svtechnmaa/headless-shell
@@ -177,15 +200,25 @@ ingress:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 
 grafanaConfig:
-  mysqlHost: "mariadb"
-  mysqlPort: 3306
-  mysqlDB: grafana
-  mysqlUser: grafana
-  mysqlPassword: juniper@123
-  adminUser: admin
-  adminPassword: admin
+  database:
+    auth:
+      existingSecret: ""
+      existingSecretPasswordKey: DB_PASSWORD
+      username: grafana
+      password: "juniper@123"
+    mysqlHost: "mariadb"
+    mysqlPort: 3306
+    mysqlDB: grafana
+  auth:
+    username: ""
+    password: ""
+    existingSecret: ""
+    existingSecretPasswordKey: GF_SECURITY_ADMIN_PASSWORD
+  subPath: /grafana
+  env: []
 
 gdgConfig:
+  runInitDataJob: true
   contextName: main
   storageEngine: {}
 
@@ -231,10 +264,6 @@ gdgConfig:
           - field: type
             regex: elasticsearch
         secureData: elasticsearch.json
-      - rules:
-          - field: name
-            regex: thruk
-        secureData: thruk.json
 
   # Global settings
   global:
@@ -262,6 +291,3 @@ gdgConfig:
     elasticsearch:
       user: elastic_user
       basicAuthPassword: elastic_password
-    thruk:
-      user: thruk_user
-      basicAuthPassword: thruk_password

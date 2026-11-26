@@ -1,0 +1,19 @@
+{{/* Fail on retired credential paths rather than silently use another account. */}}
+{{- if hasKey .Values.grafanaConfig.database "mysqlUser" }}
+{{- fail "Move grafanaConfig.database.mysqlUser to grafanaConfig.database.auth.username" }}
+{{- end }}
+{{- if hasKey .Values.grafanaConfig.database "mysqlPassword" }}
+{{- fail "Move grafanaConfig.database.mysqlPassword to grafanaConfig.database.auth.password" }}
+{{- end }}
+{{- if hasKey .Values.grafanaConfig.database "existingSecret" }}
+{{- fail "Move grafanaConfig.database.existingSecret to grafanaConfig.database.auth.existingSecret" }}
+{{- end }}
+{{- if hasKey .Values.grafanaConfig.database "existingSecretPasswordKey" }}
+{{- fail "Move grafanaConfig.database.existingSecretPasswordKey to grafanaConfig.database.auth.existingSecretPasswordKey" }}
+{{- end }}
+
+{{- range $old, $new := dict "mysqlUser" "database.auth.username" "mysqlPassword" "database.auth.password" "mysqlHost" "database.mysqlHost" "mysqlPort" "database.mysqlPort" "mysqlDB" "database.mysqlDB" "adminUser" "auth.username" "adminPassword" "auth.password" }}
+{{- if hasKey $.Values.grafanaConfig $old }}
+{{- fail (printf "Move grafanaConfig.%s to grafanaConfig.%s" $old $new) }}
+{{- end }}
+{{- end }}

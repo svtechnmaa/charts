@@ -1,0 +1,25 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "common.names.fullname" . }}-redis
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+  {{- with .Values.redis.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.redis.service.type | default "ClusterIP" }}
+  selector:
+    {{- include "common.labels.matchLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+  ports:
+    {{- range .Values.redis.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol | default "TCP" }}
+    {{- end }}
+{{- end }}
