@@ -142,10 +142,16 @@ spec:
 
               if [ "$GITSYNC_MODE" = git ]; then
                 use_git_http
-                if ! git ls-remote "$GITSYNC_URL" >/dev/null 2>&1; then
-                  log "Git destination is unreachable: ${GITSYNC_URL}" >&2
-                  exit 1
-                fi
+                attempt=0
+                until timeout 10 git ls-remote "$GITSYNC_URL" >/dev/null 2>&1; do
+                  attempt=$((attempt + 1))
+                  if [ "$attempt" -ge 12 ]; then
+                    log "Git destination did not become available after ${attempt} attempts: ${GITSYNC_URL}" >&2
+                    exit 1
+                  fi
+                  log "Waiting for Git destination ${GITSYNC_URL} to become available (attempt ${attempt}/12)..."
+                  sleep 5
+                done
                 main_sha="$(git ls-remote --heads "$GITSYNC_URL" refs/heads/main |
                   awk '$2 == "refs/heads/main" {print $1; exit}')"
                 if [ -z "$main_sha" ]; then
