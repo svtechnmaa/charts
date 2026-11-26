@@ -2,13 +2,15 @@
 #
 # icinga2 zones.conf manager
 #
-# Consolidates the Endpoint/Zone bookkeeping used by the icinga2 master and
-# satellite pods (add on startup, remove on preStop) into a single set of
-# functions dispatched by name:
+# Consolidates the Endpoint/Zone bookkeeping used by the icinga2 master pods
+# (master_zones.conf, rewritten on every start) and the satellite pods (zone
+# watcher adds and removes peers) into a single set of functions dispatched by
+# name:
 #
 #   zone-manager.sh <function> [args...]
 #
 # Examples:
+#   zone-manager.sh generate_master_zones /opt/zones.d/master_zones.conf master nmaa-icinga2-master 2 icinga2-headless.ns.svc.cluster.local
 #   zone-manager.sh generate_master_endpoint /opt/zones.d/master_zones.conf master master-0 master-0.icinga2-headless.ns.svc.cluster.local
 #   zone-manager.sh generate_satellite_endpoint /opt/zones.d/master/zone-satellite-0.conf.shared zone-satellite-0 satellite-0 master
 #   zone-manager.sh remove_endpoint /opt/zones.d/master_zones.conf master master-0
@@ -299,9 +301,91 @@ EOF
   log "Done. ${conf_file} is up to date for zone ${zone} / endpoint ${name}."
 }
 
+# Print <file> without every top-level "object <type> "<name>" { ... }" block
+# whose name matches the regex <name_re> (whole name, without the quotes).
+remove_objects_matching() {
+  local file="$1" type="$2" name_re="$3"
+  awk -v type="$type" -v name_re="$name_re" '
+      BEGIN { skip = 0; depth = 0 }
+      {
+        if (!skip && depth == 0 && $0 ~ ("^[ \t]*object[ \t]+" type "[ \t]+\"" name_re "\"")) {
+          skip = 1
+        }
+        line = $0
+        n_open  = gsub(/\{/, "{", line)
+        n_close = gsub(/\}/, "}", line)
+        depth += n_open - n_close
+        if (skip) {
+          if (depth == 0 && n_close > 0) { skip = 0 }
+          next
+        }
+        print
+      }
+  ' "$file"
+}
+
+# generate_master_zones <conf_file> <zone> <name_prefix> <replicas> <domain> [port=5665]
+#
+# Writes Endpoint <name_prefix>-0 .. <name_prefix>-<replicas-1> (host
+# <name>.<domain>), Zone <zone> listing all of them, and the global-templates /
+# director-global zones, always with the same content and order. Any other
+# object already in <conf_file> is kept after them. The file is only replaced
+# when that content differs (it is shared through Syncthing).
+#
+# Every master writes the same file whichever pod starts first, and no pod
+# removes its own Endpoint when it stops: the Endpoint of a pod that is down
+# stays declared, so its master/<pod>.conf host (command_endpoint) still
+# validates, and a master that starts already knows its peer.
+generate_master_zones() {
+  local conf_file="$1" zone="$2" prefix="$3" replicas="$4" domain="$5" port="${6:-5665}"
+  local work new_file i z members=""
+
+  if [[ ! "$replicas" =~ ^[1-9][0-9]*$ ]]; then
+    log "ERROR: invalid replica count '${replicas}'"
+    return 1
+  fi
+  work="$(mktemp -d)"
+  if [[ -f "$conf_file" ]]; then
+    remove_objects_matching "$conf_file" Endpoint "${prefix}-[0-9]+" > "$work/rest"
+    for z in "$zone" global-templates director-global; do
+      remove_objects_matching "$work/rest" Zone "$z" > "$work/rest.1"
+      mv "$work/rest.1" "$work/rest"
+    done
+  else
+    : > "$work/rest"
+  fi
+
+  for ((i = 0; i < replicas; i++)); do
+    members+="${members:+, }\"${prefix}-${i}\""
+  done
+  {
+    printf 'object Zone "%s" {\n  endpoints = [ %s ]\n}\n\n' "$zone" "$members"
+    for ((i = 0; i < replicas; i++)); do
+      printf 'object Endpoint "%s-%d" {\n  host = "%s-%d.%s"\n  port = %s\n}\n\n' \
+        "$prefix" "$i" "$prefix" "$i" "$domain" "$port"
+    done
+    printf 'object Zone "global-templates" {\n  global = true\n}\n\n'
+    printf 'object Zone "director-global" {\n  global = true\n}\n\n'
+    cat "$work/rest"
+  } > "$work/raw"
+  ensure_blank_lines_between_objects "$work/raw" > "$work/new"
+
+  if [[ -f "$conf_file" ]] && cmp -s "$work/new" "$conf_file"; then
+    log "${conf_file} already lists ${prefix}-0..$((replicas - 1)) in zone ${zone}"
+  else
+    # rename inside the target directory: Syncthing never sees a half-written file
+    new_file="$(mktemp "$(dirname "$conf_file")/.master_zones.XXXXXX")"
+    cat "$work/new" > "$new_file"
+    chmod 644 "$new_file"
+    mv -f "$new_file" "$conf_file"
+    log "${conf_file} written: zone ${zone} = ${prefix}-0..$((replicas - 1))"
+  fi
+  rm -rf "$work"
+}
+
 # remove_endpoint <conf_file> <zone> <name>
 #
-# Used from preStop: removes the Endpoint object and its membership in the
+# Used by the satellite zone watcher: removes the Endpoint object and its membership in the
 # given Zone's endpoints list. No-op if the file doesn't exist.
 remove_endpoint() {
   local conf_file="$1" zone="$2" name="$3"
@@ -328,7 +412,7 @@ remove_endpoint() {
 # ---------------------------------------------------------------------------
 if [[ $# -eq 0 ]]; then
   echo "Usage: $0 <function> [args...]" >&2
-  echo "Functions: generate_master_endpoint, generate_satellite_endpoint, remove_endpoint" >&2
+  echo "Functions: generate_master_zones, generate_master_endpoint, generate_satellite_endpoint, remove_endpoint" >&2
   exit 1
 fi
 

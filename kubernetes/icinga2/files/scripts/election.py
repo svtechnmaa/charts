@@ -635,7 +635,7 @@ def zones_synced(commit):
     Syncthing may deliver the request file, .git and the config files in any order.
 
     Only the files of that commit are compared, not the whole tree: master_zones.conf is rewritten
-    by the master pods themselves (start / preStop, the lines come back in another order) and
+    by the master pods themselves on start (older charts also edited it on preStop) and
     config-ui commits single paths, so other tracked files may differ from HEAD for a long time
     and must not hold the reload for RELOAD_SYNC_TIMEOUT."""
     if not commit or commit == "unknown":

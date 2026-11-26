@@ -140,10 +140,25 @@ spec:
             /opt/scripts/entrypoint.sh no_start
             echo "***************** ICINGA2 NODE SETUP FINISHED **********************"
 
-            # Init master_zones.conf
+            # master_zones.conf: the Endpoint of every ordinal 0..MASTER_REPLICAS-1, the same
+            # content on every start of every master, never edited on stop. Removing the Endpoint
+            # of a stopping pod left master/<pod>.conf (whose checks use that endpoint) invalid on
+            # the other node after Syncthing: with both masters deleted, master-0 failed to
+            # validate, never got Ready, and OrderedReady never created master-1 (deadlock).
+            # Host files of ordinals >= MASTER_REPLICAS (scale down through the chart) are removed
+            # before their Endpoint.
             log "GENERATE ZONES CONFIG"
             CONF_FILE="/opt/zones.d/master_zones.conf"
-            /opt/zone-manager/zone-manager.sh generate_master_endpoint ${CONF_FILE} ${ZONE} ${COMMON_NAME} ${FULL_POD_NAME}
+            MASTER_DOMAIN=${CHART_NAME}-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN}
+            for f in /opt/zones.d/master/${MASTER_NAME_ORIGIN}-*.conf; do
+              [[ -e "$f" ]] || continue
+              ordinal=${f##*-}; ordinal=${ordinal%.conf}
+              if [[ "$ordinal" =~ ^[0-9]+$ ]] && (( ordinal >= MASTER_REPLICAS )); then
+                log "Remove host object of ${MASTER_NAME_ORIGIN}-${ordinal} (replicas: ${MASTER_REPLICAS})"
+                rm -f "$f"
+              fi
+            done
+            /opt/zone-manager/zone-manager.sh generate_master_zones ${CONF_FILE} ${ZONE} ${MASTER_NAME_ORIGIN} ${MASTER_REPLICAS} ${MASTER_DOMAIN}
             rm -rf /etc/icinga2/zones.conf
             ln -s /opt/zones.d/master_zones.conf /etc/icinga2/zones.conf
 
@@ -277,14 +292,17 @@ spec:
               done
             fi
 
-            # Create host object for the endpoint
-            log "Create host object for the endpoint ${COMMON_NAME} if not exists"
-            if [[ ! -e "/opt/zones.d/master/${COMMON_NAME}.conf" ]]; then
-            cat << EOF > /opt/zones.d/master/${COMMON_NAME}.conf
-            object Host "${COMMON_NAME}" {
+            # Host object of every master endpoint (same ordinals as master_zones.conf), created
+            # once; kept when the pod stops so that a master that is down shows as DOWN.
+            for ((i = 0; i < MASTER_REPLICAS; i++)); do
+            HOST_NAME=${MASTER_NAME_ORIGIN}-${i}
+            if [[ ! -e "/opt/zones.d/master/${HOST_NAME}.conf" ]]; then
+            log "Create host object for the endpoint ${HOST_NAME}"
+            cat << EOF > /opt/zones.d/master/${HOST_NAME}.conf
+            object Host "${HOST_NAME}" {
               import "generic-host-nms"
               check_command = "hostalive"
-              address = "${FULL_POD_NAME}"
+              address = "${HOST_NAME}.${MASTER_DOMAIN}"
               address6 = "::1"
               vars.agent_endpoint = name
               vars.device_type = ""
@@ -298,6 +316,7 @@ spec:
             }
             EOF
             fi
+            done
 
             # Create cronjob to sync icinga2.state file every 5 minutes
             crontab -l 2>/dev/null | echo "*/5 * * * * rsync -acz /var/lib/icinga2/icinga2.state /opt/SVTECH-Junos-Automation/${COMMON_NAME}.state 2>/dev/null" | crontab -
@@ -351,25 +370,7 @@ spec:
 
             echo "Start Icinga2:"
             exec /tini -- icinga2 daemon
-          lifecycle:
-            preStop:
-              exec:
-                command:
-                - bash
-                - -ec
-                - |
-                  log() {
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-                  }
-                  log "PreStop hook: Stopping icinga2 process gracefully. Removing its Endpoint object and zone membership from /opt/zones.d/master_zones.conf"
-                  COMMON_NAME=${POD_NAME}
-                  ZONE="master"
-                  CONF_FILE="/opt/zones.d/master_zones.conf"
-                  /opt/zone-manager/zone-manager.sh remove_endpoint ${CONF_FILE} ${ZONE} ${COMMON_NAME}
-                  log "PreStop hook: Delete host object for the endpoint ${COMMON_NAME} if exists"
-                  if [[ -e "/opt/zones.d/master/${COMMON_NAME}.conf" ]]; then
-                    rm -f /opt/zones.d/master/${COMMON_NAME}.conf
-                  fi
+          # No preStop: a stopping master keeps its Endpoint and host object (see master_zones.conf).
           env:
             - name: POD_NAME
               valueFrom:
@@ -418,6 +419,8 @@ spec:
               value: {{ include "common.timezone" ( dict "timezone" .Values.timezone "global" .Values.global) }}
             - name: ROLE
               value: master
+            - name: MASTER_REPLICAS
+              value: {{ include "common.replicas" ( dict "replicaCount" .Values.master.replicaCount "global" .Values.global ) | quote }}
             - name: COMMON_NAME
               value: master
             - name: ZONE

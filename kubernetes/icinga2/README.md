@@ -67,6 +67,13 @@ the other nodes restart themselves after they received the sync.
   the rollout of the master StatefulSet.
 - Removed: the `auto-reload-satellite` CronJob and the `cronjob.*` values. It restarted every
   satellite from outside once a week.
+- `master_zones.conf` always lists the Endpoint of every master ordinal `0..master.replicaCount-1`
+  and is rewritten with the same content on every master start; the master preStop hook that
+  removed the stopping pod's Endpoint and `master/<pod>.conf` host is removed. Deleting both
+  masters at once no longer leaves a host whose endpoint is gone (master-0 failed to validate and
+  `OrderedReady` never created master-1). A master that is down stays declared and its host shows
+  DOWN. Host files of ordinals `>= replicaCount` are removed on the next master start. The first
+  rollout to this version still runs the old preStop once per pod.
 - Do not restart a follower master or a satellite from outside (`restart-process`,
   `reload-satellite`) right after a config change; it reloads by itself once the sync is copied.
 - Satellites: a sidecar keeps the two satellites of a zone listed in each other's zone config
