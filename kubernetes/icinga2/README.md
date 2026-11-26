@@ -74,6 +74,8 @@ the other nodes restart themselves after they received the sync.
   `OrderedReady` never created master-1). A master that is down stays declared and its host shows
   DOWN. Host files of ordinals `>= replicaCount` are removed on the next master start. The first
   rollout to this version still runs the old preStop once per pod.
+- icinga2-rebalance gets `REBALANCE_RELOAD_ON_MASTER_CHANGE=false`: it no longer requests a
+  reload when a master pod comes or goes (an older image ignores the env and still does).
 - Do not restart a follower master or a satellite from outside (`restart-process`,
   `reload-satellite`) right after a config change; it reloads by itself once the sync is copied.
 - Satellites: a sidecar keeps the two satellites of a zone listed in each other's zone config

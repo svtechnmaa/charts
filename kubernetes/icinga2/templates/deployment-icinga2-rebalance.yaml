@@ -118,6 +118,11 @@ spec:
             - name: REBALANCE_HEALTH_TIMEOUT
               value: {{ .timeoutSeconds | default 3 | quote }}
             {{- end }}
+            # master_zones.conf lists every master ordinal (MASTER_REPLICAS), so Icinga2 reconnects
+            # to a restarted master by itself; a reload on a master DNS change only keeps the
+            # objects paused for longer. An older icinga2-rebalance ignores this env.
+            - name: REBALANCE_RELOAD_ON_MASTER_CHANGE
+              value: "false"
             {{- range $key, $value := .Values.env }}
             - name: {{ $key }}
               value: {{ $value | quote }}
