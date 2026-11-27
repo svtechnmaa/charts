@@ -294,8 +294,10 @@ jobs:
         ansible-playbook ${{ github.workspace }}/SVTECH_CICD_Utilities/ansible-playbook/vm--create_k8s_vm.yml -e "BUILD_VARS_PATH=${{ github.workspace }}" -e "vm_annotation='Created by: \n- repo: ${{ github.repository }} \n- github workflow: #${{ github.run_number }} \n- commit: ${{ env.COMMIT_FULL_ID }}'" 
     - name: Upload artifact
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: vm_vars
         path: ${{ github.workspace }}/build_vars.yml
 
@@ -349,8 +351,10 @@ jobs:
         ref: ${{ env.STACKED_CHARTS_BRANCH }}
 
     - name: Download build_vars artifact
-      uses: actions/download-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: vm_vars
         path: ${{ github.workspace }}
 
@@ -379,8 +383,10 @@ jobs:
                     -i ${{ github.workspace }}/nmaa_inventory
     - name: Upload artifact
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: nmaa_build_vars
         path: ${{ github.workspace }}/build_vars.yml
 
@@ -400,8 +406,10 @@ jobs:
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
 
       - name: Download build_vars artifact
-        uses: actions/download-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: nmaa_build_vars
           path: ${{ github.workspace }}
 
@@ -452,8 +460,11 @@ jobs:
   
       - name: 'Upload Artifact'
         if: always()
-        uses: actions/upload-artifact@v4.6.0
+        continue-on-error: true
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: robot-nmaa-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
 
@@ -508,8 +519,10 @@ jobs:
         ref: ${{ env.STACKED_CHARTS_BRANCH }}
 
     - name: Download build_vars artifact
-      uses: actions/download-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: vm_vars
         path: ${{ github.workspace }}
 
@@ -538,8 +551,10 @@ jobs:
                     -i ${{ github.workspace }}/elk_inventory
     - name: Upload artifact
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: elk_build_vars
         path: ${{ github.workspace }}/build_vars.yml
 
@@ -559,8 +574,10 @@ jobs:
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
 
       - name: Download build_vars artifact
-        uses: actions/download-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: elk_build_vars
           path: ${{ github.workspace }}
 
@@ -586,8 +603,11 @@ jobs:
   
       - name: 'Upload Artifact'
         if: always()
-        uses: actions/upload-artifact@v4.6.0
+        continue-on-error: true
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: robot-elk-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
 
@@ -633,8 +653,10 @@ jobs:
         ref: ${{ env.STACKED_CHARTS_BRANCH }}
 
     - name: Download build_vars artifact
-      uses: actions/download-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: vm_vars
         path: ${{ github.workspace }}
 
@@ -664,8 +686,10 @@ jobs:
                     -i ${{ github.workspace }}/tacgui_inventory
     - name: Upload artifact
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: tacgui_build_vars
         path: ${{ github.workspace }}/build_vars.yml
 
@@ -685,8 +709,10 @@ jobs:
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
 
       - name: Download build_vars artifact
-        uses: actions/download-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: tacgui_build_vars
           path: ${{ github.workspace }}
 
@@ -697,8 +723,11 @@ jobs:
       
       - name: 'Upload Artifact'
         if: always()
-        uses: actions/upload-artifact@v4.6.0
+        continue-on-error: true
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: robot-tacgui-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
 
@@ -744,8 +773,10 @@ jobs:
         ref: ${{ env.STACKED_CHARTS_BRANCH }}
 
     - name: Download build_vars artifact
-      uses: actions/download-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: vm_vars
         path: ${{ github.workspace }}
 
@@ -775,8 +806,10 @@ jobs:
 
     - name: Upload artifact
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
       with:
+        s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+        s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
         name: netforge_build_vars
         path: ${{ github.workspace }}/build_vars.yml
 
@@ -796,8 +829,10 @@ jobs:
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
 
       - name: Download build_vars artifact
-        uses: actions/download-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: netforge_build_vars
           path: ${{ github.workspace }}
 
@@ -808,8 +843,11 @@ jobs:
 
       - name: Upload Test result
         if: always()
-        uses: actions/upload-artifact@v4.6.0
+        continue-on-error: true
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: robot-netforge-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
         
@@ -852,8 +890,10 @@ jobs:
           ref: ${{ env.STACKED_CHARTS_BRANCH }}
 
       - name: Download build_vars.yml
-        uses: actions/download-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: vm_vars
           path: ${{ github.workspace }}
 
@@ -883,8 +923,10 @@ jobs:
 
       - name: Upload artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: radius_build_vars
           path: ${{ github.workspace }}/build_vars.yml
       
@@ -903,8 +945,10 @@ jobs:
           path: SVTECH_CICD_Utilities
           ref: ${{ env.CICD_UTILITIES_BRANCH }}
       - name: Download build_vars
-        uses: actions/download-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: radius_build_vars
           path: ${{ github.workspace }}
 
@@ -914,8 +958,11 @@ jobs:
           sh "${{ github.workspace }}/SVTECH_CICD_Utilities/integration-test/radius/run_testcase.sh" -D "${{ github.workspace }}" -I .
       - name: Upload Test result
         if: always()
-        uses: actions/upload-artifact@v4.6.0
+        continue-on-error: true
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/upload@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: robot-radius-result-#${{ github.run_number }}
           path: ${{ github.workspace }}/test_result
 
@@ -1135,8 +1182,10 @@ jobs:
         
 
       - name: Download build_vars artifact
-        uses: actions/download-artifact@v4
+        uses: svtechnmaa/.github/actions/artifact_with_s3_fallback/download@3a6d386220815cefdb2dde976dc11e808e1697dd
         with:
+          s3-access-key: ${{ secrets.S3_ARTIFACT_ACCESS_KEY }}
+          s3-secret-key: ${{ secrets.S3_ARTIFACT_SECRET_KEY }}
           name: vm_vars
           path: ${{ github.workspace }}
 
