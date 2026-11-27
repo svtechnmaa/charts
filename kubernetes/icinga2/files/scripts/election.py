@@ -574,7 +574,7 @@ def reconcile_leader(now):
             STATE.applied_role = "leader"
             note_success()
             write_ready("leader")
-            mark_requests_loaded()
+            mark_requests_loaded(f"loaded on start as leader, expected hosts={expected}")
             return
 
     ok, msg = reload_and_verify(expected)
@@ -582,7 +582,7 @@ def reconcile_leader(now):
         STATE.applied_role = "leader"
         note_success()
         write_ready("leader")   # replaces leader-no-content / follower
-        mark_requests_loaded()
+        mark_requests_loaded(f"loaded on promote, {msg}")
         log.info(f"Leader reload verified: {msg}")
     else:
         note_failure(f"Leader reload NOT verified: {msg}")
@@ -600,11 +600,34 @@ def read_request():
         return None
 
 
-def mark_requests_loaded():
-    """A promote loads the whole zones.d: every request written so far is done."""
-    STATE.handled_request = read_request()
+def mark_requests_loaded(detail):
+    """A promote loads the whole zones.d on disk. The current request is done only if its commit
+    is on this node (zones_synced): then write its result, a Rundeck job may be waiting for it
+    (the leader may have restarted while the request waited for Syncthing). Otherwise the promote
+    loaded an older tree: keep the request, handle_reload_request reloads once the commit is here
+    (or after RELOAD_SYNC_TIMEOUT)."""
     STATE.pending_request = None
     STATE.request_failures = 0
+    req = read_request()
+    if req is None or req == STATE.handled_request:
+        return
+    commit = (req.split() + ["", ""])[1]
+    synced, why = zones_synced(commit)
+    if not synced:
+        log.info(f"Promote loaded zones.d before the requested commit, request kept: {why}")
+        return
+    STATE.handled_request = req
+    if read_result()[:2] != [commit, "ok"]:
+        write_result(req, "ok", detail)
+
+
+def read_result():
+    """RELOAD_RESULT_FILE split in words ("<commit> <status> <time> <pod> <detail...>"), or []."""
+    try:
+        with open(RELOAD_RESULT_FILE) as f:
+            return f.read().split()
+    except OSError:
+        return []
 
 
 def write_result(req, status, detail):
@@ -620,9 +643,13 @@ def write_result(req, status, detail):
 def _git(*args):
     """Read-only git in OPT_ZONES. GIT_OPTIONAL_LOCKS=0: never rewrite .git/index, which Syncthing
     shares between the nodes (a write would race with the other nodes: sync-conflict files).
-    safe.directory: the repo belongs to another uid and ~/.gitconfig does not survive a restart."""
+    safe.directory: the repo belongs to another uid and ~/.gitconfig does not survive a restart.
+    core.fileMode=false: every master start runs chmod 777 -R on /opt/zones.d, so a file committed
+    as 100644 shortly before shows as modified (mode only) and zones_synced would wait for
+    RELOAD_SYNC_TIMEOUT; the mode does not matter to icinga2."""
     try:
-        r = subprocess.run(["git", "-c", "safe.directory=*", "-C", OPT_ZONES, *args],
+        r = subprocess.run(["git", "-c", "safe.directory=*", "-c", "core.fileMode=false",
+                            "-C", OPT_ZONES, *args],
                            capture_output=True, text=True, timeout=GIT_TIMEOUT,
                            env={**os.environ, "GIT_OPTIONAL_LOCKS": "0"})
     except (OSError, subprocess.TimeoutExpired) as e:
