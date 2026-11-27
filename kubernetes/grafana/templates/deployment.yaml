@@ -155,11 +155,6 @@ spec:
               value: grid
             - name: GF_REPORTER_PLUGIN_REPORT_DASHBOARD_MODE
               value: full
-            - name: GF_RENDERING_RENDERER_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "grafana.adminSecretName" . | quote }}
-                  key: {{ include "grafana.adminSecretKey" . | quote }}
             {{- if .Values.grafanaConfig.env }}
             {{- include "common.tplvalues.render" ( dict "value" .Values.grafanaConfig.env "context" $ ) | nindent 12 }}
             {{- end }}
@@ -202,11 +197,6 @@ spec:
         {{- end }}
         {{- if .Values.renderer.enabled }}
         - env:
-          - name: AUTH_TOKEN
-            valueFrom:
-                secretKeyRef:
-                  name: {{ include "grafana.adminSecretName" . | quote }}
-                  key: {{ include "grafana.adminSecretKey" . | quote }}
           - name: IGNORE_HTTPS_ERRORS
             value: "true"
           - name: RENDERING_MODE
