@@ -3,6 +3,40 @@
 This chart deploys Grafana and initializes organization-specific dashboards,
 datasources, and library panels from `grafana-entities`.
 
+Grafana login and database access use separate accounts. Set the admin username
+through `global.authenUsers.grafana.user` or `grafanaConfig.auth.username`.
+
+## Admin credentials
+
+| Choice | `grafanaConfig.auth` |
+| --- | --- |
+| Generate a password on first install | Leave `password` and `existingSecret` empty. The chart creates `<fullname>-admin`. |
+| Supply an initial password | Set `password` and leave `existingSecret` empty. |
+| Use an existing Secret | Set `existingSecret` and `existingSecretPasswordKey` to a Secret and key in the release namespace. |
+
+An external Secret takes precedence over `password`. For a managed Secret, an
+existing password is preserved on cluster-backed upgrades, even if values
+contain a different password. Offline `helm template` cannot read that stored
+value. The admin username must be nonempty; an empty managed password is
+generated as 32 characters on first install. Grafana startup settings do not
+change the password of an account already stored in its database. When using an
+existing Grafana database, supply that account's current password.
+
+## Database credentials
+
+Set the connection under `grafanaConfig.database`, including `mysqlHost`,
+`mysqlPort`, and `mysqlDB`. Set `grafanaConfig.database.auth.username` and either
+`auth.existingSecret` with `auth.existingSecretPasswordKey`, or `auth.password`
+matching the existing database user. The chart does not create the SQL account
+or schema. An empty password without an external Secret fails rendering.
+
+Without an external DB Secret, the password is stored in `<fullname>-admin`
+under `grafanaConfig.database.auth.existingSecretPasswordKey` (default
+`DB_PASSWORD`). Grafana reads it using `secretKeyRef`. Cluster-backed upgrades
+preserve the stored password; changing values does not rotate the SQL account.
+Admin and database keys must differ when both are chart-managed. External
+Secrets are referenced, not modified.
+
 ## Configuration
 
 | Key | Purpose |
@@ -18,6 +52,16 @@ datasources, and library panels from `grafana-entities`.
 | `grafanaConfig.auth` | Grafana admin username/password or existing Secret. |
 | `grafanaConfig.database` | MariaDB/MySQL connection and credentials. |
 | `global.github.fg_token` | GitHub source access and GitHub-mode Git Sync token. |
+
+The chart accepts legacy `global.adminUser` and `global.adminPassword`.
+For username and initial password independently, a nonempty
+`global.authenUsers.grafana.*` takes precedence, followed by a nonempty legacy
+`global.admin*`, then `grafanaConfig.auth.*`. Existing managed passwords and
+external Secret references take precedence over initial password values.
+Remove legacy keys when moving to local auth values. If switching from an
+external to a managed admin Secret against an initialized Grafana database,
+provide the account's current password; generating a new Secret does not
+change its password in SQL.
 
 Example:
 
@@ -56,6 +100,32 @@ resolves the placeholder before calling Grafana's API. Missing credential
 variables produce an unauthenticated datasource and a warning; a plugin that
 requires credentials may still reject it.
 
+## Local and external rendering services
+
+`renderer.enabled` and `chrome.enabled` control their local containers and
+Services. `renderer.url` and `chrome.url` independently configure the endpoints
+used by Grafana. To use shared services, disable the local containers and set
+reachable URLs. To disable an integration, also clear its URL:
+
+```yaml
+renderer:
+  enabled: false
+  url: ""
+chrome:
+  enabled: false
+  url: ""
+```
+
+Leaving a default URL while disabling its local container requires another
+service at that address. `chrome.resources` configures the local Chrome
+container.
+
+The current chart sets Grafana's `GF_RENDERING_RENDERER_TOKEN` and the local
+renderer sidecar's `AUTH_TOKEN` from the configured Grafana admin password
+Secret key. It does not support the separate `renderer.auth.*` values described
+in older chart revisions. If using an external renderer, configure its token to
+match this value.
+
 ## Init flow
 
 1. In `git` mode, missing git-http `main` is seeded once from the entities image.
@@ -87,6 +157,8 @@ each organization, the Job reads Grafana's API and logs its actual default.
 
 ## Upgrade notes
 
+- For a fresh installation, set an admin username and database credentials.
+  An existing release can retain its values with `helm upgrade --reuse-values`.
 - The previous datasource Job published a ConfigMap containing `prune: true`.
   Inventory provisioned datasources and plan their migration before upgrading
   an existing Grafana installation to API-managed datasources. Removing that
@@ -99,6 +171,33 @@ each organization, the Job reads Grafana's API and logs its actual default.
   fields change.
 - `helm template | kubectl apply` updates the datasource Secret but does not
   rerun an existing Job. Apply the Secret first, then recreate only the Job.
+
+## Standalone values
+
+For a Grafana installation without Git Sync, save a private values overlay.
+Replace the database Secret reference with one that exists in the release
+namespace:
+
+```yaml
+grafanaConfig:
+  auth:
+    username: admin
+    password: "" # Generate on first install, or supply the existing account password.
+  database:
+    mysqlHost: mariadb
+    mysqlPort: 3306
+    mysqlDB: grafana
+    auth:
+      username: grafana
+      existingSecret: database-auth
+      existingSecretPasswordKey: grafana-password
+  subPath: /grafana
+gitsync:
+  enabled: false
+```
+
+From the charts repository, run `helm upgrade --install grafana
+./kubernetes/grafana -n <namespace> -f <private-values.yaml>`.
 
 ## Verify
 
