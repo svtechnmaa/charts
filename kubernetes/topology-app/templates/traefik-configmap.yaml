@@ -171,22 +171,10 @@ data:
       #     loadBalancer:
       #       servers:
       #         - url: "http://rundeck:4440/rundeck"
-      #   topology:
-      #     loadBalancer:
-      #       servers:
-      #         - url: "http://nagvis:80/nagvis/"
       #   gitlist:
       #     loadBalancer:
       #       servers:
       #         - url: "http://gitlist:80/gitlist/"
-      #   csv:
-      #     loadBalancer:
-      #       servers:
-      #         - url: "http://proxy:80/csv/"
-      #   static_csv:
-      #     loadBalancer:
-      #       servers:
-      #         - url: "http://proxy:80/static_csv/"
 
     tls:
       stores:

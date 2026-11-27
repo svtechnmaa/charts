@@ -32,9 +32,9 @@ init:
     pullPolicy: IfNotPresent
 
 image:
-  registry: docker.io
-  repository: duchieu2920/svtech_grafana
-  tag: v13.3.1
+  registry: ghcr.io
+  repository: svtechnmaa/svtech_grafana
+  tag: v1.3.3
   pullPolicy: IfNotPresent
   # debug: true
 
@@ -56,6 +56,13 @@ renderer:
   service:
     port: 8081
     type: ClusterIP
+  # Shared secret between Grafana ([rendering] renderer_token) and the renderer (AUTH_TOKEN).
+  # Grafana 13+ refuses to start with the default token, so the chart always sets one.
+  # By default the token is stored as a key in the chart-managed <fullname>-admin Secret.
+  auth:
+    token: "" # First install only. Empty: generate 64 random characters. Upgrades keep the stored value.
+    existingSecret: "" # Secret you manage yourself (same namespace). Must not be the chart-managed <fullname>-admin.
+    existingSecretTokenKey: GF_RENDERING_RENDERER_TOKEN # Key holding the token, in the managed or the existing Secret.
 
 chrome:
   enabled: true

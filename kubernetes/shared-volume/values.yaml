@@ -119,19 +119,6 @@ global:
       # storageClass: gitlist-data-hostpath # for hostPath PV
       # folderName: gitlist # for hostPath PV
 
-    - volumeName: nagvis-maps-volume
-      pvcName: nagvis-maps-pvc
-      storageSize: 2Gi
-      path: /usr/share/nagvis/etc/maps
-      accessModes: ReadWriteMany
-      shareFor:
-        - nagvis
-        - rundeck
-        - debuger
-      storageClass: seaweedfs-storage
-      # storageClass: nagvis-maps-hostpath # for hostPath PV
-      # folderName: nagvis_maps # for hostPath PV
-
     - volumeName: rundeck-var-volume
       pvcName: rundeck-var-pvc
       storageSize: 10Gi
@@ -154,19 +141,6 @@ global:
       storageClass: seaweedfs-storage
       # storageClass: rundeck-server-config-hostpath # for hostPath PV
       # folderName: rundeck_server_config # for hostPath PV
-
-    - volumeName: nagvis-auth-db-volume
-      pvcName: nagvis-auth-db-pvc
-      storageSize: 1Gi
-      path: /usr/share/nagvis/etc
-      subPath: auth.db
-      accessModes: ReadWriteMany
-      shareFor:
-        - nagvis
-        - rundeck
-      storageClass: seaweedfs-storage
-      # storageClass: nagvis-auth-db-hostpath # for hostPath PV
-      # folderName: nagvis_auth_db # for hostPath PV
 
     - volumeName: rundeck-etc-config-volume
       pvcName: rundeck-etc-config-pvc
@@ -217,18 +191,6 @@ global:
       storageClass: seaweedfs-storage
       # storageClass: csv-output-hostpath # for hostPath PV
       # folderName: csv_output # for hostPath PV
-
-    - volumeName: thruk-volume
-      pvcName: thruk-pvc
-      storageSize: 30Mi
-      path: /etc/thruk
-      accessModes: ReadWriteMany
-      shareFor:
-        - thruk
-        - rundeck
-      storageClass: seaweedfs-storage
-      # storageClass: thruk-hostpath # for hostPath PV
-      # folderName: thruk # for hostPath PV   
 
     - volumeName: icingaweb-volume
       pvcName: icingaweb-pvc
