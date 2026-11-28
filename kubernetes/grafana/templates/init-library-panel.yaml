@@ -1,0 +1,616 @@
+{{- define "grafana.libraryInitContainer" }}
+        - name: library-init
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: GITSYNC_ORGANIZATIONS_JSON
+              value: {{ include "grafana.gitsyncOrganizationsJson" . | quote }}
+            - name: GITSYNC_DEFAULT_PATHS_JSON
+              value: "[]"
+            - name: GRAFANA_SERVER
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
+            - name: GRAFANA_USER
+              value: {{ include "grafana.adminUser" . | quote }}
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
+          volumeMounts:
+            - name: grafana-entities
+              mountPath: /opt/grafana/grafana-entities
+              readOnly: true
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -Eeuo pipefail
+
+              log() {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+
+              log_organization_start() {
+                local org="$1"
+                local org_id="$2"
+                shift 2
+                local paths
+
+                paths="$(printf '%s, ' "$@")"
+                paths="${paths%, }"
+                echo
+                log "==================== ORGANIZATION START ===================="
+                log "Organization: ${org} (ID: ${org_id})"
+                log "Repository paths: ${paths}"
+                log "============================================================"
+              }
+
+              log_organization_end() {
+                local org="$1"
+                local result="$2"
+
+                log "Result for ${org}: ${result}"
+                log "===================== ORGANIZATION END ====================="
+                echo
+              }
+
+              trim() {
+                sed 's/^[[:space:]]*//;s/[[:space:]]*$//' <<< "$1"
+              }
+
+              validate_repository_path() {
+                local path="$1"
+
+                if [[ -z "$path" || "$path" == /* || "/$path/" == *"/../"* ]]; then
+                  log "Invalid organization path: ${path}" >&2
+                  return 1
+                fi
+              }
+
+              wait_grafana() {
+                local timeout="${1:-300}"
+
+                until curl -fsS \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/health" >/dev/null; do
+                  timeout=$((timeout - 5))
+                  if (( timeout <= 0 )); then
+                    log "Timeout waiting for Grafana at ${GRAFANA_SERVER}" >&2
+                    exit 1
+                  fi
+                  log "Waiting for Grafana at ${GRAFANA_SERVER}..."
+                  sleep 5
+                done
+              }
+
+              resolve_org() {
+                local requested_org="$1"
+
+                if [[ "${requested_org,,}" == "main" || "${requested_org,,}" == "default" ]]; then
+                  jq -c 'first(.[] | select(.id == 1)) // empty' <<< "$TARGET_ORGS"
+                  return
+                fi
+
+                jq -c --arg org "$requested_org" \
+                  'first(.[] | select((.name | ascii_downcase) == ($org | ascii_downcase))) // empty' \
+                  <<< "$TARGET_ORGS"
+              }
+
+              api_request() {
+                local method="$1"
+                local path="$2"
+                local org_id="$3"
+                local response_file="$4"
+                local payload="${5:-}"
+                local -a args=(
+                  -sS
+                  -o "$response_file"
+                  -w '%{http_code}'
+                  -X "$method"
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}"
+                  -H "X-Grafana-Org-Id: ${org_id}"
+                  -H 'Accept: application/json'
+                )
+
+                if [[ -n "$payload" ]]; then
+                  args+=(
+                    -H 'Content-Type: application/json'
+                    --data "$payload"
+                  )
+                fi
+
+                HTTP_STATUS="$(curl "${args[@]}" "${GRAFANA_SERVER}${path}")"
+              }
+
+              log_api_error() {
+                local action="$1"
+                local response_file="$2"
+                local detail
+
+                detail="$(
+                  jq -r '.message // .error // .status // empty' "$response_file" 2>/dev/null || true
+                )"
+                [[ -n "$detail" ]] || detail="unexpected Grafana response"
+                log "${action}: HTTP ${HTTP_STATUS}: ${detail}" >&2
+              }
+
+              list_child_folders() {
+                local org_id="$1"
+                local parent_uid="$2"
+                local response_file="$3"
+                local -a args=(
+                  -sS
+                  -o "$response_file"
+                  -w '%{http_code}'
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}"
+                  -H "X-Grafana-Org-Id: ${org_id}"
+                  -H 'Accept: application/json'
+                  --get
+                  --data-urlencode 'limit=1000'
+                )
+
+                if [[ -n "$parent_uid" ]]; then
+                  args+=(--data-urlencode "parentUid=${parent_uid}")
+                fi
+
+                HTTP_STATUS="$(curl "${args[@]}" "${GRAFANA_SERVER}/api/folders")"
+              }
+
+              declare -A FOLDER_UID_CACHE=()
+              ENSURED_FOLDER_UID=""
+
+              ensure_folder_path() {
+                local org_id="$1"
+                local nested_path="$2"
+                local parent_uid=""
+                local current_path=""
+                local component cache_key response_file match_count folder_uid folder_uid_seed
+                local payload
+
+                ENSURED_FOLDER_UID=""
+                [[ -n "$nested_path" && "$nested_path" != "General" ]] || return 0
+
+                IFS='/' read -r -a path_components <<< "$nested_path"
+                for component in "${path_components[@]}"; do
+                  [[ -n "$component" && "$component" != "." && "$component" != ".." ]] || {
+                    log "Invalid library-panel folder path: ${nested_path}" >&2
+                    return 1
+                  }
+
+                  if [[ -n "$current_path" ]]; then
+                    current_path="${current_path}/${component}"
+                  else
+                    current_path="$component"
+                  fi
+                  cache_key="${org_id}/${current_path}"
+                  if [[ -n "${FOLDER_UID_CACHE[$cache_key]:-}" ]]; then
+                    parent_uid="${FOLDER_UID_CACHE[$cache_key]}"
+                    continue
+                  fi
+
+                  response_file="$(mktemp /tmp/grafana-folder-list.XXXXXX)"
+                  list_child_folders "$org_id" "$parent_uid" "$response_file"
+                  if [[ "$HTTP_STATUS" != "200" ]]; then
+                    log_api_error "Failed to list folders below ${parent_uid:-General}" "$response_file"
+                    rm -f "$response_file"
+                    return 1
+                  fi
+
+                  match_count="$(
+                    jq --arg title "$component" '[.[] | select(.title == $title)] | length' \
+                      "$response_file"
+                  )"
+                  if (( match_count > 1 )); then
+                    log "Multiple folders named ${component} exist below ${parent_uid:-General}" >&2
+                    rm -f "$response_file"
+                    return 1
+                  fi
+                  folder_uid="$(
+                    jq -r --arg title "$component" \
+                      'first(.[] | select(.title == $title) | .uid) // empty' \
+                      "$response_file"
+                  )"
+                  rm -f "$response_file"
+
+                  if [[ -z "$folder_uid" ]]; then
+                    folder_uid_seed="$(
+                      printf '%s' "${org_id}/${current_path}" | sha256sum | awk '{print $1}'
+                    )"
+                    folder_uid="lp-${folder_uid_seed:0:32}"
+                    payload="$(
+                      jq -cn \
+                        --arg uid "$folder_uid" \
+                        --arg title "$component" \
+                        --arg parent_uid "$parent_uid" \
+                        '{uid: $uid, title: $title}
+                         + if $parent_uid == "" then {} else {parentUid: $parent_uid} end'
+                    )"
+                    response_file="$(mktemp /tmp/grafana-folder-create.XXXXXX)"
+                    api_request POST /api/folders "$org_id" "$response_file" "$payload"
+                    if [[ "$HTTP_STATUS" != "200" && "$HTTP_STATUS" != "201" ]]; then
+                      if [[ "$HTTP_STATUS" == "409" ]]; then
+                        rm -f "$response_file"
+                        response_file="$(mktemp /tmp/grafana-folder-list.XXXXXX)"
+                        folder_uid=""
+                        list_child_folders "$org_id" "$parent_uid" "$response_file"
+                        if [[ "$HTTP_STATUS" == "200" ]]; then
+                          folder_uid="$(
+                            jq -r --arg title "$component" \
+                              'first(.[] | select(.title == $title) | .uid) // empty' \
+                              "$response_file"
+                          )"
+                        fi
+                      fi
+                      if [[ -z "$folder_uid" || "$HTTP_STATUS" != "200" ]]; then
+                        log_api_error "Failed to create folder ${current_path}" "$response_file"
+                        rm -f "$response_file"
+                        return 1
+                      fi
+                    else
+                      folder_uid="$(jq -r '.uid // empty' "$response_file")"
+                      if [[ -z "$folder_uid" ]]; then
+                        log "Grafana created ${current_path} without returning its UID" >&2
+                        rm -f "$response_file"
+                        return 1
+                      fi
+                      log "Created folder ${current_path} (${folder_uid})"
+                    fi
+                    rm -f "$response_file"
+                  fi
+
+                  FOLDER_UID_CACHE[$cache_key]="$folder_uid"
+                  parent_uid="$folder_uid"
+                done
+
+                ENSURED_FOLDER_UID="$parent_uid"
+              }
+
+              normalize_library_panel() {
+                local source_file="$1"
+                local nested_path="$2"
+                local output_file="$3"
+
+                if jq -e 'type == "object" and (.Entity | type == "object")' \
+                  "$source_file" >/dev/null; then
+                  jq --arg nested_path "$nested_path" \
+                    '.NestedPath = $nested_path' \
+                    "$source_file" > "$output_file"
+                elif jq -e 'type == "object"' "$source_file" >/dev/null; then
+                  jq --arg nested_path "$nested_path" \
+                    '{Entity: ., NestedPath: $nested_path}' \
+                    "$source_file" > "$output_file"
+                else
+                  log "Invalid library-panel JSON object: ${source_file}" >&2
+                  return 1
+                fi
+
+                if ! jq -e '
+                  (.Entity.uid | type == "string" and length > 0) and
+                  (.Entity.name | type == "string" and length > 0) and
+                  (.Entity.model | type == "object")
+                ' "$output_file" >/dev/null; then
+                  log "Library panel is missing Entity.uid, Entity.name, or Entity.model: ${source_file}" >&2
+                  return 1
+                fi
+              }
+
+              merge_library_panels() {
+                local destination="$1"
+                local raw_path repository_path source file relative target
+                local nested_path candidate
+                local count=0
+
+                mkdir -p "$destination"
+
+                for raw_path in "${REPOSITORY_PATHS[@]}"; do
+                  repository_path="$(trim "$raw_path")"
+                  [[ -n "$repository_path" ]] || continue
+                  validate_repository_path "$repository_path"
+
+                  source="/opt/grafana/grafana-entities/org-${configured_orgs}/${repository_path}/libraryelements"
+                  if [[ ! -d "$source" ]]; then
+                    log "Library-panel directory not found; skipping ${repository_path}: ${source}"
+                    continue
+                  fi
+
+                  while IFS= read -r -d '' file; do
+                    relative="${file#"$source"/}"
+                    target="${destination}/${relative}"
+                    mkdir -p "$(dirname "$target")"
+
+                    nested_path="$(dirname "$relative")"
+                    if [[ "$nested_path" == "." ]]; then
+                      nested_path="General"
+                    fi
+
+                    candidate="$(mktemp /tmp/grafana-library-panel.XXXXXX)"
+                    if ! normalize_library_panel "$file" "$nested_path" "$candidate"; then
+                      rm -f "$candidate"
+                      exit 1
+                    fi
+
+                    if [[ -e "$target" ]]; then
+                      if ! cmp -s "$candidate" "$target"; then
+                        rm -f "$candidate"
+                        log "Library-panel collision: ${relative} differs in ${repository_path}" >&2
+                        exit 1
+                      fi
+                      rm -f "$candidate"
+                      log "Skipping identical library panel ${relative} from ${repository_path}"
+                      continue
+                    fi
+
+                    mv "$candidate" "$target"
+                    count=$((count + 1))
+                    log "Adding library panel ${relative} from ${repository_path}"
+                  done < <(find "$source" -type f -name '*.json' -size +0c -print0 | sort -z)
+                done
+
+                if (( count == 0 )); then
+                  log "No library-panel JSON files found below the organization's configured paths; nothing to upload"
+                else
+                  log "Prepared ${count} unique library-panel files"
+                fi
+
+                LIBRARY_PANEL_COUNT="$count"
+              }
+
+              upsert_library_panel() {
+                local org_id="$1"
+                local file="$2"
+                local uid name nested_path folder_uid encoded_uid desired_payload response_file
+                local version update_payload attempt
+
+                uid="$(jq -r '.Entity.uid' "$file")"
+                name="$(jq -r '.Entity.name' "$file")"
+                nested_path="$(jq -r '.NestedPath // "General"' "$file")"
+
+                ensure_folder_path "$org_id" "$nested_path"
+                folder_uid="$ENSURED_FOLDER_UID"
+                desired_payload="$(
+                  jq -c --arg folder_uid "$folder_uid" '
+                    {
+                      uid: .Entity.uid,
+                      name: .Entity.name,
+                      kind: (.Entity.kind // 1),
+                      model: .Entity.model,
+                      folderUid: $folder_uid
+                    }
+                  ' "$file"
+                )"
+                encoded_uid="$(jq -rn --arg value "$uid" '$value | @uri')"
+
+                for attempt in 1 2 3; do
+                  response_file="$(mktemp /tmp/grafana-library-get.XXXXXX)"
+                  api_request GET "/api/library-elements/${encoded_uid}" "$org_id" "$response_file"
+
+                  if [[ "$HTTP_STATUS" == "404" ]]; then
+                    rm -f "$response_file"
+                    response_file="$(mktemp /tmp/grafana-library-create.XXXXXX)"
+                    api_request POST /api/library-elements "$org_id" "$response_file" "$desired_payload"
+                    if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "201" ]]; then
+                      rm -f "$response_file"
+                      CREATED_LIBRARY_PANELS=$((CREATED_LIBRARY_PANELS + 1))
+                      log "Created library panel ${name} (${uid}) in ${nested_path}"
+                      return 0
+                    fi
+                    if [[ "$HTTP_STATUS" == "409" || "$HTTP_STATUS" == "412" ]]; then
+                      rm -f "$response_file"
+                      log "Library panel ${uid} changed concurrently; retrying (${attempt}/3)"
+                      continue
+                    fi
+                    log_api_error "Failed to create library panel ${name} (${uid})" "$response_file"
+                    rm -f "$response_file"
+                    return 1
+                  fi
+
+                  if [[ "$HTTP_STATUS" != "200" ]]; then
+                    log_api_error "Failed to read library panel ${name} (${uid})" "$response_file"
+                    rm -f "$response_file"
+                    return 1
+                  fi
+
+                  if jq -e --argjson desired "$desired_payload" '
+                    .result as $current
+                    | ($current.uid == $desired.uid)
+                    and ($current.name == $desired.name)
+                    and ($current.kind == $desired.kind)
+                    and (($current.meta.folderUid // $current.folderUid // "") == $desired.folderUid)
+                    and (
+                      ($current.model | del(.id, .version, .libraryPanel))
+                      == ($desired.model | del(.id, .version, .libraryPanel))
+                    )
+                  ' "$response_file" >/dev/null; then
+                    rm -f "$response_file"
+                    UNCHANGED_LIBRARY_PANELS=$((UNCHANGED_LIBRARY_PANELS + 1))
+                    log "Library panel ${name} (${uid}) is unchanged"
+                    return 0
+                  fi
+
+                  version="$(jq -r '.result.version // empty' "$response_file")"
+                  rm -f "$response_file"
+                  if [[ ! "$version" =~ ^[0-9]+$ ]]; then
+                    log "Library panel ${uid} has no numeric version; cannot update safely" >&2
+                    return 1
+                  fi
+                  update_payload="$(
+                    jq -cn \
+                      --argjson desired "$desired_payload" \
+                      --argjson version "$version" \
+                      '$desired + {version: $version}'
+                  )"
+                  response_file="$(mktemp /tmp/grafana-library-update.XXXXXX)"
+                  api_request PATCH "/api/library-elements/${encoded_uid}" \
+                    "$org_id" "$response_file" "$update_payload"
+                  if [[ "$HTTP_STATUS" == "200" ]]; then
+                    rm -f "$response_file"
+                    UPDATED_LIBRARY_PANELS=$((UPDATED_LIBRARY_PANELS + 1))
+                    log "Updated library panel ${name} (${uid}) in ${nested_path}"
+                    return 0
+                  fi
+                  if [[ "$HTTP_STATUS" == "409" || "$HTTP_STATUS" == "412" ]]; then
+                    rm -f "$response_file"
+                    log "Library panel ${uid} changed concurrently; retrying (${attempt}/3)"
+                    continue
+                  fi
+                  log_api_error "Failed to update library panel ${name} (${uid})" "$response_file"
+                  rm -f "$response_file"
+                  return 1
+                done
+
+                log "Library panel ${name} (${uid}) still conflicts after 3 attempts" >&2
+                return 1
+              }
+
+              sync_library_panels() {
+                local source_dir="$1"
+                local org_id="$2"
+                local file
+
+                CREATED_LIBRARY_PANELS=0
+                UPDATED_LIBRARY_PANELS=0
+                UNCHANGED_LIBRARY_PANELS=0
+                while IFS= read -r -d '' file; do
+                  upsert_library_panel "$org_id" "$file"
+                done < <(find "$source_dir" -type f -name '*.json' -size +0c -print0 | sort -z)
+              }
+
+              delete_stale_library_panels() {
+                local source_dir="$1"
+                local org_id="$2"
+                local file response_file elements_file element_count total_count page per_page element uid encoded_uid
+
+                declare -A SOURCE_LIBRARY_UIDS=()
+                while IFS= read -r -d '' file; do
+                  uid="$(jq -r '.Entity.uid // empty' "$file")"
+                  if [[ -n "$uid" ]]; then
+                    SOURCE_LIBRARY_UIDS["$uid"]=1
+                  fi
+                done < <(find "$source_dir" -type f -name '*.json' -size +0c -print0 | sort -z)
+
+                DELETED_LIBRARY_PANELS=0
+                elements_file="$(mktemp /tmp/grafana-library-inventory.XXXXXX)"
+                page=1
+                per_page=1000
+                while :; do
+                  response_file="$(mktemp /tmp/grafana-library-list.XXXXXX)"
+                  api_request GET "/api/library-elements?kind=1&perPage=${per_page}&page=${page}" \
+                    "$org_id" "$response_file"
+                  if [[ "$HTTP_STATUS" != "200" ]]; then
+                    log_api_error "Failed to list library panels for stale-panel cleanup" "$response_file"
+                    rm -f "$response_file" "$elements_file"
+                    return 1
+                  fi
+
+                  if ! jq -e '(.result.elements | type) == "array"' "$response_file" >/dev/null; then
+                    log "Invalid library-panel inventory; refusing stale-panel deletion" >&2
+                    rm -f "$response_file" "$elements_file"
+                    return 1
+                  fi
+                  element_count="$(jq '.result.elements | length' "$response_file")"
+                  total_count="$(jq -r '.result.totalCount // .totalCount // 0' "$response_file")"
+                  jq -c '.result.elements[]' "$response_file" >> "$elements_file"
+                  rm -f "$response_file"
+
+                  if (( element_count == 0 || page * per_page >= total_count )); then
+                    break
+                  fi
+                  page=$((page + 1))
+                done
+
+                # Finish pagination before deleting: deleting while paging
+                # shifts the remaining elements and can skip stale panels.
+                  while IFS= read -r element; do
+                    uid="$(jq -r '.uid // empty' <<< "$element")"
+                    [[ -n "$uid" ]] || continue
+                    [[ -n "${SOURCE_LIBRARY_UIDS[$uid]:-}" ]] && continue
+
+                    encoded_uid="$(jq -rn --arg value "$uid" '$value | @uri')"
+                    response_file="$(mktemp /tmp/grafana-library-delete.XXXXXX)"
+                    api_request DELETE "/api/library-elements/${encoded_uid}" \
+                      "$org_id" "$response_file"
+                    if [[ "$HTTP_STATUS" == "200" || "$HTTP_STATUS" == "204" || "$HTTP_STATUS" == "404" ]]; then
+                      if [[ "$HTTP_STATUS" != "404" ]]; then
+                        DELETED_LIBRARY_PANELS=$((DELETED_LIBRARY_PANELS + 1))
+                        log "Deleted stale library panel ${uid}"
+                      fi
+                    else
+                      log_api_error "Failed to delete stale library panel ${uid}" "$response_file"
+                      rm -f "$response_file"
+                      return 1
+                    fi
+                    rm -f "$response_file"
+                  done < "$elements_file"
+                rm -f "$elements_file"
+              }
+
+              wait_grafana
+              TARGET_ORGS="$(
+                curl -fsS \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/orgs"
+              )"
+
+              rm -rf /tmp/grafana-library
+              configured_orgs=0
+              declare -A CONFIGURED_ORG_NAMES=()
+
+              while IFS= read -r organization_config; do
+                requested_org="$(jq -r '.org // empty' <<< "$organization_config")"
+                mapfile -t REPOSITORY_PATHS < <(
+                  jq -r --argjson default "$GITSYNC_DEFAULT_PATHS_JSON" \
+                    '(.path // .paths // $default)[]? // empty' <<< "$organization_config"
+                )
+
+                if [[ -z "$requested_org" ]]; then
+                  log "Every gitsync.organizations entry requires org" >&2
+                  exit 1
+                fi
+                if (( ${#REPOSITORY_PATHS[@]} == 0 )); then
+                  log "Organization ${requested_org} requires at least one path" >&2
+                  exit 1
+                fi
+
+                org_record="$(resolve_org "$requested_org")"
+                if [[ -z "$org_record" ]]; then
+                  log "Grafana organization not found: ${requested_org}" >&2
+                  exit 1
+                fi
+                org="$(jq -r '.name' <<< "$org_record")"
+                org_id="$(jq -r '.id' <<< "$org_record")"
+                org_key="${org,,}"
+                if [[ -n "${CONFIGURED_ORG_NAMES[$org_key]:-}" ]]; then
+                  log "Duplicate organization configuration: ${org}" >&2
+                  exit 1
+                fi
+                CONFIGURED_ORG_NAMES[$org_key]="$org"
+                if [[ ! -d "/opt/grafana/grafana-entities/org-${configured_orgs}" ]]; then
+                  log "Missing entities snapshot for ${org} at org-${configured_orgs}" >&2
+                  exit 1
+                fi
+                log_organization_start "$org" "$org_id" "${REPOSITORY_PATHS[@]}"
+
+                SOURCE_LIBRARY_DIR="/tmp/grafana-library/source-${configured_orgs}"
+                LIBRARY_PANEL_COUNT=0
+                merge_library_panels "$SOURCE_LIBRARY_DIR"
+                if (( LIBRARY_PANEL_COUNT > 0 )); then
+                  log "Synchronizing library panels to ${org} (organization ID ${org_id})"
+                  sync_library_panels "$SOURCE_LIBRARY_DIR" "$org_id"
+                else
+                  CREATED_LIBRARY_PANELS=0
+                  UPDATED_LIBRARY_PANELS=0
+                  UNCHANGED_LIBRARY_PANELS=0
+                fi
+                log "Checking for stale library panels in ${org}"
+                delete_stale_library_panels "$SOURCE_LIBRARY_DIR" "$org_id"
+                log_organization_end "$org" "created=${CREATED_LIBRARY_PANELS}, updated=${UPDATED_LIBRARY_PANELS}, unchanged=${UNCHANGED_LIBRARY_PANELS}, deleted=${DELETED_LIBRARY_PANELS}"
+                configured_orgs=$((configured_orgs + 1))
+              done < <(jq -c '.[]' <<< "$GITSYNC_ORGANIZATIONS_JSON")
+
+              if (( configured_orgs == 0 )); then
+                log "No organizations contained library panels; nothing to synchronize"
+                exit 0
+              fi
+
+              log "Library-panel synchronization completed for ${configured_orgs} organizations"
+{{- end }}

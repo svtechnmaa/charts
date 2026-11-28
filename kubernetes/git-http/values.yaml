@@ -1,0 +1,181 @@
+global:
+  github:
+    user: ""
+    fg_token: ""
+  sharedVolume:
+    enabled: true    # Enable for adding Volume/VolumeMounts to pod
+  sharedPersistenceVolume:
+    - volumeName: git-repository
+      pvcName: git-repository-pvc
+      storageSize: 2Gi
+      path: /srv/git
+      accessModes: ReadWriteOnce
+      shareFor:
+        - git-http
+      # storageClass: seaweedfs-storage
+      storageClass: git-repository-hostpath # for hostPath PV (need folderName for syncthing to share between nodes)
+      folderName: git-repository # for syncthing
+
+
+timezone: Asia/Ho_Chi_Minh
+
+image:
+  registry: ghcr.io
+  repository: svtechnmaa/svtech_git_server
+  tag: v1.0.0
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# This chart is the sole producer. Existing nonempty managed keys are retained.
+# An external Secret must provide username/password in the same namespace.
+auth:
+  existingSecret: ""
+
+replicaCount: 1
+updateStrategy: Recreate
+
+commonAnnotations: {}
+commonLabels: {}
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+initContainerSecurityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  runAsGroup: 0
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+    add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+command:
+  - /bin/sh
+  - -ec
+args:
+  - |
+    rm -f /tmp/httpd.pid /tmp/cgisock.*
+    exec httpd -DFOREGROUND -f /etc/git-http/httpd.conf
+
+apache:
+  serverName: git.internal
+  repositoryRoot: /srv/git
+  # Empty trusts every repository directly below repositoryRoot. Set an exact
+  # path when this server should expose only one bare repository.
+  safeDirectory: ""
+  # Forward the client's Git-Protocol header. Do not force v2 globally because
+  # git-receive-pack may advertise an empty repository using protocol v0.
+  forceProtocolV2: false
+
+# Git configuration applied to every declared bare repository on pod startup.
+# Non-fast-forward updates are enabled because the Grafana bootstrap workflow
+# intentionally promotes gitsync.remote_branch to main with force-with-lease.
+# Ref deletion remains disabled.
+repositoryConfig:
+  uploadpack.allowFilter: true
+  receive.denyNonFastForwards: false
+  receive.denyDeletes: true
+  http.receivepack: true
+
+service:
+  type: ClusterIP
+  port: 8080
+  annotations: {}
+  sessionAffinity: None
+
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  path: /git
+  pathType: Prefix
+  hosts: []
+  tls: []
+
+livenessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -ec
+      - test -S /tmp/cgisock.1
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  exec:
+    command:
+      - /bin/sh
+      - -ec
+      - test -S /tmp/cgisock.1
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+resources:
+  limits: {}
+  requests: {}
+
+# Import offline Git bundles from the repository PVC. Bundle files must use:
+#   <incomingRoot>/<repository>/<branch>/*.bundle
+# Branch names may contain '/', for example:
+#   /srv/git/bundle/grafana-entities.git/customer/test/update.bundle
+# Every inspected bundle is moved below processedRoot/applied, /skipped or
+# /failed while preserving its repository/branch-relative path. Retry a failed
+# bundle by moving it back to incomingRoot after correcting the cause.
+bundleSync:
+  enabled: true
+  incomingRoot: /srv/git/bundle
+  processedRoot: /srv/git/processed
+  intervalSeconds: 30
+  resources:
+    limits: {}
+    requests: {}
+  extraVolumeMounts: []
+
+affinity: {}
+tolerations: []
+
+# Repository storage can come from global.sharedPersistenceVolume or these
+# chart-local values. The init container creates missing bare repositories;
+# initial content can come from the bundle sidecar or another bootstrap workflow.
+volumes:
+  - name: config
+    configMap:
+      name: '{{ .Chart.Name }}-config'
+  - name: auth
+    emptyDir: {}
+
+volumeMounts:
+  - name: config
+    mountPath: /etc/git-http/httpd.conf
+    subPath: httpd.conf
+    readOnly: true
+  - name: auth
+    mountPath: /etc/git-http/auth
+    readOnly: true
+
+# Bare repositories created by the init container. Repository names must be
+# direct children of apache.repositoryRoot and cannot contain '/'.
+repositories:
+  - grafana-entities.git

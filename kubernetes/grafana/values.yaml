@@ -5,6 +5,14 @@ global:
     grafana:
       user: "" # Non-empty global input overrides grafanaConfig.auth.username
       password: "" # Empty: generate and preserve a 32-character password.
+  github:
+    user: ""
+    email: ""
+    fg_token: ""
+    signing_key: |    # SSH or GPG private key
+
+  # Optional HTTPS proxy used by the entities init container in GitHub mode.
+  http_proxy: ""
 
   sharedVolume:
     enabled: false
@@ -29,6 +37,13 @@ image:
   tag: v1.3.3
   pullPolicy: IfNotPresent
   # debug: true
+
+grafanaEntities:
+  image:
+    registry: ghcr.io
+    repository: svtechnmaa/grafana-entities
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
 
 renderer:
   enabled: true
@@ -108,12 +123,9 @@ nodeSelector: {}
 ## Tolerations for pod assignment
 tolerations: []
 
-## Extra volumes to add to the deployment
-extraVolumes: []
-
-## Extra volume mounts to add to the container
-extraVolumeMounts: []
-
+## Extra volumes and mounts for the Grafana deployment.
+volumes: []
+volumeMounts: []
 securityContext:
   enabled: false
   fsGroup: 0
@@ -217,68 +229,38 @@ grafanaConfig:
   subPath: /grafana
   env: []
 
-gdgConfig:
-  runInitDataJob: true
-  contextName: main
-  storageEngine: {}
+gitsync:
+  enabled: true
+  mode: git # git or github
+  # Reference the git-http producer Secret; Grafana never copies its credentials.
+  git:
+    auth:
+      existingSecret: git-http-auth
+      usernameKey: username
+      passwordKey: password
+    url: "http://git-http:8080/git/grafana-entities.git"
+    organizations:
+      - org: "Main"
+        write: true
+        branch: "main"
+        path: [nmaa, itim]
 
-  # Main context configuration
-  mainContext:
-    # URL for Grafana
-    url: http://grafana:3000/grafana
-    organizationName: "Main Org."
-    outputPath: /opt/grafana-entities
-    dashboardSettings:
-      nestedFolders: true
-      ignoreFilters: true
-      ignoreBadFolders: false
-    watched:
-      - Library-Panels
-    watchedFoldersOverride: []
 
-    # Credentials - these should be provided in a separate secrets file
-    credentials:
-      username: "" # Will be populated from secrets
-      password: "" # Will be populated from secrets
-      token: ""    # Will be populated from secrets
+  github:
+    url: "https://github.com/svtechnmaa/grafana-entities"
+    organizations:
+      - org: "Main"
+        write: true
+        branch: "main"
+        path: [nmaa, itim]
 
-    # Connection credential rules
-    connectionRules:
-      - rules:
-          - field: name
-            regex: IcingaDB
-        secureData: icingadb.json
-      - rules:
-          - field: name
-            regex: influxdb_nms
-        secureData: influxdb.json
-      - rules:
-          - field: name
-            regex: junos_tableview
-        secureData: junos-tableview.json
-      - rules:
-          - field: name
-            regex: Audit_Config
-        secureData: audit-config.json
-      - rules:
-          - field: type
-            regex: elasticsearch
-        secureData: elasticsearch.json
-
-  # Global settings
-  global:
-    debug: true
-    apiDebug: false
-    ignoreSSLErrors: true
-    retryCount: 3
-    retryDelay: 5s
-    clearOutput: false
-
-  # gdg secure credential for connections(grafana datasource)
+  # Shared initial datasource credentials. Existing datasources are not updated.
   secureFiles:
     icingadb:
       user: icingadb_user
       password: icingadb_password
+    influxdb-flux:
+        token: influxdb_user:influxdb_password
     influxdb:
         user: influxdb_user
         password: influxdb_password

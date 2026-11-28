@@ -1,0 +1,251 @@
+{{- define "grafana.initDatasources" }}
+        - name: datasource-init
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ include "common.names.fullname" . }}-datasource-auth
+                optional: true
+          env:
+            - name: CD_ORGANIZATIONS_JSON
+              value: {{ include "grafana.gitsyncOrganizationsJson" . | quote }}
+            - name: GRAFANA_SERVER
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
+            - name: GRAFANA_USER
+              value: {{ include "grafana.adminUser" . | quote }}
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
+          volumeMounts:
+            - name: grafana-entities
+              mountPath: /opt/grafana/grafana-entities
+              readOnly: true
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -Eeuo pipefail
+              log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+              until curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                "${GRAFANA_SERVER}/api/health" >/dev/null; do
+                log "Waiting for Grafana..."
+                sleep 5
+              done
+              TARGET_ORGS="$(curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                "${GRAFANA_SERVER}/api/orgs")"
+
+              resolve_org_id() {
+                local org="$1"
+                if [[ "${org,,}" == main || "${org,,}" == default ]]; then
+                  echo 1
+                else
+                  jq -r --arg org "$org" \
+                    'first(.[] | select((.name | ascii_downcase) == ($org | ascii_downcase)) | .id) // empty' \
+                    <<< "$TARGET_ORGS"
+                fi
+              }
+
+              api_get_datasources() {
+                local org_id="$1" status
+                status="$(curl -sS -o /tmp/grafana-datasources-current.json -w '%{http_code}' \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  -H "X-Grafana-Org-Id: ${org_id}" \
+                  "${GRAFANA_SERVER}/api/datasources")"
+                if [[ "$status" != 200 ]] || ! jq -e 'type == "array"' \
+                  /tmp/grafana-datasources-current.json >/dev/null; then
+                  log "Unable to list datasources for orgId ${org_id}: HTTP ${status}" >&2
+                  exit 1
+                fi
+              }
+
+              create_datasource() {
+                local org_id="$1" payload="$2" status name
+                name="$(jq -r '.name' <<< "$payload")"
+                status="$(printf '%s' "$payload" | curl -sS \
+                  -o /tmp/grafana-datasource-create.json -w '%{http_code}' \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  -H "X-Grafana-Org-Id: ${org_id}" \
+                  -H 'Content-Type: application/json' \
+                  -X POST --data-binary @- "${GRAFANA_SERVER}/api/datasources")"
+                if [[ "$status" != 200 && "$status" != 201 ]]; then
+                  log "Failed to create datasource ${name} for orgId ${org_id}: HTTP ${status}" >&2
+                  exit 1
+                fi
+                log "Created datasource ${name} in orgId ${org_id}"
+              }
+
+              # Resolve only exact Grafana provisioning placeholders. The API
+              # does not expand them. A missing credential omits auth fields.
+              resolve_entry() {
+                local entry="$1" missing invalid
+                missing="$(jq -r '
+                  [paths(scalars) as $p
+                   | getpath($p) | strings
+                   | select(test("^\\$__env\\{[A-Za-z_][A-Za-z0-9_]*\\}$"))
+                   | capture("^\\$__env\\{(?<key>[A-Za-z_][A-Za-z0-9_]*)\\}$").key
+                   | select((env[.] // "") == "")] | unique | join(",")
+                ' <<< "$entry")"
+                invalid="$(jq -r '
+                  [paths(scalars) as $p
+                   | getpath($p) | strings
+                   | select(test("^\\$__env\\{[A-Za-z_][A-Za-z0-9_]*\\}$"))
+                   | capture("^\\$__env\\{(?<key>[A-Za-z_][A-Za-z0-9_]*)\\}$").key as $key
+                   | select((env[$key] // "") == "")
+                   | select(($p[0] != "user") and ($p[0] != "basicAuthUser") and ($p[0] != "secureJsonData"))
+                   | $key] | unique | join(",")
+                ' <<< "$entry")"
+                if [[ -n "$invalid" ]]; then
+                  log "Missing non-auth datasource variables: ${invalid}" >&2
+                  exit 1
+                fi
+                if [[ -n "$missing" ]]; then
+                  log "Missing datasource credential variables ${missing}; creating without authentication" >&2
+                fi
+                jq -c --argjson noAuth "$( [[ -n "$missing" ]] && echo true || echo false )" '
+                  def resolve:
+                    if type == "object" then
+                      with_entries(.value |= resolve | select(.value != null))
+                    elif type == "array" then map(resolve)
+                    elif type == "string" and test("^\\$__env\\{[A-Za-z_][A-Za-z0-9_]*\\}$") then
+                      capture("^\\$__env\\{(?<key>[A-Za-z_][A-Za-z0-9_]*)\\}$").key as $key
+                      | (env[$key] // null)
+                    else . end;
+                  resolve | del(.orgId, .id, .version, .editable, .updateIntervalSeconds)
+                  | if $noAuth then
+                      del(.user, .basicAuthUser, .secureJsonData.password,
+                          .secureJsonData.basicAuthPassword)
+                      | .basicAuth = false
+                    else . end
+                  | if .secureJsonData == {} then del(.secureJsonData) else . end
+                ' <<< "$entry"
+              }
+
+              ensure_datasource() {
+                local entry="$1" name uid existing existing_uid payload
+                name="$(jq -r '.name' <<< "$entry")"
+                uid="$(jq -r '.uid // empty' <<< "$entry")"
+                existing="$(jq -c --arg uid "$uid" --arg name "$name" '
+                  first(.[] | select(($uid != "" and .uid == $uid) or .name == $name)) // empty
+                ' /tmp/grafana-datasources-current.json)"
+                if [[ -n "$existing" ]]; then
+                  existing_uid="$(jq -r '.uid // empty' <<< "$existing")"
+                  if [[ -n "$uid" && "$existing_uid" != "$uid" ]]; then
+                    log "Datasource name ${name} already exists in ${org} with UID ${existing_uid}; expected ${uid}" >&2
+                    exit 1
+                  fi
+                  if [[ "$(jq -r '.isDefault // false' <<< "$entry")" == true &&
+                        "$(jq -r '.isDefault // false' <<< "$existing")" != true ]]; then
+                    log "Configured default ${name} already exists in ${org} but is not default; leaving it unchanged" >&2
+                  fi
+                  log "Keeping existing datasource ${name} in ${org}"
+                  return
+                fi
+                payload="$(resolve_entry "$entry")"
+                if [[ "$(jq -r '.isDefault // false' <<< "$payload")" == true ]] &&
+                   jq -e 'any(.[]; .isDefault == true)' \
+                     /tmp/grafana-datasources-current.json >/dev/null; then
+                  payload="$(jq -c '.isDefault = false' <<< "$payload")"
+                  log "Existing default datasource in ${org}; ${name} will not become default"
+                fi
+                create_datasource "$org_id" "$payload"
+                api_get_datasources "$org_id"
+              }
+
+              org_index=0
+              while IFS= read -r organization; do
+                org="$(jq -r '.org // empty' <<< "$organization")"
+                org_id="$(resolve_org_id "$org")"
+                if [[ -z "$org_id" ]]; then
+                  log "Grafana org ${org} not found" >&2
+                  exit 1
+                fi
+                snapshot="/opt/grafana/grafana-entities/org-${org_index}"
+                if [[ ! -d "$snapshot" ]]; then
+                  log "Missing entities snapshot for ${org}" >&2
+                  exit 1
+                fi
+                log "===== Datasources: ${org} (orgId ${org_id}) ====="
+                api_get_datasources "$org_id"
+                declare -A seen_names=() seen_uids=()
+                default_entry=""
+                other_entries=()
+                mapfile -t paths < <(jq -r '.path[]? // empty' <<< "$organization")
+                if (( ${#paths[@]} == 0 )); then
+                  log "Org ${org} has no repository paths" >&2
+                  exit 1
+                fi
+                for repository_path in "${paths[@]}"; do
+                  if [[ -z "$repository_path" || "$repository_path" == /* ||
+                        "/$repository_path/" == *"/../"* ]]; then
+                    log "Invalid repository path for ${org}: ${repository_path}" >&2
+                    exit 1
+                  fi
+                  datasource_dir="${snapshot}/${repository_path}/datasources"
+                  [[ -d "$datasource_dir" ]] || continue
+                  while IFS= read -r -d '' file; do
+                    parsed_file="/opt/grafana/grafana-entities/parsed/org-${org_index}/${repository_path}/datasources/${file##*/}.json"
+                    if [[ ! -s "$parsed_file" ]]; then
+                      log "Missing parsed datasource file: ${parsed_file}" >&2
+                      exit 1
+                    fi
+                    entries="$(cat "$parsed_file")"
+                    if ! jq -e 'type == "array" and all(.[]; type == "object")' \
+                      <<< "$entries" >/dev/null; then
+                      log "Invalid datasource list in ${file}" >&2
+                      exit 1
+                    fi
+                    while IFS= read -r entry; do
+                      name="$(jq -r '.name // empty' <<< "$entry")"
+                      type="$(jq -r '.type // empty' <<< "$entry")"
+                      uid="$(jq -r '.uid // empty' <<< "$entry")"
+                      if [[ -z "$name" || -z "$type" ]]; then
+                        log "Datasource in ${file} needs name and type" >&2
+                        exit 1
+                      fi
+                      if [[ -n "${seen_names[$name]:-}" ||
+                            ( -n "$uid" && -n "${seen_uids[$uid]:-}" ) ]]; then
+                        log "Duplicate datasource name or UID for ${org}: ${name}" >&2
+                        exit 1
+                      fi
+                      seen_names[$name]=1
+                      [[ -z "$uid" ]] || seen_uids[$uid]=1
+                      if [[ "$(jq -r '.isDefault // false' <<< "$entry")" == true ]]; then
+                        if [[ -n "$default_entry" ]]; then
+                          log "Additional default datasource ${name} in ${org}; creating it as non-default"
+                          other_entries+=("$(jq -c '.isDefault = false' <<< "$entry")")
+                        else
+                          default_entry="$entry"
+                        fi
+                      else
+                        other_entries+=("$entry")
+                      fi
+                    done < <(jq -c '.[]' <<< "$entries")
+                  done < <(find "$datasource_dir" -maxdepth 1 -type f \
+                    \( -name '*.yaml' -o -name '*.yml' \) -size +0c -print0 | sort -z)
+                done
+                if [[ -n "$default_entry" ]]; then
+                  ensure_datasource "$default_entry"
+                elif (( ${#other_entries[@]} > 0 )) &&
+                     ! jq -e 'any(.[]; .isDefault == true)' \
+                       /tmp/grafana-datasources-current.json >/dev/null; then
+                  log "No default declared for ${org}; Grafana may choose the first created datasource"
+                fi
+                for entry in "${other_entries[@]}"; do
+                  ensure_datasource "$entry"
+                done
+                api_get_datasources "$org_id"
+                actual_default="$(jq -r '[.[] | select(.isDefault == true) | .name] | join(", ")' \
+                  /tmp/grafana-datasources-current.json)"
+                if [[ -n "$actual_default" ]]; then
+                  log "Default datasource in ${org} (orgId ${org_id}): ${actual_default}"
+                else
+                  log "No default datasource in ${org} (orgId ${org_id})"
+                fi
+                unset seen_names seen_uids default_entry other_entries
+                org_index=$((org_index + 1))
+              done < <(jq -c '.[]' <<< "$CD_ORGANIZATIONS_JSON")
+              log "Datasource initialization completed for ${org_index} organizations"
+{{- end -}}

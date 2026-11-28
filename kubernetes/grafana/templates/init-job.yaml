@@ -1,0 +1,343 @@
+{{- if .Values.gitsync.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Chart.Name }}-init
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: grafana-entities-init
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    helm.sh/hook-weight: "20"
+    argogitsync.argoproj.io/hook: PostSync
+    argogitsync.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argogitsync.argoproj.io/sync-wave: "20"
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        app.kubernetes.io/component: grafana-entities-init
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      volumes:
+      # shareVolume(volume): define in the global values
+        {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+        {{- range .Values.global.sharedPersistenceVolume }}
+        {{- if has $.Chart.Name .shareFor }}
+        - name: {{ .volumeName }}
+          persistentVolumeClaim:
+            claimName: {{ .pvcName }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+      # unshareVolume(volume): define in the chart's values.yaml
+        {{- if .Values.volumes }}
+        {{- tpl (toYaml .Values.volumes) $ | nindent 8 }}
+        {{- end }}
+        - name: grafana-entities
+          emptyDir: {}
+      initContainers:
+        - name: grafana-entities
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.grafanaEntities.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: GITSYNC_MODE
+              value: {{ include "grafana.gitsyncMode" . | quote }}
+            - name: GITSYNC_ORGANIZATIONS_JSON
+              value: {{ include "grafana.gitsyncOrganizationsJson" . | quote }}
+            - name: GITSYNC_URL
+              value: {{ include "grafana.gitsyncUrl" . | quote }}
+            - name: GITHUB_SOURCE_URL
+              value: {{ required "gitsync.github.url is required as the source for missing git branches" .Values.gitsync.github.url | quote }}
+            {{- if not (empty (default "" .Values.global.http_proxy)) }}
+            - name: HTTPS_PROXY
+              value: {{ .Values.global.http_proxy | quote }}
+            {{- end }}
+            - name: GIT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.gitAuthSecretName" . | quote }}
+                  key: {{ include "grafana.gitAuthUsernameKey" . | quote }}
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.gitAuthSecretName" . | quote }}
+                  key: {{ include "grafana.gitAuthPasswordKey" . | quote }}
+            - name: GITHUB_SOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
+                  key: signer_name
+                  optional: true
+            - name: GITHUB_SOURCE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.managedAuthSecretName" . | quote }}
+                  key: token
+                  optional: true
+            - name: GIT_TERMINAL_PROMPT
+              value: "0"
+          volumeMounts:
+            # shareVolume: VolumeMount
+            {{- if and .Values.global.sharedPersistenceVolume .Values.global.sharedVolume.enabled }}
+            {{- range .Values.global.sharedPersistenceVolume }}
+            {{- if has $.Chart.Name .shareFor }}
+            - name: {{ .volumeName }}
+              mountPath: {{ .path }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            # unshareVolume(volumeMount): define in the chart's values.yaml
+            {{- if .Values.volumeMounts }}
+            {{- toYaml .Values.volumeMounts | nindent 12 }}
+            {{- end }}
+            - name: grafana-entities
+              mountPath: /opt/grafana-entities
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -Eeuo pipefail
+
+              log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+              askpass_file="$(mktemp)"
+              trap 'rm -f "$askpass_file"' EXIT
+              cat > "$askpass_file" <<'ASKPASS'
+              #!/bin/sh
+              case "$1" in
+                *Username*) printf '%s\n' "$GIT_USERNAME" ;;
+                *Password*) printf '%s\n' "$GIT_TOKEN" ;;
+              esac
+              ASKPASS
+              chmod 700 "$askpass_file"
+              export GIT_ASKPASS="$askpass_file"
+              cd /tmp/grafana-entities
+
+              source_proxy="${HTTPS_PROXY:-}"
+              destination_user="${GIT_USERNAME:-}"
+              destination_token="${GIT_TOKEN:-}"
+              use_github() {
+                export GIT_USERNAME="${GITHUB_SOURCE_USERNAME:-}"
+                export GIT_TOKEN="${GITHUB_SOURCE_TOKEN:-}"
+                if [ -n "$source_proxy" ]; then export HTTPS_PROXY="$source_proxy"; else unset HTTPS_PROXY; fi
+              }
+              use_git_http() {
+                export GIT_USERNAME="$destination_user"
+                export GIT_TOKEN="$destination_token"
+                unset HTTPS_PROXY
+              }
+
+              image_sha="$(git rev-parse HEAD)"
+              git reset --hard "$image_sha" >/dev/null
+              git clean -fdx >/dev/null
+
+              if [ "$GITSYNC_MODE" = git ]; then
+                use_git_http
+                attempt=0
+                until timeout 10 git ls-remote "$GITSYNC_URL" >/dev/null 2>&1; do
+                  attempt=$((attempt + 1))
+                  if [ "$attempt" -ge 12 ]; then
+                    log "Git destination did not become available after ${attempt} attempts: ${GITSYNC_URL}" >&2
+                    exit 1
+                  fi
+                  log "Waiting for Git destination ${GITSYNC_URL} to become available (attempt ${attempt}/12)..."
+                  sleep 5
+                done
+                main_sha="$(git ls-remote --heads "$GITSYNC_URL" refs/heads/main |
+                  awk '$2 == "refs/heads/main" {print $1; exit}')"
+                if [ -z "$main_sha" ]; then
+                  log "Seeding missing git-http main from image commit ${image_sha}"
+                  if ! git push "$GITSYNC_URL" "${image_sha}:refs/heads/main"; then
+                    log "Unable to seed destination main; it may have been created concurrently" >&2
+                    exit 1
+                  fi
+                else
+                  log "Keeping existing git-http main at ${main_sha}"
+                fi
+              fi
+
+              org_count="$(printf '%s\n' "$GITSYNC_ORGANIZATIONS_JSON" |
+                yq -p=json -r 'length' -)"
+              index=0
+              while [ "$index" -lt "$org_count" ]; do
+                org="$(printf '%s\n' "$GITSYNC_ORGANIZATIONS_JSON" |
+                  yq -p=json -r ".[${index}].org" -)"
+                branch="$(printf '%s\n' "$GITSYNC_ORGANIZATIONS_JSON" |
+                  yq -p=json -r ".[${index}].branch" -)"
+                if [ -z "$org" ] || [ -z "$branch" ] ||
+                   ! git check-ref-format "refs/heads/${branch}" >/dev/null 2>&1; then
+                  log "Invalid organization or branch at index ${index}: ${org}, ${branch}" >&2
+                  exit 1
+                fi
+                ref="refs/remotes/bootstrap/org-${index}"
+                if [ "$GITSYNC_MODE" = git ]; then
+                  use_git_http
+                  destination_sha="$(git ls-remote --heads "$GITSYNC_URL" "refs/heads/${branch}" |
+                    awk -v ref="refs/heads/${branch}" '$2 == ref {print $1; exit}')"
+                  if [ -z "$destination_sha" ]; then
+                    if [ "$branch" = main ]; then
+                      log "Destination main is missing after seed" >&2
+                      exit 1
+                    fi
+                    use_github
+                    log "Branch ${branch} for ${org} is missing on git-http; fetching from GitHub"
+                    if ! git ls-remote --exit-code --heads "$GITHUB_SOURCE_URL" "refs/heads/${branch}" >/dev/null 2>&1; then
+                      log "GitHub is unreachable or branch ${branch} for ${org} does not exist" >&2
+                      exit 1
+                    fi
+                    git fetch --no-tags "$GITHUB_SOURCE_URL" "+refs/heads/${branch}:${ref}"
+                    source_sha="$(git rev-parse "${ref}^{commit}")"
+                    use_git_http
+                    git push "$GITSYNC_URL" "${source_sha}:refs/heads/${branch}"
+                    destination_sha="$(git ls-remote --heads "$GITSYNC_URL" "refs/heads/${branch}" |
+                      awk -v ref="refs/heads/${branch}" '$2 == ref {print $1; exit}')"
+                    if [ "$destination_sha" != "$source_sha" ]; then
+                      log "Failed to verify seeded branch ${branch} for ${org}" >&2
+                      exit 1
+                    fi
+                  fi
+                  git fetch --no-tags "$GITSYNC_URL" "+refs/heads/${branch}:${ref}"
+                  selected_sha="$(git rev-parse "${ref}^{commit}")"
+                else
+                  use_github
+                  if ! git ls-remote --exit-code --heads "$GITSYNC_URL" "refs/heads/${branch}" >/dev/null 2>&1; then
+                    log "GitHub is unreachable or branch ${branch} for ${org} does not exist" >&2
+                    exit 1
+                  fi
+                  git fetch --no-tags "$GITSYNC_URL" "+refs/heads/${branch}:${ref}"
+                  selected_sha="$(git rev-parse "${ref}^{commit}")"
+                fi
+                target="/opt/grafana-entities/org-${index}"
+                mkdir -p "$target"
+                git archive "$selected_sha" | tar -x -C "$target"
+                SNAPSHOT="$target"
+                PARSED="/opt/grafana-entities/parsed/org-${index}"
+                export SNAPSHOT PARSED
+                find "$SNAPSHOT" -type f -path '*/datasources/*' \
+                  \( -name '*.yaml' -o -name '*.yml' \) \
+                  -exec sh -ec '
+                    for file do
+                      relative="${file#"$SNAPSHOT"/}"
+                      destination="$PARSED/$relative.json"
+                      mkdir -p "$(dirname "$destination")"
+                      yq -o=json -I=0 "." "$file" > "$destination"
+                    done
+                  ' sh {} +
+                log "Prepared ${org}: branch=${branch}, commit=${selected_sha}, path=${target}"
+                index=$((index + 1))
+              done
+              if [ "$index" -eq 0 ]; then
+                log "No organizations configured" >&2
+                exit 1
+              fi
+              log "Grafana entities snapshots are ready for ${index} organizations"
+        - name: grafana-organizations
+          image: {{ include "common.images.image" ( dict "imageRoot" .Values.image "global" .Values.global ) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          env:
+            - name: GITSYNC_ORGANIZATIONS_JSON
+              value: {{ include "grafana.gitsyncOrganizationsJson" . | quote }}
+            - name: GRAFANA_SERVER
+              value: "http://{{ .Chart.Name }}:{{ .Values.service.port }}/grafana"
+            - name: GRAFANA_USER
+              value: {{ include "grafana.adminUser" . | quote }}
+            - name: GRAFANA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "grafana.adminSecretName" . | quote }}
+                  key: {{ include "grafana.adminSecretKey" . | quote }}
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              set -Eeuo pipefail
+
+              log() {
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+              }
+
+              wait_grafana() {
+                local timeout="${1:-300}"
+                until curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/health" >/dev/null; do
+                  timeout=$((timeout - 5))
+                  if [ "$timeout" -le 0 ]; then
+                    log "Timeout waiting for Grafana at ${GRAFANA_SERVER}" >&2
+                    exit 1
+                  fi
+                  log "Waiting for Grafana at ${GRAFANA_SERVER}..."
+                  sleep 5
+                done
+              }
+
+              resolve_org_id() {
+                local org="$1"
+                if [[ "${org,,}" == "main" || "${org,,}" == "default" ]]; then
+                  echo 1
+                  return 0
+                fi
+                jq -r --arg org "$org" \
+                  'first(.[] | select((.name | ascii_downcase) == ($org | ascii_downcase)) | .id) // empty' \
+                  <<< "$TARGET_ORGS"
+              }
+
+              wait_grafana
+              TARGET_ORGS="$(curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                "${GRAFANA_SERVER}/api/orgs")"
+
+              organization_count="$(jq 'length' <<< "$GITSYNC_ORGANIZATIONS_JSON")"
+              if (( organization_count == 0 )); then
+                log "gitsync.organizations must contain at least one organization" >&2
+                exit 1
+              fi
+
+              while IFS= read -r organization_config; do
+                org="$(jq -r '.org // empty' <<< "$organization_config")"
+                if [[ -z "$org" ]]; then
+                  log "Every gitsync.organizations entry requires org" >&2
+                  exit 1
+                fi
+
+                org_id="$(resolve_org_id "$org")"
+                if [[ -n "$org_id" ]]; then
+                  log "Organization ${org} already exists with ID ${org_id}"
+                  continue
+                fi
+
+                log "Creating Grafana organization ${org}"
+                payload="$(jq -cn --arg name "$org" '{name: $name}')"
+                if ! curl -fsS \
+                  -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  -H 'Content-Type: application/json' \
+                  -X POST \
+                  -d "$payload" \
+                  "${GRAFANA_SERVER}/api/orgs" >/tmp/grafana-create-org.json; then
+                  log "Failed to create Grafana organization ${org}" >&2
+                  exit 1
+                fi
+
+                TARGET_ORGS="$(curl -fsS -u "${GRAFANA_USER}:${GRAFANA_PASSWORD}" \
+                  "${GRAFANA_SERVER}/api/orgs")"
+                org_id="$(resolve_org_id "$org")"
+                if [[ -z "$org_id" ]]; then
+                  log "Organization ${org} was not found after creation" >&2
+                  exit 1
+                fi
+                log "Organization ${org} is ready with ID ${org_id}"
+              done < <(jq -c '.[]' <<< "$GITSYNC_ORGANIZATIONS_JSON")
+
+              log "All Grafana organizations are ready"
+      containers:
+{{ include "grafana.initDatasources" . }}
+{{ include "grafana.libraryInitContainer" . }}
+{{ include "grafana.gitsyncProvisioning" . }}
+{{- end }}
