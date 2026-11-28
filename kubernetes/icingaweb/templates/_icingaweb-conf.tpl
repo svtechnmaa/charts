@@ -41,10 +41,20 @@
 {{- if .Values.modules.icingadb.enabled }}
 - name: icingaweb.modules.icingadb.config.icingadb.resource
   value: {{ .Values.global.database.icingadb.database | quote }}
+{{- /* Icinga DB HA: each icinga2 master pod runs its own Redis. redis1 = master-0, redis2 = master-1
+     (per-pod DNS of icinga2-headless, publishNotReadyAddresses). icingadb-web reads redis1 and
+     switches to redis2 only when redis1 is unreachable or its icinga:stats is older than 60 s, so
+     redis2 is harmless with a single master and scaling 1 <-> 2 masters needs no change here.
+     Always both: the ini files live on a shared volume, a removed key may stay in redis.ini. */}}
+{{- $masterDns := printf "%s-icinga2-master-%%d.icinga2-headless.%s.svc.%s" .Release.Name .Release.Namespace .Values.clusterDomain }}
 - name: icingaweb.modules.icingadb.redis.redis1.host
-  value: {{ .Values.global.redis.host | default (printf "icinga2.%s.svc.%s" .Release.Namespace .Values.clusterDomain) | quote }}
+  value: {{ printf $masterDns 0 | quote }}
 - name: icingaweb.modules.icingadb.redis.redis1.port
-  value: {{ .Values.global.redis.port | default "6379" | quote }}
+  value: "6379"
+- name: icingaweb.modules.icingadb.redis.redis2.host
+  value: {{ printf $masterDns 1 | quote }}
+- name: icingaweb.modules.icingadb.redis.redis2.port
+  value: "6379"
 - name: icingaweb.modules.icingadb.commandtransports.icinga2.transport
   value: api
 - name: icingaweb.modules.icingadb.commandtransports.icinga2.skip_validation

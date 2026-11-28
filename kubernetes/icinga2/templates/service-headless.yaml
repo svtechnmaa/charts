@@ -15,6 +15,10 @@ metadata:
 spec:
   type: ClusterIP
   clusterIP: None
+  ## Publish masters that are not Ready yet: the pod DNS names used as cluster endpoints and
+  ## the reload scripts (dig srv icinga2-headless) must still see a master whose probe fails,
+  ## otherwise exactly the pod that needs a restart-process is skipped.
+  publishNotReadyAddresses: true
   ports:
     - name: icinga2-api
       port: {{ .Values.master.service.port.icinga2Api }}
@@ -45,6 +49,9 @@ metadata:
 spec:
   type: ClusterIP
   clusterIP: None
+  ## satellite.headlessService.publishNotReadyAddresses (default false), see values.yaml. Enable it
+  ## only with a rebalance image that health-checks satellites (rebalance.satelliteHealth).
+  publishNotReadyAddresses: {{ dig "headlessService" "publishNotReadyAddresses" false .Values.satellite }}
   ports:
     - name: icinga2-api
       port: {{ .Values.master.service.port.icinga2Api }}
@@ -54,7 +61,7 @@ spec:
       port: {{ .Values.master.service.port.livestatus }}
       targetPort: livestatus
       protocol: TCP
-  selector: 
+  selector:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/name: {{ .Chart.Name }}-satellite
 

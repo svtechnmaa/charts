@@ -100,7 +100,7 @@ spec:
             SATELLITE_NAME_ORIGIN=${RELEASE_NAME}-${CHART_NAME}-satellite
             FULL_POD_NAME=${POD_NAME}.${CHART_NAME}-satellite-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN}
             COMMON_NAME=${POD_NAME}
-            POD_INDEX=${POD_NAME: -1}
+            POD_INDEX=${POD_NAME##*-}
             ZONE_INDEX=$(($POD_INDEX/2))
             SATELLITE_ZONE_NAME=${ZONE}-${ZONE_INDEX}
             ROLE="satellite"
@@ -139,9 +139,24 @@ spec:
             }
             EOF
 
-            # Create new satellite zone file
+            # Create new satellite zone file: this pod plus every other member pod of the zone that
+            # is in DNS of the headless service, reachable or not (with
+            # satellite.headlessService.publishNotReadyAddresses every existing pod, otherwise only
+            # Ready ones; the sidecar adds a peer that becomes Ready later).
+            # Both satellites of a zone must always list each other: a satellite without the
+            # Endpoint of its peer does not accept it as zone member, both then check every host of
+            # the zone and send duplicate results to the masters. A member that is down is fine:
+            # Icinga2 HA gives all its checks to the connected one. The sidecar keeps it current.
             CONF_FILE="/tmp/zone-config/${ZONE}.conf"
             /opt/zone-manager/zone-manager.sh generate_satellite_endpoint ${CONF_FILE} ${ZONE} ${COMMON_NAME} ${FULL_POD_NAME} ${PARENT_ZONE}
+            SAT_DOMAIN=${CHART_NAME}-satellite-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN}
+            SAT_INDEX=${POD_NAME##*-}
+            for member in "${POD_NAME%-*}-$(( SAT_INDEX / 2 * 2 ))" "${POD_NAME%-*}-$(( SAT_INDEX / 2 * 2 + 1 ))"; do
+              if [[ "$member" != "$POD_NAME" ]] && getent hosts "${member}.${SAT_DOMAIN}" > /dev/null; then
+                log "Zone member ${member} exists, adding it to ${CONF_FILE}"
+                /opt/zone-manager/zone-manager.sh generate_satellite_endpoint ${CONF_FILE} ${ZONE} ${member} ${member}.${SAT_DOMAIN} ${PARENT_ZONE}
+              fi
+            done
             log "Create symbolic link for $CONF_FILE to /etc/icinga2/"
             ln -sf $CONF_FILE /etc/icinga2/${ZONE}.conf
             # Update icinga2.conf to include /etc/icinga2/${ZONE}.conf
@@ -318,84 +333,134 @@ spec:
             done
             log "Icinga2 is ready, start sidecar container"
 
-            # Determine this pod's zone and the 2 pod ordinals that belong to it
-            POD_INDEX=${POD_NAME: -1}
+            # Zone membership watcher. Members of this pod's zone = the pods <base>-2k and
+            # <base>-2k+1 present in DNS of the headless service (every existing pod with
+            # satellite.headlessService.publishNotReadyAddresses, otherwise Ready ones), not the
+            # ones answering on :5665:
+            # - both satellites of a zone must list each other, otherwise neither accepts the other
+            #   as zone member and both check every host (duplicate results in the database);
+            # - a member that is down or restarting stays listed: Icinga2 HA gives all its checks
+            #   to the connected one, nothing to reload;
+            # - a new member is added at once; a member is removed only once its pod is gone for
+            #   ZONE_MEMBER_REMOVE_AFTER seconds (scale down), not while it restarts (a restart
+            #   that leaves DNS, publishNotReadyAddresses false, is shorter than that).
+            # Reload guard: never restart icinga2 while a master may be syncing config to it (this
+            # pod or a master started less than RELOAD_QUIET_SECONDS ago). An external restart
+            # during that copy leaves api/zones half-copied and Icinga2 never repairs it.
+            POD_INDEX=${POD_NAME##*-}
             ZONE_INDEX=$((POD_INDEX/2))
             SATELLITE_ZONE_NAME="${ZONE}-${ZONE_INDEX}"
-            HEADLESS_SVC="icinga2-satellite-headless"
+            SAT_DOMAIN="${CHART_NAME}-satellite-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"
             POD_BASENAME="${POD_NAME%-*}"
             PEER0="${POD_BASENAME}-$((ZONE_INDEX*2))"
             PEER1="${POD_BASENAME}-$((ZONE_INDEX*2+1))"
             CONF_FILE="/tmp/zone-config/${SATELLITE_ZONE_NAME}.conf"
+            MASTER_HOSTS=""
+            for ((i = 0; i < MASTER_REPLICAS; i++)); do
+              MASTER_HOSTS+=" ${RELEASE_NAME}-${CHART_NAME}-master-${i}.${CHART_NAME}-headless.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"
+            done
+            REMOVE_AFTER=${ZONE_MEMBER_REMOVE_AFTER:-300}
+            QUIET=${RELOAD_QUIET_SECONDS:-60}
 
-            log "Monitoring zone ${SATELLITE_ZONE_NAME} (expected members: ${PEER0}, ${PEER1})"
+            log "Watching zone ${SATELLITE_ZONE_NAME} (members: ${PEER0}, ${PEER1}; remove after ${REMOVE_AFTER}s; reload quiet ${QUIET}s; masters:${MASTER_HOSTS})"
 
-            # Prints, one per line, whichever of PEER0/PEER1 currently accept
-            # connections on the icinga2 port (i.e. are up and reachable).
-            get_active_endpoints() {
-              local peer
-              for peer in "$PEER0" "$PEER1"; do
-                if nc -zvw3 "${peer}.${HEADLESS_SVC}.${NAMESPACE}.svc.cluster.local" 5665 2>/dev/null; then
-                  echo "$peer"
+            pod_exists() {
+              [[ "$1" == "$POD_NAME" ]] || getent hosts "$1.${SAT_DOMAIN}" > /dev/null 2>&1
+            }
+
+            conf_members() {
+              [[ -f "$CONF_FILE" ]] || return 0
+              grep -oE 'object Endpoint "[^"]+"' "$CONF_FILE" | sed -E 's/object Endpoint "([^"]+)"/\1/' | sort -u
+            }
+
+            # Seconds since program_start of the icinga2 at $1, fails if its API does not answer
+            uptime_of() {
+              local start
+              start=$(wget -q -T 10 -O - --no-check-certificate --header='Accept: application/json' \
+                "https://${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}@$1:5665/v1/status/IcingaApplication" 2>/dev/null \
+                | grep -oE '"program_start":[0-9.]+' | cut -d: -f2)
+              [[ -n "$start" ]] || return 1
+              echo $(( $(date +%s) - ${start%.*} ))
+            }
+
+            # True when no master can be sending config to this satellite right now
+            sync_quiet() {
+              local up host
+              if ! up=$(uptime_of localhost); then GUARD="local icinga2 API not answering"; return 1; fi
+              if [[ $up -lt $QUIET ]]; then GUARD="local icinga2 started ${up}s ago"; return 1; fi
+              for host in $MASTER_HOSTS; do
+                up=$(uptime_of "$host") || continue      # unreachable master: syncs nothing
+                if [[ $up -lt $QUIET ]]; then GUARD="${host%%.*} started ${up}s ago"; return 1; fi
+              done
+              return 0
+            }
+
+            reload_icinga2() {
+              log "Reloading local icinga2 to pick up ${CONF_FILE} changes"
+              if wget -q -T 60 -O /dev/null --no-check-certificate \
+                  --header='Accept: application/json' --post-data='' \
+                  "https://${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}@localhost:5665/v1/actions/restart-process"; then
+                log "icinga2 restart-process request sent successfully"
+                return 0
+              fi
+              log "WARNING: icinga2 restart-process request failed, retrying"
+              return 1
+            }
+
+            declare -A MISSING_SINCE=()
+            RELOAD_PENDING=0
+            while true; do
+              now=$(date +%s)
+              members="$(conf_members)"
+              for peer in $(printf '%s\n' "$PEER0" "$PEER1" | sort -u); do
+                if pod_exists "$peer"; then
+                  unset 'MISSING_SINCE[$peer]'
+                  if ! grep -qxF "$peer" <<<"$members"; then
+                    log "Zone member ${peer} exists, adding it to ${CONF_FILE}"
+                    /opt/zone-manager/zone-manager.sh generate_satellite_endpoint "$CONF_FILE" "$SATELLITE_ZONE_NAME" "$peer" "${peer}.${SAT_DOMAIN}" "$PARENT_ZONE"
+                    RELOAD_PENDING=1
+                  fi
+                elif grep -qxF "$peer" <<<"$members"; then
+                  : "${MISSING_SINCE[$peer]:=$now}"
+                  gone=$(( now - MISSING_SINCE[$peer] ))
+                  if [[ $gone -ge $REMOVE_AFTER ]]; then
+                    log "Zone member ${peer} gone for ${gone}s, removing it from ${CONF_FILE}"
+                    /opt/zone-manager/zone-manager.sh remove_endpoint "$CONF_FILE" "$SATELLITE_ZONE_NAME" "$peer"
+                    unset 'MISSING_SINCE[$peer]'
+                    RELOAD_PENDING=1
+                  else
+                    log "Zone member ${peer} has no pod for ${gone}s (removed after ${REMOVE_AFTER}s)"
+                  fi
                 fi
               done
-            }
 
-            # Reload the local icinga2 process so it picks up the updated CONF_FILE
-            reload_icinga2() {
-              local url="https://${ICINGA2_API_USER}:${ICINGA2_API_PASSWORD}@localhost:5665/v1/actions/restart-process?pretty=1"
-              log "Reloading local icinga2 to pick up ${CONF_FILE} changes"
-              if wget -q -O /dev/null \
-                  --no-check-certificate \
-                  --header='Accept: application/json' \
-                  --post-data='' \
-                  "$url"; then
-                log "icinga2 restart-process request sent successfully"
-              else
-                log "WARNING: icinga2 restart-process request failed"
+              if [[ $RELOAD_PENDING -eq 1 ]]; then
+                GUARD=""
+                if sync_quiet; then
+                  if reload_icinga2; then RELOAD_PENDING=0; fi
+                else
+                  log "Reload postponed: ${GUARD} (a master may be syncing config to this satellite)"
+                  sleep 5
+                  continue
+                fi
               fi
-            }
-
-            while true; do
-              ACTIVE_ENDPOINTS="$(get_active_endpoints)"
-              ACTIVE_COUNT=$(printf '%s\n' "$ACTIVE_ENDPOINTS" | grep -c . || true)
-
-              PREV_ENDPOINTS=""
-              if [[ -f "$CONF_FILE" ]]; then
-                PREV_ENDPOINTS="$(grep -oE 'object Endpoint "[^"]+"' "$CONF_FILE" | sed -E 's/object Endpoint "([^"]+)"/\1/' | sort -u)"
-              fi
-              CURRENT_COUNT=$(printf '%s\n' "$PREV_ENDPOINTS" | grep -c . || true)
-
-              if [[ "$ACTIVE_COUNT" -ne "$CURRENT_COUNT" ]]; then
-                log "Zone ${SATELLITE_ZONE_NAME}: endpoint count changed (was ${CURRENT_COUNT}, now ${ACTIVE_COUNT}: ${ACTIVE_ENDPOINTS//$'\n'/, }) - reconciling ${CONF_FILE}"
-
-                # Endpoints that became active: add them via zone-manager.sh
-                while read -r ep; do
-                  [[ -z "$ep" ]] && continue
-                  if ! grep -qxF "$ep" <<<"$PREV_ENDPOINTS"; then
-                    log "Endpoint ${ep} became active, generating it in ${CONF_FILE}"
-                    FULL_HOST="${ep}.${HEADLESS_SVC}.${NAMESPACE}.svc.cluster.local"
-                    /opt/zone-manager/zone-manager.sh generate_satellite_endpoint "$CONF_FILE" "$SATELLITE_ZONE_NAME" "$ep" "$FULL_HOST" "$PARENT_ZONE"
-                  fi
-                done <<<"$ACTIVE_ENDPOINTS"
-
-                # Endpoints that are no longer active: remove them via zone-manager.sh
-                while read -r ep; do
-                  [[ -z "$ep" ]] && continue
-                  if ! grep -qxF "$ep" <<<"$ACTIVE_ENDPOINTS"; then
-                    log "Endpoint ${ep} no longer active, removing it from ${CONF_FILE}"
-                    /opt/zone-manager/zone-manager.sh remove_endpoint "$CONF_FILE" "$SATELLITE_ZONE_NAME" "$ep"
-                  fi
-                done <<<"$PREV_ENDPOINTS"
-
-                reload_icinga2
-              fi
-
               sleep 30
             done
           env:
           - name: NAMESPACE
             value: {{ .Release.Namespace }}
+          - name: RELEASE_NAME
+            value: {{ .Release.Name }}
+          - name: CHART_NAME
+            value: {{ .Chart.Name }}
+          - name: CLUSTER_DOMAIN
+            value: {{ .Values.clusterDomain | quote }}
+          - name: MASTER_REPLICAS
+            value: {{ include "common.replicas" ( dict "replicaCount" .Values.master.replicaCount "global" .Values.global ) | quote }}
+          - name: ZONE_MEMBER_REMOVE_AFTER
+            value: {{ .Values.satellite.zoneWatcher.removeAfterSeconds | quote }}
+          - name: RELOAD_QUIET_SECONDS
+            value: {{ .Values.satellite.zoneWatcher.reloadQuietSeconds | quote }}
           - name: POD_NAME
             valueFrom:
               fieldRef:

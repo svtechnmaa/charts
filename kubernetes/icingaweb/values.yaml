@@ -3,12 +3,6 @@
 global:
   sharedVolume:
     enabled: true
-  redis:
-    enabled: true
-    host:
-    port:
-  icingadb:
-    enabled: true
   sharedPersistenceVolume:
     - volumeName: icingaweb-volume
       pvcName: icingaweb-pvc
@@ -74,13 +68,6 @@ image:
   repository: svtechnmaa/svtech_icingaweb2
   tag: v1.1.0
   pullPolicy: IfNotPresent
-
-cronjob:
-  image:
-    registry: ghcr.io
-    repository: svtechnmaa/svtech_kubectl
-    tag: latest
-    pullPolicy: IfNotPresent
 
 # This is to override the chart name.
 nameOverride: ""
@@ -201,6 +188,7 @@ modules:
     enabled: false
   icingadb:
     enabled: true
+    ## Redis: always redis1 = icinga2 master-0, redis2 = master-1 (see _icingaweb-conf.tpl)
   incubator:
     enabled: true
   grafana:

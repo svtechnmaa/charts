@@ -2,10 +2,9 @@ global:
   externalIP: "" # externalIP for CICD
   sharedVolume:
     enabled: true
-  redis:
-    enabled: true
-  icingadb:
-    enabled: true
+  ## redis and icingadb always run as containers in every master pod, next to icinga2, and always
+  ## talk to localhost:6379 (Icinga DB HA: one Redis + one icingadb per master). global.redis.* is
+  ## not read by this chart (in the stack it describes the shared Redis of other applications).
   database:
     director:
       enabled: true
@@ -52,21 +51,13 @@ image:
   tag: v1.2.5
   pullPolicy: IfNotPresent
 
-
-cronjob:
-  image:
-    registry: ghcr.io
-    repository: svtechnmaa/svtech_debuger
-    tag: v1.0.3
-    pullPolicy: IfNotPresent
-
 clusterDomain: cluster.local
 commonAnnotations:
   helm.sh/hook-weight: "0"
 commonLabels: {}
 
 ## Secret holding credentials used by icinga2 (readiness probes, reload
-## scripts, cronjob) to authenticate against the icinga2 API.
+## scripts) to authenticate against the icinga2 API.
 ## If disabled, a Secret named "<chart-name>-secret" with keys
 ## icinga2-admin-user / icinga2-admin-password must already exist.
 secrets:
@@ -86,6 +77,11 @@ master:
   replicaCount: 2
   updateStrategy: RollingUpdate
   podManagementPolicy: OrderedReady
+  ## A restarted follower answers on :5665 (Ready) before config sync from the leader has
+  ## finished (lab: 3 of 18 hosts after the first sync batch). Keep each pod Ready this long
+  ## before the rolling update restarts the next one, otherwise the leader can be stopped
+  ## while the follower still holds a partial config.
+  minReadySeconds: 60
   podAffinityPreset: ""
   podAntiAffinityPreset: soft
 
@@ -151,6 +147,11 @@ master:
     #   memory: 128Mi
 
 
+  ## Precedence of the icinga2 container liveness probe: livenessProbe.enabled (icinga2 daemon -C)
+  ## > customLivenessProbe > election.livenessProbe (+ redisProbe liveness check).
+  ## livenessProbe.enabled keeps the election heartbeat check (election.livenessProbe.enabled) but
+  ## drops the redis-check liveness. customLivenessProbe DROPS both (a hung election reconcile loop
+  ## is then not restarted). A dead election.py always stops the container (entrypoint watcher).
   livenessProbe:
     enabled: false
     initialDelaySeconds: 180
@@ -158,19 +159,97 @@ master:
     timeoutSeconds: 30
     successThreshold: 1
     failureThreshold: 6
+  ## Enabled so that the OrderedReady rolling update waits for icinga2 to answer on :5665 before
+  ## restarting the next master (the entrypoint now holds icinga2 until the election decides the
+  ## role), and so that the "icinga2" Service, used by master-1 to fetch its certificate, only
+  ## points at a master whose API is up.
   readinessProbe:
-    enabled: false
-    initialDelaySeconds: 60
-    periodSeconds: 45
-    timeoutSeconds: 30
+    enabled: true
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 10
     successThreshold: 1
     failureThreshold: 6
+
+  ## Check that icinga2 feeds the Redis of its own pod (files/scripts/redis-check.sh, ConfigMap
+  ## "icinga2-redis-probe", mounted at /probe). Icinga 2 dumps its config into Redis only when it
+  ## starts, so a Redis that lost its data stays without icinga:host (Web/Grafana: host states
+  ## without names) until icinga2 restarts.
+  ## - startupProbe (strict): icinga2 counts as started once icinga:host is non-empty and
+  ##   icinga:stats is fresh. Must cover election.readyTimeoutSeconds + the config dump.
+  ## - liveness: appended to the election liveness probe above (same timings). Restarts icinga2
+  ##   when icinga:host is empty or icinga:stats is older than maxHeartbeatAgeSeconds.
+  ##   A Redis that does not answer is ignored here (the redis container's probe handles it).
+  ## - Both accept an empty icinga:host while the election READY file says leader-no-content
+  ##   (icinga2 runs without zones.d on purpose) or follower-no-content (zones.d blocked for
+  ##   every master, so the leader syncs nothing); a restart would not help. The heartbeat is
+  ##   still checked.
+  redisProbe:
+    enabled: true
+    maxHeartbeatAgeSeconds: 180
+    startupProbe:
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 90   # 15 minutes
+
+  ## PodDisruptionBudget: a node drain must not take both masters down at once
+  pdb:
+    enabled: true
+    maxUnavailable: 1
 
   ## Custom Liveness probe
   customLivenessProbe: {}
 
   ## Custom Readiness probe
   customReadinessProbe: {}
+
+  ## Config-master election (files/scripts/election.py, ConfigMap "election")
+  election:
+    ## The entrypoint starts icinga2 only after election.py has decided the role.
+    ## Must cover INITIAL_DECISION_TIMEOUT (45s) or STARTUP_MAX_WAIT (300s, leader waiting for
+    ## zones.d content) plus one `icinga2 daemon --validate`. On timeout the container exits 1.
+    readyTimeoutSeconds: 600
+    ## Extra env for election.py, all optional (defaults in the script):
+    ## LEASE_DURATION 30, RENEW_DEADLINE 20, RETRY_PERIOD 5, FENCE_AFTER 25 (LEASE_DURATION -
+    ## RETRY_PERIOD), RECONCILE_INTERVAL 10, CONTENT_STABLE_SECONDS 15, STARTUP_MAX_WAIT 300,
+    ## RELOAD_VERIFY_TIMEOUT 180, VALIDATE_TIMEOUT 300, LEASE_API_TIMEOUT 10,
+    ## CONTENT_READY_MARKER "" (file written by the config pipeline)
+    ## Only the lease holder has /etc/icinga2/zones.d. A leader whose lease has not been confirmed
+    ## for FENCE_AFTER seconds drops zones.d (symlink removed, demote reload) before the other
+    ## master may take the lease (LEASE_DURATION). Cost: an API server unreachable from the leader
+    ## for longer than that means a demote reload, then a promote reload once the lease is back
+    ## (the leader runs without zones.d meanwhile). FENCE_AFTER >= LEASE_DURATION lets both
+    ## masters have zones.d during that window (logged as WARNING at startup).
+    ## Syncthing conflict files (*.sync-conflict-*) in /opt/zones.d block every promote (icinga2
+    ## would load them as .conf: duplicate objects) and never disappear by themselves: delete them
+    ## by hand (election logs an ERROR with the paths). /opt/zones.d is shared, so both masters are
+    ## blocked. After STARTUP_MAX_WAIT the leader starts icinga2 without zones.d (READY =
+    ## leader-no-content) and syncs no config; a follower without old config (new pod) then has
+    ## 0 Hosts too (READY = follower-no-content, set while zones.d is blocked). redisProbe accepts
+    ## 0 Hosts in both cases (heartbeat still checked), so while the conflict files are there a
+    ## Redis that loses icinga:host is not repaired by a restart on the follower.
+    ## election.py reloads icinga2 on a role change (promote / demote) and, on the leader only, on
+    ## request: the post-commit hook of /opt/zones.d (git commit by Rundeck / rebalance) writes
+    ## /opt/zones.d/.reload-request "<epoch> <commit> <host>"; the leader waits until that commit
+    ## and its .conf files reached its node (Syncthing, RELOAD_SYNC_TIMEOUT 300, then reloads what
+    ## is on disk), the content is stable and valid, reloads + verifies, and writes
+    ## /opt/zones.d/.reload-result "<commit> ok|validate-failed|reload-failed <time> <pod> <detail>".
+    ## The follower and the satellites get the change through the Icinga2 config sync and restart
+    ## themselves; nothing restarts them from outside (an external restart during that copy leaves
+    ## api/zones half-copied, see README). Optional env: RELOAD_SYNC_TIMEOUT 300,
+    ## RELOAD_MAX_FAILURES 3, GIT_TIMEOUT 60, RELOAD_REQUEST_FILE, RELOAD_RESULT_FILE.
+    env: {}
+    ## Restart the icinga2 container when the election reconcile loop (hung) stops writing its
+    ## heartbeat. Also part of master.livenessProbe; not used with master.customLivenessProbe.
+    ## One reconcile pass may legitimately block for VALIDATE_TIMEOUT + RELOAD_VERIFY_TIMEOUT
+    ## (~480s), so keep maxHeartbeatAgeSeconds above that (fencing runs on its own thread).
+    livenessProbe:
+      enabled: true
+      maxHeartbeatAgeSeconds: 900
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
 
   ## Container ports
   containerPorts:
@@ -244,16 +323,30 @@ master:
     service:
       type: ClusterIP
       port: 6379
-    persistence:
-      enabled: false
-      storageClass: "redis"
-      accessModes:
-        - ReadWriteOnce
-      size: 1Gi
-      # mountPath: the destination inside the pod
-      mountPath: /data
-      # hostPath: mount a file or directory from the host node's filesystem into the pod
-      hostPath: /data/redis
+    ## AOF in an emptyDir at /data: the data survives a restart of the redis container (the
+    ## emptyDir lives as long as the pod). A new pod starts with an empty Redis, but icinga2
+    ## starts with it and dumps the config again.
+    appendonly: true
+    dataVolume:
+      ## Exceeding sizeLimit evicts the whole pod: keep it >= 4 x used_memory_peak
+      sizeLimit: 2Gi
+    ## e.g. "1536mb" (~75% of resources.limits.memory). Empty = no limit. Policy is noeviction:
+    ## Redis refuses writes when full instead of dropping icinga2 keys.
+    maxmemory: ""
+    extraArgs: []
+    resources: {}
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 0
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
 
   service:
     ## Service type
@@ -300,6 +393,31 @@ master:
 
 satellite:
   replicaCount: 3
+  ## Satellite headless service (icinga2-satellite-headless).
+  ##  - publishNotReadyAddresses: true keeps satellites that are not Ready (restarting,
+  ##    crashlooping, on a dead node) in DNS. The zone watcher then lists a peer as soon as its pod
+  ##    exists, also at startup, and icinga2-rebalance does not move hosts while a satellite
+  ##    restarts. REQUIRES the rebalance image with the satellite health check
+  ##    (rebalance.satelliteHealth): an older image takes the satellite list from DNS only, so it
+  ##    adds a new satellite before it runs and keeps the hosts of a zone whose satellites are all
+  ##    broken, and those hosts are not checked.
+  ##  - false (default, safe with any rebalance image): only Ready satellites are in DNS. A peer
+  ##    that restarts leaves DNS but the zone watcher keeps it for removeAfterSeconds, so no reload;
+  ##    a peer that is not Ready when a satellite starts is added by the watcher once Ready (one
+  ##    guarded reload). Rebalance moves hosts away from a satellite that is not Ready (old
+  ##    behaviour).
+  headlessService:
+    publishNotReadyAddresses: false
+  ## Zone membership watcher (sidecar). Members of a zone = the satellite pods present in DNS of
+  ## the headless service (see headlessService), reachable or not, so that the two
+  ## satellites of a zone always list each other (otherwise both check every host of the zone).
+  ## A new member is added at once; a member missing from DNS for removeAfterSeconds (scale down)
+  ## is removed. icinga2 is reloaded only when neither this satellite nor a master started less
+  ## than reloadQuietSeconds ago (a master may be syncing config to it: an external restart during
+  ## that copy leaves api/zones half-copied).
+  zoneWatcher:
+    removeAfterSeconds: 300
+    reloadQuietSeconds: 60
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
@@ -330,6 +448,22 @@ satellite:
 rebalance:
   workloadType: Deployment
   replicaCount: 1
+  ## Which satellites icinga2-rebalance puts into the zone config. With
+  ## satellite.headlessService.publishNotReadyAddresses DNS lists a crashlooping satellite too;
+  ## rebalance filters it with a TCP health check on the satellite API port (needs the rebalance
+  ## image with this logic, an older image ignores these values and uses DNS only):
+  ##  - zoneDeadAfterSeconds: a zone without any healthy satellite for this long is removed and its
+  ##    hosts move to the other zones (a single-satellite zone, odd replica count, or both
+  ##    satellites of a zone broken). A broken satellite whose zone peer is healthy is kept:
+  ##    Icinga2 HA moves its checks to the peer.
+  ##  - absentAfterSeconds: a satellite pod that no longer exists (scale down) is removed after this.
+  ##  - joinAfterSeconds: a new or recovered satellite is added once healthy for this long.
+  satelliteHealth:
+    zoneDeadAfterSeconds: 120
+    absentAfterSeconds: 300
+    joinAfterSeconds: 60
+    port: 5665
+    timeoutSeconds: 3
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
